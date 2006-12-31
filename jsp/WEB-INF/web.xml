@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<!DOCTYPE web-app
+    PUBLIC "-//Sun Microsystems, Inc.//DTD Web Application 2.3//EN"
+    "http://java.sun.com/dtd/web-app_2_3.dtd">
+
+<web-app>
+	<display-name>Lex</display-name>
+	<description>Lex</description>
+	
+	<!-- Filters -->
+	 
+	<filter>
+	    <filter-name>TimerFilter</filter-name>
+	    <filter-class>com.qwirx.lex.TimerFilter</filter-class>
+	</filter>
+	
+	<!-- Filter Mappings -->
+	
+	<filter-mapping>
+	    <filter-name>TimerFilter</filter-name>
+	    <url-pattern>/*</url-pattern>
+	</filter-mapping>
+
+	<security-constraint>
+		<web-resource-collection>
+			<web-resource-name>Login Page</web-resource-name>
+			<url-pattern>/login.jsp</url-pattern>
+			<http-method>GET</http-method>
+			<http-method>POST</http-method>
+			<http-method>HEAD</http-method>
+			<http-method>PUT</http-method>
+		</web-resource-collection>
+		
+		<auth-constraint>
+			<role-name>user</role-name>
+		</auth-constraint>
+	</security-constraint>
+	
+	<login-config>
+		<auth-method>BASIC</auth-method>
+		<realm-name>Lex Login Page</realm-name>
+	</login-config>
+
+	<!--
+	<error-page exception-type='javax.servlet.ServletException' 
+		location='/error.jsp'/>
+	-->
+	
+	<!--
+	<error-page>
+	<error-code>404</error-code>
+	<error-code>500</error-code>
+	<location>/error.jsp</location>
+	</error-page>
+	-->
+</web-app>
+  

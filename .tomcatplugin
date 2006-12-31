@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<tomcatProjectProperties>
+    <rootDir>/jsp</rootDir>
+    <exportSource>false</exportSource>
+    <reloadable>true</reloadable>
+    <redirectLogger>true</redirectLogger>
+    <updateXml>true</updateXml>
+    <warLocation>/tmp/lex.war</warLocation>
+    <extraInfo></extraInfo>
+    <webPath>/lex</webPath>
+</tomcatProjectProperties>

@@ -1,0 +1,37 @@
+h1
+{
+	background-color: #bbf;
+	padding: 4px;
+	margin:  0px;
+}
+div.topmenu
+{
+	background-color: #eef;
+	padding: 2px;
+	margin: 0px;
+	margin-bottom: 1em;
+}
+div.topmenu a
+{
+	float: left;
+	padding: 4px;
+	border-right: 1px solid white;
+}
+div.topmenu a:hover
+{	
+	background-color: #eee;
+}
+div.topmenu a:visited
+{	
+	color: black;
+}
+div.topmenu a.login_jsp
+{
+	float: right;
+	border-left: 1px solid white;
+	border-right: 0px none;
+}
+div.clearer
+{
+	clear: left;
+}
