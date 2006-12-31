@@ -15,7 +15,7 @@ import java.util.Map.Entry;
 public class RuleEdge extends EdgeBase implements Cloneable
 {
 	private final Edge [] parts;
-	private final Rule        rule;
+	private final Rule    rule;
 	private Map attribs = new Hashtable();
 	
 	public Rule   rule()   { return rule; }
@@ -53,7 +53,8 @@ public class RuleEdge extends EdgeBase implements Cloneable
     {
 		super();
         this.rule  = rule;
-		this.parts = new Edge [parts.length];
+
+        this.parts = new Edge [parts.length];
         
         for (int i = 0; i < this.parts.length; i++)
         {
@@ -103,18 +104,22 @@ public class RuleEdge extends EdgeBase implements Cloneable
 		findAttributes();
 	}
     
-	public String toString() {
+	public String toString() 
+    {
 		StringBuffer buf = new StringBuffer();
 		appendString(buf);
 		return buf.toString();
 	}
-	public void appendString(StringBuffer buf) {
+    
+	public void appendString(StringBuffer buf) 
+    {
 		buf.append("{");
 		buf.append(rule().symbol());
 		buf.append(" ");
 		
 		Map attribs = attributes();
-		for (Iterator i = attribs.entrySet().iterator(); i.hasNext(); ) {
+		for (Iterator i = attribs.entrySet().iterator(); i.hasNext(); ) 
+        {
 			Entry e = (Entry)( i.next() );
 			buf.append(e.getKey());
 			buf.append('=');
@@ -141,17 +146,22 @@ public class RuleEdge extends EdgeBase implements Cloneable
 		}
 		buf.append("}");
 	}
-	public void appendStringPrettyPrint(StringBuffer buf) {
+    
+	public void appendStringPrettyPrint(StringBuffer buf) 
+    {
 		appendStringPrettyPrint(buf, "");
 	}
-	private void appendStringPrettyPrint(StringBuffer buf, String indent) {
+    
+	private void appendStringPrettyPrint(StringBuffer buf, String indent) 
+    {
 		buf.append(indent);
 		buf.append("{");
 		buf.append(rule().symbol());
 		buf.append(" ");
 		
 		Map attribs = attributes();
-		for (Iterator i = attribs.entrySet().iterator(); i.hasNext(); ) {
+		for (Iterator i = attribs.entrySet().iterator(); i.hasNext(); ) 
+        {
 			Entry e = (Entry)( i.next() );
 			buf.append(e.getKey());
 			buf.append('=');
@@ -189,17 +199,24 @@ public class RuleEdge extends EdgeBase implements Cloneable
 		buf.append(indent);
 		buf.append("}");
 	}
-	public String[] words() {
+    
+	public String[] words() 
+    {
 		Vector v = new Vector();
 		appendWords(v);
 		return (String[])( v.toArray(new String[v.size()]) );
 	}
-	public void appendWords(Vector words) {
-		for (int i = 0; i < parts.length; i++) {
+    
+	public void appendWords(Vector words) 
+    {
+		for (int i = 0; i < parts.length; i++) 
+        {
 			parts[i].appendWords(words);
 		}
 	}
-	public Edge[] parts() {
+    
+	public Edge[] parts() 
+    {
 		Edge [] result = new Edge[parts.length];
 		System.arraycopy(parts, 0, result, 0, parts.length);
 		return result;
@@ -218,7 +235,8 @@ public class RuleEdge extends EdgeBase implements Cloneable
 	}
 	
     public Map attributes() { return attribs; }
-	private void findAttributes() {
+	private void findAttributes() 
+    {
 		attribs = new Hashtable();
 		
 		for (Iterator i = rule().copiedAttributes().entrySet().iterator();
@@ -239,20 +257,28 @@ public class RuleEdge extends EdgeBase implements Cloneable
 					continue;
 				
 				Edge partInstance = parts[p];
+                
 				Object value = partInstance.attributes().get(name);
-				if (value == null) {
+                
+				if (value == null) 
+                {
 					throw new IllegalStateException(
 							partInstance.toString()+
 							" has no attribute named "+
 							name+" to copy into "+this);
 				}
+                
 				Object oldValue = attribs.get(name);
-				if (oldValue != null && ! oldValue.equals(value)) {
+                
+				if (oldValue != null && ! oldValue.equals(value)) 
+                {
 					throw new IllegalStateException(
 							"Unable to unify "+oldValue+" and "+value+
 							" for attribute "+name+" of "+this);
 				}
-				if (oldValue == null) {
+                
+				if (oldValue == null) 
+                {
 					attribs.put(name, value);
 				}
 			}
@@ -280,20 +306,40 @@ public class RuleEdge extends EdgeBase implements Cloneable
 			}
 		}
 	}
-	public int getDepthScore() {
+    
+	public int getDepthScore() 
+    {
 		return getDepthScore(1);
 	}
-	private int getDepthScore(int initialDepth) {
+    
+	private int getDepthScore(int initialDepth) 
+    {
 		int d = initialDepth;
-		for (int i = 0; i < parts.length; i++) {
-			if (parts[i] instanceof RuleEdge) {
+		for (int i = 0; i < parts.length; i++) 
+        {
+			if (parts[i] instanceof RuleEdge) 
+            {
 				d += ((RuleEdge)(parts[i])).getDepthScore(initialDepth+1);
 			}
 		}
 		return d;
 	}
+    
     public Edge getUnboundCopy()
     {
         return new RuleEdge(rule, parts);
+    }
+    
+    public boolean isAt(int position)
+    {
+        for (int i = 0; i < parts.length; i++)
+        {
+            if (parts[i].isAt(position))
+            {
+                return true;
+            }
+        }
+        
+        return false;
     }
 }

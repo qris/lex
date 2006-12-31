@@ -18,16 +18,18 @@ public class WordEdge extends EdgeBase
 	private final String surface;
     private static final Edge[]   parts   = new Edge[0];
     private static final ImmutableMap attribs = new ImmutableMap(new HashMap());
+    private int m_Position;
     
     /**
      * Default constructor, creates an instance of the given text as a 
      * "word" object.
      * @param surface The text of the word
      */
-    public WordEdge(String surface) 
+    public WordEdge(String surface, int position) 
     {
 		super();
 		this.surface = surface;
+        this.m_Position = position;
 	}
     
     /**
@@ -58,9 +60,9 @@ public class WordEdge extends EdgeBase
      * @param surface
      * @param boundLocation
      */
-    public WordEdge(String surface, RulePart boundLocation)
+    public WordEdge(String surface, int position, RulePart boundLocation)
     {
-        this(surface);
+        this(surface, position);
         
         try
         {
@@ -96,6 +98,10 @@ public class WordEdge extends EdgeBase
 	public Map    attributes() { return attribs; }
     public Edge getUnboundCopy()
     {
-        return new WordEdge(surface);
+        return new WordEdge(surface, m_Position);
+    }
+    public boolean isAt(int position)
+    {
+        return m_Position == position;
     }
 }

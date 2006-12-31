@@ -8,13 +8,12 @@ package com.qwirx.lex.parser;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Stack;
 import java.util.Vector;
 
 import com.qwirx.lex.DatabaseException;
-import com.qwirx.lex.parser.Rule.Match;
 import com.qwirx.lex.sql.SqlDatabase;
 
 /**
@@ -23,10 +22,12 @@ import com.qwirx.lex.sql.SqlDatabase;
  * TODO To change the template for this generated type comment go to
  * Window - Preferences - Java - Code Style - Code Templates
  */
-public class Parser {
+public class Parser 
+{
 	private Rule [] rules;
 	
-	public Parser(SqlDatabase db) throws DatabaseException, SQLException {
+	public Parser(SqlDatabase db) throws DatabaseException, SQLException 
+    {
 		Vector ruleV = new Vector();
 		
 		try 
@@ -56,75 +57,41 @@ public class Parser {
 		this.rules = rules;
 	}
 	
-	public Edge[][] parse(String input) 
+	public Chart parse(String input) 
     {
 		String[] words = input.split(" ");
-		
-		Vector stacks = new Vector();
-		stacks.add(new Stack());
+        Chart chart = new Chart(words.length);
 		
 		for (int i = 0; i < words.length; i++) 
         {
-            for (int s = 0; s < stacks.size(); s++) 
+            chart.add(new WordEdge(words[i], i));
+            
+			for (int r = 0; r < rules.length; r++) 
             {
-                Stack stack = (Stack)( stacks.get(s) );
-                stack.push(new WordEdge(words[i]));
-            }
-
-			for (int s = 0; s < stacks.size(); s++) 
-            {
-				Stack oldStack = (Stack)( stacks.get(s) );
-			
-				for (int r = 0; r < rules.length; r++) 
+				/*
+                if (r == 4 && s == 5)
                 {
-					/*
-                    if (r == 4 && s == 5)
-                    {
-                        System.out.println("boo");
-                    }
-					*/
+                    System.out.println("boo");
+                }
+				*/
 
-                    Rule rule = rules[r];
-                    List matches = rule.applyTo(oldStack);
-                    
-                    for (Iterator m = matches.iterator(); m.hasNext(); )
-                    {
-                        Match match = (Match)( m.next() );
-                        // System.out.println(stacks.size() + ": " + match.stack);
-                        stacks.add(match.stack);
-                    }
-				}
+                Rule rule = rules[r];
+                List newEdges = rule.applyTo(chart, i);
+                chart.add(newEdges);
 			}
 		}
 
 		System.out.println("Parse finished.");
-		Edge[][] results = new Edge[stacks.size()][];
-
-		for (int i = 0; i < stacks.size(); i++) 
-        {
-			Stack stack = (Stack)( stacks.get(i) );
-			// System.out.println("Stack "+(i+1)+" contains:");
-
-			Edge[] thisResult = new Edge[stack.size()];
-
-			for (int j = 0; j < stack.size(); j++) 
-            {
-				// System.out.println(j+": "+
-				//	stack.get(j).toString());
-				thisResult[j] = (Edge)( stack.get(j) );
-			}
-			
-			results[i] = thisResult;
-		}
-		
-		return results;
+        
+        return chart;
 	}
 
-    public Edge[][] parseFor(String input, String goal)
+    public List parseFor(String input, String goal)
     {
         return parseFor(input, goal, false);
     }
     
+    /*
     private String getStringFromArray(Object [] array)
     {
         StringBuffer sb = new StringBuffer();
@@ -140,66 +107,56 @@ public class Parser {
         
         return sb.toString();
     }
+    */
 
-	public Edge[][] parseFor(String input, String goal, boolean verbose) 
+	public List parseFor(String input, String goal, boolean verbose) 
     {
-		Edge[][] parseResults = parse(input);
+		Chart chart = parse(input);
 		
-		Vector results = new Vector();
-		for (int i = 0; i < parseResults.length; i++) 
+        List edges = chart.getEdges();
+		List goals = new ArrayList();
+        
+		for (Iterator i = edges.iterator(); i.hasNext(); ) 
         {
-			Edge[] result = parseResults[i];
-			if (result.length > 1) 
-			{
+            Edge edge = (Edge)( i.next() );
+            if (! edge.symbol().equals(goal))
+            {
                 if (verbose)
                 {
-                    System.out.println("Rejected stack " + (i+1) +
-                        ": too long: " + getStringFromArray(result));
+                    System.out.println("Rejected non-goal edge: " + edge);
+                }   
+                
+                continue;
+            }
+            
+            boolean hasHoles = false;
+            
+            for (int j = 0; j < chart.getWidth(); j++)
+            {
+                if (! edge.isAt(j))
+                {
+                    hasHoles = true;
+                    break;
+                }
+            }
+            
+            if (hasHoles)
+            {
+                if (verbose)
+                {
+                    System.out.println("Rejected edge with holes: " + edge);
                 }   
                 continue;
-			}
-			
-            String symbol = result[0].symbol();
-			if (! symbol.equals(goal)) 
-            {
-			    if (verbose)
-                {
-                    System.out.println("Rejected stack " + (i+1) +
-                        ": not " + goal + ": " + getStringFromArray(result));
-                }
-                continue;
             }
             
-   			results.add(result);
-            
-            if (!verbose)
+   			goals.add(edge);
+
+            if (verbose)
             {
-                continue;
-            }
-            
-    		System.out.println("Accepted stack "+(i+1)+":");
-            
-            for (int j = 0; j < result.length; j++) 
-            {
-				if (result[j] instanceof RuleEdge) 
-                {
-					RuleEdge instance = (RuleEdge)( result[j] );
-					StringBuffer buf = new StringBuffer();
-					instance.appendStringPrettyPrint(buf);
-					System.out.println(buf.toString());
-				} 
-                else 
-                {
-					System.out.print(result[j]);
-					System.out.print(" ");
-				}
-			}
-            
-			System.out.println("");
+                System.out.println("Accepted edge: " + edge);
+            }   
 		}
 		
-		Edge[][] resultArray = new Edge[results.size()][];
-		resultArray = (Edge[][])( results.toArray(resultArray) );
-		return resultArray;
+		return goals;
 	}
 }

@@ -6,6 +6,7 @@
  */
 package com.qwirx.lex.parser;
 
+import java.util.ArrayList;
 import java.util.Hashtable;
 import java.util.Iterator;
 import java.util.List;
@@ -23,6 +24,9 @@ public class Rule
 	private final Map         fixedAttrs, copyAttrs;
 	private final boolean     m_isPermutable;
     private final boolean     m_isSearching;
+    private final List []     m_PartBindingLists; 
+    private final boolean []  m_PartsFinished;
+    private       boolean []  m_PositionsUsed;
     
 	public Rule
     (
@@ -36,8 +40,17 @@ public class Rule
 		this.right = right;
 		this.fixedAttrs = fixedAttrs;
 		this.copyAttrs  = copyAttrs;
-        this.m_isPermutable = isPermutable;
-        this.m_isSearching  = isSearching;
+        
+        m_isPermutable = isPermutable;
+        m_isSearching  = isSearching;
+        m_PartBindingLists = new List [right.length];
+        m_PartsFinished = new boolean [right.length];
+        
+        for (int i = 0; i < right.length; i++)
+        {
+            m_PartBindingLists[i] = new ArrayList();
+            m_PartsFinished[i] = false;
+        }
 	}
 
 	public Rule(int id, String left, RulePart [] right, boolean isPermutable,
@@ -206,16 +219,15 @@ public class Rule
     }
     
     private int m_NumPartsRemaining;
-    private boolean [] m_PartsAlreadyUsed;
     
     private void hidePart(int index)
     {
-        if (m_PartsAlreadyUsed[index])
+        if (m_PartsFinished[index])
         {
             throw new AssertionError("the current rule part should " +
                 "not be marked to be skipped");
         }
-        m_PartsAlreadyUsed[index] = true;
+        m_PartsFinished[index] = true;
         
         if (m_NumPartsRemaining <= 0)
         {
@@ -227,12 +239,12 @@ public class Rule
     
     private void unhidePart(int index)
     {
-        if (!m_PartsAlreadyUsed[index])
+        if (!m_PartsFinished[index])
         {
             throw new AssertionError("the current rule part should " +
                 "be marked to be skipped");
         }
-        m_PartsAlreadyUsed[index] = false;
+        m_PartsFinished[index] = false;
         
         if (m_NumPartsRemaining >= right.length)
         {
@@ -242,6 +254,366 @@ public class Rule
         m_NumPartsRemaining++;
     }
     
+    private Chart m_CurrentChart;
+    
+    /** 
+     * Public entry point for parsing.
+     * @param chart A chart containing existing edges to apply to
+     * @param endPos The right-hand side of the chart, where this rule is
+     * required to match this time (it may match elsewhere as well) 
+     * @return A list of new Edges to be added to the Chart
+     */
+    public List applyTo(Chart chart, int endPos)
+    {
+        m_CurrentChart = chart;
+        
+        // debugging code
+        for (int i = 0; i < right.length; i++)
+        {
+            if (m_PartBindingLists[i].size() > 0)
+            {
+                throw new AssertionError
+                (
+                    "the part binding list should be empty at the start of " +
+                    "the parse"
+                );
+            }
+            
+            if (m_PartsFinished[i])
+            {
+                throw new AssertionError
+                (
+                    "no parts should be already used at the start of the parse"
+                );
+                
+            }
+        }
+        
+        m_PositionsUsed = new boolean[endPos + 1];
+
+        // we must always match an edge at the specified end position,
+        // which will be different every time we are called,
+        // otherwise we will generate duplicate edges.
+        
+        List oldEdges = chart.getEdgesAt(endPos);
+        List newEdges = new ArrayList();
+        
+        if (m_isSearching || m_isPermutable)
+        {
+            // any part can match one or more edges
+            
+        }
+        else
+        {
+            // the last part must match one or more edges,
+            // unless it's optional, in which case it might be skipped
+            // and the last-but-one might match, etc.
+            
+            int firstPartSkipped = right.length;
+            
+            for (int partIndex = right.length - 1; partIndex >= 0; partIndex--)
+            {
+                RulePart part = right[partIndex];
+                
+                for (Iterator i = oldEdges.iterator(); i.hasNext(); )
+                {
+                    Edge edge = (Edge)( i.next() );
+                    if (part.matches(edge))
+                    {
+                        bindAndContinueParse(partIndex, edge, newEdges);
+                    }
+                }
+                
+                if (!part.canSkip())
+                {
+                    break;
+                }
+                
+                m_PartsFinished[partIndex] = true;
+                firstPartSkipped = partIndex;
+            }
+            
+            for (int i = firstPartSkipped; i < right.length; i++)
+            {
+                if (!m_PartsFinished[i]) throw new AssertionError();
+                m_PartsFinished[i] = false;
+            }
+        }
+        
+        return newEdges;
+    }
+    
+    private void bindAndContinueParse(int partIndex, Edge edge, List newEdges)
+    {
+        for (int i = 0; i < right.length; i++)
+        {
+            if (m_PartBindingLists[i].contains(edge))
+            {
+                throw new AssertionError
+                (
+                    "No part binding list should already contain this edge"
+                );
+            }
+        }
+
+        m_PartBindingLists[partIndex].add(0, edge);
+
+        if (m_PartsFinished[partIndex])
+        {
+            throw new AssertionError
+            (
+                "Not allowed to bind a rule part that is already finished"
+            );
+        }
+        
+        for (int i = 0; i < m_PositionsUsed.length; i++)
+        {
+            if (!edge.isAt(i))
+            {
+                continue;
+            }
+            
+            if (m_PositionsUsed[i])
+            {
+                throw new AssertionError
+                (
+                    "Not allowed to bind an edge that overlaps an existing " +
+                    "bound edge"
+                );
+            }
+            
+            m_PositionsUsed[i] = true;
+        }
+        
+        if (right[partIndex].canRepeat())
+        {
+            continueParseWithThisPart(partIndex, true, newEdges);
+        }
+        else
+        {
+            m_PartsFinished[partIndex] = true;
+            continueParseWithNextPart(newEdges);        
+            m_PartsFinished[partIndex] = false;
+        }
+        
+        for (int i = 0; i < m_PositionsUsed.length; i++)
+        {
+            if (!edge.isAt(i))
+            {
+                continue;
+            }
+            
+            if (!m_PositionsUsed[i])
+            {
+                throw new AssertionError
+                (
+                    "Positions used by this edge should be marked as used"
+                );
+            }
+            
+            m_PositionsUsed[i] = false;
+        }
+
+        for (int i = 0; i < right.length; i++)
+        {
+            if (i == partIndex)
+            {
+                if (!m_PartBindingLists[i].contains(edge))
+                {
+                    throw new AssertionError
+                    (
+                        "The part binding list for this part should " +
+                        "contain this edge"
+                    );
+                }
+            }
+            else
+            {
+                if (m_PartBindingLists[i].contains(edge))
+                {
+                    throw new AssertionError
+                    (
+                        "No other part binding list should contain this edge"
+                    );
+                }
+            }
+        }
+
+        m_PartBindingLists[partIndex].remove(edge);
+    }
+
+    private void continueParseWithNextPart(List newEdges)
+    {
+        boolean foundUnfinishedPart = false;
+        
+        for (int i = right.length - 1; i >= 0; i--)
+        {
+            if (m_PartsFinished[i])
+            {
+                continue;
+            }
+            
+            foundUnfinishedPart = true;
+            
+            continueParseWithThisPart(i, false, newEdges);
+            
+            // reordering of elements in permutable rules happens here,
+            // by allowing the loop to proceed with the next unfinished part.
+            if (!m_isPermutable)
+            {
+                return;
+            }
+        }
+        
+        if (foundUnfinishedPart)
+        {
+            return;
+        }
+        
+        // base case: we end up here when all parts have been used,
+        // and we should be ready to create a new edge.
+        
+        // don't create new edges which don't contain any other edges:
+        // we could keep doing that forever.
+        
+        int numEdges = 0;
+        
+        for (int i = 0; i < right.length; i++)
+        {
+            numEdges += m_PartBindingLists[i].size();
+        }
+        
+        if (numEdges == 0)
+        {
+            return;
+        }
+
+        int position = 0;
+        Edge[] contained = new Edge[numEdges];
+        
+        for (int i = 0; i < right.length; i++)
+        {
+            for (Iterator j = m_PartBindingLists[i].iterator(); j.hasNext(); )
+            {
+                Edge edge = (Edge)( j.next() );
+                Edge unbound = edge.getUnboundCopy();
+                try
+                {
+                    unbound.bindTo(null, right[i]);
+                }
+                catch (AlreadyBoundException e)
+                {
+                    throw new AssertionError(e);
+                }
+                contained[position++] = unbound;
+            }
+        }
+        
+        if (position != numEdges)
+        {
+            throw new AssertionError();
+        }
+        
+        Edge newEdge = new RuleEdge(this, contained);
+        newEdges.add(newEdge);       
+    }
+
+    private void continueParseWithThisPart(int partIndex, boolean hasMatched,
+        List newEdges)
+    {
+        if (m_PartsFinished[partIndex])
+        {
+            throw new AssertionError
+            (
+                "Not allowed to bind a rule part that is already finished"
+            );
+        }
+
+        // find any other edges that we can use
+        
+        int rightmostEmptyPos = -1;
+        for (int i = m_PositionsUsed.length - 1; i >= 0; i--)
+        {
+            if (!m_PositionsUsed[i])
+            {
+                rightmostEmptyPos = i;
+                break;
+            }
+        }
+        
+        List edges = m_CurrentChart.getEdgesAt(rightmostEmptyPos);
+        RulePart part = right[partIndex];
+                
+        for (Iterator i = edges.iterator(); i.hasNext(); )
+        {
+            Edge edge = (Edge)( i.next() );
+            if (!part.matches(edge))
+            {
+                continue;
+            }
+            
+            // check that the edge doesn't overlap any previously chosen ones
+            boolean overlaps = false;
+            for (int j = rightmostEmptyPos + 1; 
+                j < m_CurrentChart.getWidth(); j++)
+            {
+                if (edge.isAt(j))
+                {
+                    overlaps = true;
+                    break;
+                }
+            }
+            
+            if (overlaps == true)
+            {
+                continue;
+            }
+            
+            bindAndContinueParse(partIndex, edge, newEdges);
+        }
+        
+        // Optional elements may only be skipped (match 0 times)
+        // in permutable rules if no matches have yet been made.
+        // This enforces the condition that they may not match 
+        // nothing at different places in the same input, which 
+        // would produce duplicate trees in the output.
+        
+        boolean canSkip = part.canSkip();
+        
+        if (canSkip && m_isPermutable)
+        {
+            for (int i = 0; i < m_PositionsUsed.length; i++)
+            {
+                if (m_PositionsUsed[i])
+                {
+                    canSkip = false;
+                    break;
+                }
+            }
+        }
+
+        // stop now if this part is not optional and has not matched yet
+        if (!canSkip && !hasMatched)
+        {
+            return;
+        }
+        
+        // mark it as finished, so we can move onto the next part
+        // (in the case where it is optional and being skipped)
+        
+        m_PartsFinished[partIndex] = true;
+        
+        continueParseWithNextPart(newEdges);
+        
+        if (!m_PartsFinished[partIndex])
+        {
+            throw new AssertionError("this part should still be marked" +
+                "as fininshed");
+        }
+        
+        m_PartsFinished[partIndex] = false;
+    }
+
     private void apply(List stack, Match match, List out)
     {
         // debug code
@@ -250,7 +622,7 @@ public class Rule
             int realNumPartsRemaining = right.length;
             for (int i = 0; i < right.length; i++)
             {
-                if (m_PartsAlreadyUsed[i])
+                if (m_PartsFinished[i])
                 {
                     realNumPartsRemaining--;
                 }
@@ -320,7 +692,7 @@ public class Rule
             
             for (int i = right.length - 1; i >= 0; i--)
             {
-                if (!m_PartsAlreadyUsed[i])
+                if (!m_PartsFinished[i])
                 {
                     firstRulePartIndex = i;
                     break;
@@ -338,7 +710,7 @@ public class Rule
 
         for (int i = firstRulePartIndex; i < right.length; i++)
         {
-            if (m_PartsAlreadyUsed[i])
+            if (m_PartsFinished[i])
             {
                 // the caller has processed this part, and asked us to skip it
                 continue;
@@ -527,7 +899,7 @@ public class Rule
             
             for (int i = right.length - 1; i >= 0; i--)
             {
-                if (!m_PartsAlreadyUsed[i])
+                if (!m_PartsFinished[i])
                 {
                     nextPartIndex = i;
                     break;
@@ -565,7 +937,10 @@ public class Rule
     {
         Match match = new Match(right.length);
         List out = new Vector();
-        m_PartsAlreadyUsed = new boolean [right.length];
+        for (int i = 0; i < right.length; i++)
+        {
+            m_PartsFinished[i] = false;
+        }
         m_NumPartsRemaining = right.length;
         apply(stack, match, out);
         return out;

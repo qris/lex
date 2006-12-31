@@ -9,10 +9,10 @@ import java.util.Hashtable;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Stack;
 
 import junit.framework.TestCase;
 
+import com.qwirx.lex.parser.Chart;
 import com.qwirx.lex.parser.Edge;
 import com.qwirx.lex.parser.Parser;
 import com.qwirx.lex.parser.Rule;
@@ -21,7 +21,6 @@ import com.qwirx.lex.parser.RulePart;
 import com.qwirx.lex.parser.WordEdge;
 import com.qwirx.lex.parser.EdgeBase.AlreadyBoundException;
 import com.qwirx.lex.parser.Rule.DuplicateNameException;
-import com.qwirx.lex.parser.Rule.Match;
 
 /**
  * @author chris
@@ -30,6 +29,63 @@ import com.qwirx.lex.parser.Rule.Match;
  */
 public class ParserTest extends TestCase 
 {
+    public void testEdgePositioning()
+    {
+        Edge e = new WordEdge("foo", 0);
+        assertTrue (e.isAt(0));
+        assertFalse(e.isAt(-1));
+        assertFalse(e.isAt(1));
+
+        e = new WordEdge("bar", 1);
+        assertFalse(e.isAt(0));
+        assertTrue (e.isAt(1));
+        assertFalse(e.isAt(2));
+    }
+    
+    public void testAddToChart()
+    {
+        Chart chart = new Chart(2);
+        List edges = chart.getEdges();
+        assertEquals(0, edges.size());
+        
+        Edge e1 = new WordEdge("foo", 0);
+        chart.add(e1);
+        assertEquals(0, edges.size());
+        edges = chart.getEdges();
+        assertEquals(1, edges.size());
+        assertEquals(e1, edges.get(0));
+
+        Edge e2 = new WordEdge("bar", 1);
+        chart.add(e2);
+        assertEquals(1, edges.size());
+        edges = chart.getEdges();
+        assertEquals(2, edges.size());
+        assertEquals(e1, edges.get(0));
+        assertEquals(e2, edges.get(1));
+        
+        edges = chart.getEdgesAt(1);
+        assertEquals(1,  edges.size());
+        assertEquals(e2, edges.get(0));
+
+        edges = chart.getEdgesAt(0);
+        assertEquals(1,  edges.size());
+        assertEquals(e1, edges.get(0));
+    }
+    
+    public void testApplyRuleToChartReturnsEdge()
+    {
+        Chart chart = new Chart(2);
+        chart.add(new WordEdge("the", 0));
+        chart.add(new WordEdge("cat", 1));
+        Rule r1 = Rule.makeFromString(1, "DET", "the");
+        
+        List newEdges = r1.applyTo(chart, 0);
+        assertEquals(1, newEdges.size());
+        
+        newEdges = r1.applyTo(chart, 1);
+        assertEquals(0, newEdges.size());
+    }
+    
     public void testRulePartRepeat()
     {
         String[] repetitions = new String[]{"","?","*","+"};
@@ -70,17 +126,17 @@ public class ParserTest extends TestCase
             }
 
             RulePart p = RulePart.fromString("the"+repString);
-            assertFalse(p.matches(new WordEdge("")));
-            assertFalse(p.matches(new WordEdge("th")));
-            assertTrue (p.matches(new WordEdge("the")));
-            assertFalse(p.matches(new WordEdge("thet")));
-            assertFalse(p.matches(new WordEdge("thethe")));
+            assertFalse(p.matches(new WordEdge("", 0)));
+            assertFalse(p.matches(new WordEdge("th", 0)));
+            assertTrue (p.matches(new WordEdge("the", 0)));
+            assertFalse(p.matches(new WordEdge("thet", 0)));
+            assertFalse(p.matches(new WordEdge("thethe", 0)));
         }
         
         WordEdge[] none = new WordEdge[]{};
-        WordEdge[] one  = new WordEdge[]{new WordEdge("the")};
+        WordEdge[] one  = new WordEdge[]{new WordEdge("the", 0)};
         WordEdge[] two  = new WordEdge[]{one[0], one[0]};
-        WordEdge[] odd  = new WordEdge[]{one[0], new WordEdge("tea")};
+        WordEdge[] odd  = new WordEdge[]{one[0], new WordEdge("tea", 0)};
         
         RulePart p = RulePart.fromString("the");
         assertFalse(p.matches(none));
@@ -240,34 +296,36 @@ public class ParserTest extends TestCase
 	public void testSimpleParse() throws Exception 
     {
 		Rule[] rules = new Rule[]{
-				Rule.makeFromString(1, "DET",  "the"),
-				Rule.makeFromString(2, "NOUN", "cat"),
-				Rule.makeFromString(3, "VERB", "sat"),
-				Rule.makeFromString(4, "PREP", "on"),
-				Rule.makeFromString(5, "NOUN", "mat"),
-				Rule.makeFromString(6, "NP",   "{DET} {NOUN}"),
-				Rule.makeFromString(7, "PP",   "{PREP} {NP}"),
-				Rule.makeFromString(8, "VP",   "{VERB} {PP}"),
-				Rule.makeFromString(9, "SENTENCE", "{NP} {VP}")
+				Rule.makeFromString(1,  "DET",      "the"),
+				Rule.makeFromString(2,  "NOUN",     "cat"),
+				Rule.makeFromString(3,  "VERB",     "sat"),
+				Rule.makeFromString(4,  "P",        "on"),
+				Rule.makeFromString(5,  "NOUN",     "mat"),
+                Rule.makeFromString(6,  "P",        "by"),
+                Rule.makeFromString(7,  "NOUN",     "door"),
+				Rule.makeFromString(8,  "NP",       "{DET} {NOUN}"),
+				Rule.makeFromString(9,  "PP",       "{P} {NP}"),
+				Rule.makeFromString(10, "VP",       "{VERB}"),
+				Rule.makeFromString(11, "SENTENCE", "{NP} {VP} {PP}"),
+                Rule.makeFromString(12, "SENTENCE", "{NP} {VP} {PP} {PP}")
 		};
 		
 		Parser p = new Parser(rules);
-		Edge[][] results = p.parseFor("the cat sat on the mat", "SENTENCE");
+		List results = p.parseFor("the cat sat on the mat by the door", "SENTENCE");
 		
-		assertEquals(1, results.length);
-		Edge[] result = results[0];
+		assertEquals(1, results.size());
 		
-		Edge SENTENCE = result[0];
+		Edge SENTENCE = (Edge)( results.get(0) );
 		assertEquals("SENTENCE", SENTENCE.symbol());
 		
-		Edge NP = SENTENCE.part(0);
-		assertEquals("NP", NP.symbol());
+		Edge NP1 = SENTENCE.part(0);
+		assertEquals("NP", NP1.symbol());
 
-		Edge DET = NP.part(0);
+		Edge DET = NP1.part(0);
 		assertEquals("DET", DET.symbol());
 		assertEquals("the", DET.part(0).toString());
 		
-		Edge NOUN = NP.part(1);
+		Edge NOUN = NP1.part(1);
 		assertEquals("NOUN", NOUN.symbol());
 		assertEquals("cat",  NOUN.part(0).toString());
 		
@@ -278,23 +336,41 @@ public class ParserTest extends TestCase
 		assertEquals("VERB", VERB.symbol());
 		assertEquals("sat", VERB.part(0).toString());
 		
-		Edge PP = VP.part(1);
-		assertEquals("PP", PP.symbol());
+		Edge PP1 = SENTENCE.part(2);
+		assertEquals("PP", PP1.symbol());
 		
-		Edge PREP = PP.part(0);
-		assertEquals("PREP", PREP.symbol());
-		assertEquals("on",   PREP.part(0).symbol());
+		Edge P1 = PP1.part(0);
+		assertEquals("P",  P1.symbol());
+		assertEquals("on", P1.part(0).symbol());
 		
-		NP = PP.part(1);
-		assertEquals("NP", NP.symbol());
+		Edge NP2 = PP1.part(1);
+		assertEquals("NP", NP2.symbol());
 		
-		DET = NP.part(0);
+		DET = NP2.part(0);
 		assertEquals("DET", DET.symbol());
 		assertEquals("the", DET.part(0).symbol());
 		
-		NOUN = NP.part(1);
+		NOUN = NP2.part(1);
 		assertEquals("NOUN", NOUN.symbol());
 		assertEquals("mat",  NOUN.part(0).symbol());
+        
+        Edge PP2 = SENTENCE.part(3);
+        assertEquals("PP", PP2.symbol());
+        
+        Edge P2 = PP2.part(0);
+        assertEquals("P",  P2.symbol());
+        assertEquals("by", P2.part(0).symbol());
+        
+        Edge NP3 = PP2.part(1);
+        assertEquals("NP", NP3.symbol());
+        
+        DET = NP3.part(0);
+        assertEquals("DET", DET.symbol());
+        assertEquals("the", DET.part(0).symbol());
+        
+        NOUN = NP3.part(1);
+        assertEquals("NOUN", NOUN.symbol());
+        assertEquals("door",  NOUN.part(0).symbol());
 	}
 
 	public void testConstructParse() throws Exception 
@@ -336,19 +412,16 @@ public class ParserTest extends TestCase
 		};
 		Parser p = new Parser(rules);
 		
-		Edge[][] results = p.parseFor("TWLDWT/ H CMJM/ W H >RY/", "NP");
-		assertEquals(2, results.length);
+		List results = p.parseFor("TWLDWT/ H CMJM/ W H >RY/", "NP");
+		assertEquals(2, results.size());
 		
-		for (int i = 0; i < results.length; i++) {
-			RuleEdge r = (RuleEdge)(results[i][0]);
+		for (int i = 0; i < results.size(); i++) {
+			RuleEdge r = (RuleEdge)(results.get(i));
 			System.out.println("Depth score of result "+i+": "+
 					r.getDepthScore());	
 		}
 		
-		Edge[] result = results[1];
-		assertEquals(1, result.length);
-		
-		Edge NP_all = result[0];
+		Edge NP_all = (Edge)(results.get(1));
 		assertEquals("NP",       NP_all.symbol());
 		assertEquals("absolute", NP_all.attribute("state"));
 		
@@ -398,13 +471,10 @@ public class ParserTest extends TestCase
         
         Parser p = new Parser(rules);
         
-        Edge[][] results = p.parseFor("cat dog", "must_CAT_must_DOG");
-        assertEquals(1, results.length);
+        List results = p.parseFor("cat dog", "must_CAT_must_DOG");
+        assertEquals(1, results.size());
         
-        Edge[] result = results[0];
-        assertEquals(1, result.length);
-        
-        Edge instance = result[0];
+        Edge instance = (Edge)( results.get(0) );
         assertEquals("must_CAT_must_DOG", instance.symbol());
         
         Edge CAT = instance.part(0);
@@ -414,60 +484,89 @@ public class ParserTest extends TestCase
         assertEquals("DOG", DOG.symbol());
         
         String target = "must_CAT_must_DOG";
-        assertEquals(0, p.parseFor("",                target).length);
-        assertEquals(0, p.parseFor("dog",             target).length);
-        assertEquals(0, p.parseFor("cat",             target).length);
-        assertEquals(0, p.parseFor("cat cat",         target).length);
-        assertEquals(1, p.parseFor("cat dog",         target).length);
-        assertEquals(0, p.parseFor("dog cat",         target).length);
-        assertEquals(0, p.parseFor("dog dog",         target).length);
-        assertEquals(0, p.parseFor("cat cat cat",     target).length);
-        assertEquals(0, p.parseFor("cat cat dog",     target).length);
-        assertEquals(0, p.parseFor("cat dog cat",     target).length);
-        assertEquals(0, p.parseFor("dog cat dog",     target).length);
-        assertEquals(0, p.parseFor("dog dog dog",     target).length);
-        assertEquals(0, p.parseFor("cat cat dog dog", target).length);
-        assertEquals(0, p.parseFor("cat dog cat dog", target).length);
-        assertEquals(0, p.parseFor("cat dog dog cat", target).length);
-        assertEquals(0, p.parseFor("dog cat dog cat", target).length);
+        assertEquals(0, p.parseFor("",                target).size());
+        assertEquals(0, p.parseFor("dog",             target).size());
+        assertEquals(0, p.parseFor("cat",             target).size());
+        assertEquals(0, p.parseFor("cat cat",         target).size());
+        assertEquals(1, p.parseFor("cat dog",         target).size());
+        assertEquals(0, p.parseFor("dog cat",         target).size());
+        assertEquals(0, p.parseFor("dog dog",         target).size());
+        assertEquals(0, p.parseFor("cat cat cat",     target).size());
+        assertEquals(0, p.parseFor("cat cat dog",     target).size());
+        assertEquals(0, p.parseFor("cat dog cat",     target).size());
+        assertEquals(0, p.parseFor("dog cat dog",     target).size());
+        assertEquals(0, p.parseFor("dog dog dog",     target).size());
+        assertEquals(0, p.parseFor("cat cat dog dog", target).size());
+        assertEquals(0, p.parseFor("cat dog cat dog", target).size());
+        assertEquals(0, p.parseFor("cat dog dog cat", target).size());
+        assertEquals(0, p.parseFor("dog cat dog cat", target).size());
 
         target = "maybe_CAT_must_DOG";
-        assertEquals(0, p.parseFor("",                target).length);
-        assertEquals(1, p.parseFor("dog",             target).length);
-        assertEquals(0, p.parseFor("cat",             target).length);
-        assertEquals(1, p.parseFor("cat dog",         target).length);
-        assertEquals(0, p.parseFor("dog cat",         target).length);
-        assertEquals(0, p.parseFor("cat cat dog",     target).length);
-        assertEquals(0, p.parseFor("cat cat dog dog", target).length);
+        assertEquals(0, p.parseFor("",                target).size());
+        assertEquals(1, p.parseFor("dog",             target).size());
+        assertEquals(0, p.parseFor("cat",             target).size());
+        assertEquals(1, p.parseFor("cat dog",         target).size());
+        assertEquals(0, p.parseFor("dog cat",         target).size());
+        assertEquals(0, p.parseFor("cat cat dog",     target).size());
+        assertEquals(0, p.parseFor("cat cat dog dog", target).size());
 
         target = "maybe_CAT_maybe_DOG";
-        assertEquals(0, p.parseFor("",                target).length);
-        assertEquals(1, p.parseFor("dog",             target).length);
-        assertEquals(1, p.parseFor("cat",             target).length);
-        assertEquals(1, p.parseFor("cat dog",         target).length);
-        assertEquals(0, p.parseFor("dog cat",         target).length);
-        assertEquals(0, p.parseFor("cat cat dog",     target).length);
-        assertEquals(0, p.parseFor("cat cat dog dog", target).length);
+        assertEquals(0, p.parseFor("",                target).size());
+        assertEquals(1, p.parseFor("dog",             target).size());
+        assertEquals(1, p.parseFor("cat",             target).size());
+        assertEquals(1, p.parseFor("cat dog",         target).size());
+        assertEquals(0, p.parseFor("dog cat",         target).size());
+        assertEquals(0, p.parseFor("cat cat dog",     target).size());
+        assertEquals(0, p.parseFor("cat cat dog dog", target).size());
 
         target = "maybe_CATs_maybe_DOGs";
-        assertEquals(0, p.parseFor("",                target).length);
-        assertEquals(1, p.parseFor("dog",             target).length);
-        assertEquals(1, p.parseFor("cat",             target).length);
-        assertEquals(1, p.parseFor("cat dog",         target).length);
-        assertEquals(0, p.parseFor("dog cat",         target).length);
-        assertEquals(1, p.parseFor("cat cat dog",     target).length);
-        assertEquals(1, p.parseFor("cat dog dog",     target).length);
-        assertEquals(1, p.parseFor("cat cat dog dog", target).length);
+        assertEquals(0, p.parseFor("",                target).size());
+        assertEquals(1, p.parseFor("dog",             target).size());
+        assertEquals(1, p.parseFor("cat",             target).size());
+        assertEquals(1, p.parseFor("cat dog",         target).size());
+        assertEquals(0, p.parseFor("dog cat",         target).size());
+        assertEquals(1, p.parseFor("cat cat dog",     target).size());
+        assertEquals(1, p.parseFor("cat dog dog",     target).size());
+        assertEquals(1, p.parseFor("cat cat dog dog", target).size());
 
         target = "must_CATs_must_DOGs";
-        assertEquals(0, p.parseFor("",                target).length);
-        assertEquals(0, p.parseFor("dog",             target).length);
-        assertEquals(0, p.parseFor("cat",             target).length);
-        assertEquals(1, p.parseFor("cat dog",         target).length);
-        assertEquals(0, p.parseFor("dog cat",         target).length);
-        assertEquals(1, p.parseFor("cat cat dog",     target).length);
-        assertEquals(1, p.parseFor("cat dog dog",     target).length);
-        assertEquals(1, p.parseFor("cat cat dog dog", target).length);
+        assertEquals(0, p.parseFor("",                target).size());
+        assertEquals(0, p.parseFor("dog",             target).size());
+        assertEquals(0, p.parseFor("cat",             target).size());
+        assertEquals(1, p.parseFor("cat dog",         target).size());
+        assertEquals(0, p.parseFor("dog cat",         target).size());
+        assertEquals(1, p.parseFor("cat cat dog",     target).size());
+        assertEquals(1, p.parseFor("cat dog dog",     target).size());
+        assertEquals(1, p.parseFor("cat cat dog dog", target).size());
+    }
+    
+    public void testRepetitionOrder() throws Exception 
+    {
+        Rule[] rules = new Rule[]{
+                Rule.makeFromString(1, "N",  "door"),
+                Rule.makeFromString(2, "N",  "mat"),
+                Rule.makeFromString(3, "NP", "{N}+")
+        };
+        
+        Parser p = new Parser(rules);
+        List results = p.parseFor("door mat", "NP");
+        
+        assertEquals(1, results.size());
+        
+        Edge NP = (Edge)( results.get(0) );
+        assertEquals("NP", NP.symbol());
+        
+        Edge N1 = NP.part(0);
+        assertEquals("N", N1.symbol());
+
+        Edge DOOR = N1.part(0);
+        assertEquals("door", DOOR.symbol());
+
+        Edge N2 = NP.part(1);
+        assertEquals("N", N2.symbol());
+
+        Edge MAT = N2.part(0);
+        assertEquals("mat", MAT.symbol());
     }
 
     public void testPermutableParseSimple() throws Exception
@@ -476,56 +575,38 @@ public class ParserTest extends TestCase
         Rule dog = Rule.makeFromString(2, "DOG", "dog");
         Rule test = Rule.makeFromString(3, "maybe_CATs_maybe_DOGs", "# {CAT}* {DOG}*");
         
-        Stack stackIn = new Stack();
-        stackIn.add(new RuleEdge(cat, new Edge[]{
-            new WordEdge("cat", cat.part(0))
+        Chart chart = new Chart(2);
+        chart.add(new RuleEdge(cat, new Edge[]{
+            new WordEdge("cat", 0, cat.part(0))
         }));
-        stackIn.add(new RuleEdge(dog, new Edge[]{
-            new WordEdge("dog", dog.part(0))
+        chart.add(new RuleEdge(dog, new Edge[]{
+            new WordEdge("dog", 1, dog.part(0))
         }));
         
-        List matches = test.applyTo(stackIn);
-        assertEquals(2, matches.size());
-        
-        Match match = (Match)( matches.get(0) );
-        Stack stackOut = match.getStack();
-        assertEquals(2, stackOut.size());
-        
-        {
-            RuleEdge CAT = (RuleEdge)( stackOut.get(0) );
-            assertEquals("CAT", CAT.symbol());
-            assertEquals(1,     CAT.parts().length);
-            assertEquals("cat", CAT.parts()[0].symbol());
+        List edges = cat.applyTo(chart, 0);
+        assertEquals(1, edges.size());
+        chart.add(edges);
 
-            RuleEdge MCMD = (RuleEdge)( stackOut.get(1) );
-            assertEquals("maybe_CATs_maybe_DOGs", MCMD.symbol());
-            assertEquals(1,     MCMD.parts().length);
-            
-            RuleEdge DOG = (RuleEdge)( MCMD.parts()[0] );
-            assertEquals("DOG", DOG.symbol());
-            assertEquals(1,     DOG.parts().length);
-            assertEquals("dog", DOG.parts()[0].symbol());
-        }
-        
-        match = (Match)( matches.get(1) );
-        stackOut = match.getStack();
-        assertEquals(1, stackOut.size());
-        
-        {
-            RuleEdge MCMD = (RuleEdge)( stackOut.get(0) );
-            assertEquals("maybe_CATs_maybe_DOGs", MCMD.symbol());
-            assertEquals(2,     MCMD.parts().length);
+        edges = dog.applyTo(chart, 1);
+        assertEquals(1, edges.size());
+        chart.add(edges);
 
-            RuleEdge CAT = (RuleEdge)( MCMD.parts()[0] );
-            assertEquals("CAT", CAT.symbol());
-            assertEquals(1,     CAT.parts().length);
-            assertEquals("cat", CAT.parts()[0].symbol());
+        edges = test.applyTo(chart, 1);
+        assertEquals(1, edges.size());
+        
+        RuleEdge MCMD = (RuleEdge)( edges.get(0) );
+        assertEquals("maybe_CATs_maybe_DOGs", MCMD.symbol());
+        assertEquals(2,     MCMD.parts().length);
 
-            RuleEdge DOG = (RuleEdge)( MCMD.parts()[1] );
-            assertEquals("DOG", DOG.symbol());
-            assertEquals(1,     DOG.parts().length);
-            assertEquals("dog", DOG.parts()[0].symbol());
-        }
+        RuleEdge CAT = (RuleEdge)( MCMD.parts()[0] );
+        assertEquals("CAT", CAT.symbol());
+        assertEquals(1,     CAT.parts().length);
+        assertEquals("cat", CAT.parts()[0].symbol());
+
+        RuleEdge DOG = (RuleEdge)( MCMD.parts()[1] );
+        assertEquals("DOG", DOG.symbol());
+        assertEquals(1,     DOG.parts().length);
+        assertEquals("dog", DOG.parts()[0].symbol());
     }
     
     public void testPermutableParse() throws Exception 
@@ -542,13 +623,10 @@ public class ParserTest extends TestCase
         
         Parser p = new Parser(rules);
         
-        Edge[][] results = p.parseFor("cat dog", "must_CAT_must_DOG");
-        assertEquals(1, results.length);
+        List edges = p.parseFor("cat dog", "must_CAT_must_DOG");
+        assertEquals(1, edges.size());
         
-        Edge[] result = results[0];
-        assertEquals(1, result.length);
-        
-        Edge instance = result[0];
+        Edge instance = (Edge)( edges.get(0) );
         assertEquals("must_CAT_must_DOG", instance.symbol());
         
         Edge CAT = instance.part(0);
@@ -558,95 +636,95 @@ public class ParserTest extends TestCase
         assertEquals("DOG", DOG.symbol());
         
         String target = "must_CAT_must_DOG";
-        assertEquals(0, p.parseFor("",                target).length);
-        assertEquals(0, p.parseFor("dog",             target).length);
-        assertEquals(0, p.parseFor("cat",             target).length);
-        assertEquals(0, p.parseFor("cat cat",         target).length);
-        assertEquals(1, p.parseFor("cat dog",         target).length);
-        assertEquals(1, p.parseFor("dog cat",         target).length);
-        assertEquals(0, p.parseFor("dog dog",         target).length);
-        assertEquals(0, p.parseFor("cat cat cat",     target).length);
-        assertEquals(0, p.parseFor("cat cat dog",     target).length);
-        assertEquals(0, p.parseFor("cat dog cat",     target).length);
-        assertEquals(0, p.parseFor("dog cat dog",     target).length);
-        assertEquals(0, p.parseFor("dog dog dog",     target).length);
-        assertEquals(0, p.parseFor("cat cat dog dog", target).length);
-        assertEquals(0, p.parseFor("cat dog cat dog", target).length);
-        assertEquals(0, p.parseFor("cat dog dog cat", target).length);
-        assertEquals(0, p.parseFor("dog cat dog cat", target).length);
+        assertEquals(0, p.parseFor("",                target).size());
+        assertEquals(0, p.parseFor("dog",             target).size());
+        assertEquals(0, p.parseFor("cat",             target).size());
+        assertEquals(0, p.parseFor("cat cat",         target).size());
+        assertEquals(1, p.parseFor("cat dog",         target).size());
+        assertEquals(1, p.parseFor("dog cat",         target).size());
+        assertEquals(0, p.parseFor("dog dog",         target).size());
+        assertEquals(0, p.parseFor("cat cat cat",     target).size());
+        assertEquals(0, p.parseFor("cat cat dog",     target).size());
+        assertEquals(0, p.parseFor("cat dog cat",     target).size());
+        assertEquals(0, p.parseFor("dog cat dog",     target).size());
+        assertEquals(0, p.parseFor("dog dog dog",     target).size());
+        assertEquals(0, p.parseFor("cat cat dog dog", target).size());
+        assertEquals(0, p.parseFor("cat dog cat dog", target).size());
+        assertEquals(0, p.parseFor("cat dog dog cat", target).size());
+        assertEquals(0, p.parseFor("dog cat dog cat", target).size());
 
         target = "maybe_CAT_must_DOG";
-        assertEquals(0, p.parseFor("",                target).length);
-        assertEquals(1, p.parseFor("dog",             target).length);
-        assertEquals(0, p.parseFor("cat",             target).length);
-        assertEquals(0, p.parseFor("cat cat",         target).length);
-        assertEquals(1, p.parseFor("cat dog",         target).length);
-        assertEquals(1, p.parseFor("dog cat",         target).length);
-        assertEquals(0, p.parseFor("dog dog",         target).length);
-        assertEquals(0, p.parseFor("cat cat cat",     target).length);
-        assertEquals(0, p.parseFor("cat cat dog",     target).length);
-        assertEquals(0, p.parseFor("cat dog cat",     target).length);
-        assertEquals(0, p.parseFor("dog cat dog",     target).length);
-        assertEquals(0, p.parseFor("dog dog dog",     target).length);
-        assertEquals(0, p.parseFor("cat cat dog dog", target).length);
-        assertEquals(0, p.parseFor("cat dog cat dog", target).length);
-        assertEquals(0, p.parseFor("cat dog dog cat", target).length);
-        assertEquals(0, p.parseFor("dog cat dog cat", target).length);
+        assertEquals(0, p.parseFor("",                target).size());
+        assertEquals(1, p.parseFor("dog",             target).size());
+        assertEquals(0, p.parseFor("cat",             target).size());
+        assertEquals(0, p.parseFor("cat cat",         target).size());
+        assertEquals(1, p.parseFor("cat dog",         target).size());
+        assertEquals(1, p.parseFor("dog cat",         target).size());
+        assertEquals(0, p.parseFor("dog dog",         target).size());
+        assertEquals(0, p.parseFor("cat cat cat",     target).size());
+        assertEquals(0, p.parseFor("cat cat dog",     target).size());
+        assertEquals(0, p.parseFor("cat dog cat",     target).size());
+        assertEquals(0, p.parseFor("dog cat dog",     target).size());
+        assertEquals(0, p.parseFor("dog dog dog",     target).size());
+        assertEquals(0, p.parseFor("cat cat dog dog", target).size());
+        assertEquals(0, p.parseFor("cat dog cat dog", target).size());
+        assertEquals(0, p.parseFor("cat dog dog cat", target).size());
+        assertEquals(0, p.parseFor("dog cat dog cat", target).size());
 
         target = "maybe_CAT_maybe_DOG";
-        assertEquals(0, p.parseFor("",                target).length);
-        assertEquals(1, p.parseFor("dog",             target).length);
-        assertEquals(1, p.parseFor("cat",             target).length);
-        assertEquals(0, p.parseFor("cat cat",         target).length);
-        assertEquals(1, p.parseFor("cat dog",         target).length);
-        assertEquals(1, p.parseFor("dog cat",         target).length);
-        assertEquals(0, p.parseFor("dog dog",         target).length);
-        assertEquals(0, p.parseFor("cat cat cat",     target).length);
-        assertEquals(0, p.parseFor("cat cat dog",     target).length);
-        assertEquals(0, p.parseFor("cat dog cat",     target).length);
-        assertEquals(0, p.parseFor("dog cat dog",     target).length);
-        assertEquals(0, p.parseFor("dog dog dog",     target).length);
-        assertEquals(0, p.parseFor("cat cat dog dog", target).length);
-        assertEquals(0, p.parseFor("cat dog cat dog", target).length);
-        assertEquals(0, p.parseFor("cat dog dog cat", target).length);
-        assertEquals(0, p.parseFor("dog cat dog cat", target).length);
+        assertEquals(0, p.parseFor("",                target).size());
+        assertEquals(1, p.parseFor("dog",             target).size());
+        assertEquals(1, p.parseFor("cat",             target).size());
+        assertEquals(0, p.parseFor("cat cat",         target).size());
+        assertEquals(1, p.parseFor("cat dog",         target).size());
+        assertEquals(1, p.parseFor("dog cat",         target).size());
+        assertEquals(0, p.parseFor("dog dog",         target).size());
+        assertEquals(0, p.parseFor("cat cat cat",     target).size());
+        assertEquals(0, p.parseFor("cat cat dog",     target).size());
+        assertEquals(0, p.parseFor("cat dog cat",     target).size());
+        assertEquals(0, p.parseFor("dog cat dog",     target).size());
+        assertEquals(0, p.parseFor("dog dog dog",     target).size());
+        assertEquals(0, p.parseFor("cat cat dog dog", target).size());
+        assertEquals(0, p.parseFor("cat dog cat dog", target).size());
+        assertEquals(0, p.parseFor("cat dog dog cat", target).size());
+        assertEquals(0, p.parseFor("dog cat dog cat", target).size());
 
         target = "maybe_CATs_maybe_DOGs";
-        assertEquals(0, p.parseFor("",                target).length);
-        assertEquals(1, p.parseFor("dog",             target).length);
-        assertEquals(1, p.parseFor("cat",             target).length);
-        assertEquals(1, p.parseFor("cat cat",         target).length);
-        assertEquals(1, p.parseFor("cat dog",         target).length);
-        assertEquals(1, p.parseFor("dog cat",         target).length);
-        assertEquals(1, p.parseFor("dog dog",         target).length);
-        assertEquals(1, p.parseFor("cat cat cat",     target).length);
-        assertEquals(1, p.parseFor("cat cat dog",     target).length);
-        // assertEquals(1, p.parseFor("cat dog cat",     target).length);
-        // assertEquals(1, p.parseFor("dog cat dog",     target).length);
-        assertEquals(1, p.parseFor("dog dog cat",     target).length);
-        assertEquals(1, p.parseFor("dog dog dog",     target).length);
-        assertEquals(1, p.parseFor("cat cat dog dog", target).length);
-        //assertEquals(1, p.parseFor("cat dog cat dog", target).length);
-        //assertEquals(1, p.parseFor("cat dog dog cat", target).length);
-        //assertEquals(1, p.parseFor("dog cat dog cat", target).length);
+        assertEquals(0, p.parseFor("",                target).size());
+        assertEquals(1, p.parseFor("dog",             target).size());
+        assertEquals(1, p.parseFor("cat",             target).size());
+        assertEquals(1, p.parseFor("cat cat",         target).size());
+        assertEquals(1, p.parseFor("cat dog",         target).size());
+        assertEquals(1, p.parseFor("dog cat",         target).size());
+        assertEquals(1, p.parseFor("dog dog",         target).size());
+        assertEquals(1, p.parseFor("cat cat cat",     target).size());
+        assertEquals(1, p.parseFor("cat cat dog",     target).size());
+        // assertEquals(1, p.parseFor("cat dog cat",     target).size());
+        // assertEquals(1, p.parseFor("dog cat dog",     target).size());
+        assertEquals(1, p.parseFor("dog dog cat",     target).size());
+        assertEquals(1, p.parseFor("dog dog dog",     target).size());
+        assertEquals(1, p.parseFor("cat cat dog dog", target).size());
+        //assertEquals(1, p.parseFor("cat dog cat dog", target).size());
+        //assertEquals(1, p.parseFor("cat dog dog cat", target).size());
+        //assertEquals(1, p.parseFor("dog cat dog cat", target).size());
 
         target = "must_CATs_must_DOGs";
-        assertEquals(0, p.parseFor("",                target).length);
-        assertEquals(0, p.parseFor("dog",             target).length);
-        assertEquals(0, p.parseFor("cat",             target).length);
-        assertEquals(0, p.parseFor("cat cat",         target).length);
-        assertEquals(1, p.parseFor("cat dog",         target).length);
-        assertEquals(1, p.parseFor("dog cat",         target).length);
-        assertEquals(0, p.parseFor("dog dog",         target).length);
-        assertEquals(0, p.parseFor("cat cat cat",     target).length);
-        assertEquals(1, p.parseFor("cat cat dog",     target).length);
-        //assertEquals(1, p.parseFor("cat dog cat",     target).length);
-        //assertEquals(1, p.parseFor("dog cat dog",     target).length);
-        assertEquals(0, p.parseFor("dog dog dog",     target).length);
-        assertEquals(1, p.parseFor("cat cat dog dog", target).length);
-        //assertEquals(1, p.parseFor("cat dog cat dog", target).length);
-        //assertEquals(1, p.parseFor("cat dog dog cat", target).length);
-        //assertEquals(1, p.parseFor("dog cat dog cat", target).length);
+        assertEquals(0, p.parseFor("",                target).size());
+        assertEquals(0, p.parseFor("dog",             target).size());
+        assertEquals(0, p.parseFor("cat",             target).size());
+        assertEquals(0, p.parseFor("cat cat",         target).size());
+        assertEquals(1, p.parseFor("cat dog",         target).size());
+        assertEquals(1, p.parseFor("dog cat",         target).size());
+        assertEquals(0, p.parseFor("dog dog",         target).size());
+        assertEquals(0, p.parseFor("cat cat cat",     target).size());
+        assertEquals(1, p.parseFor("cat cat dog",     target).size());
+        //assertEquals(1, p.parseFor("cat dog cat",     target).size());
+        //assertEquals(1, p.parseFor("dog cat dog",     target).size());
+        assertEquals(0, p.parseFor("dog dog dog",     target).size());
+        assertEquals(1, p.parseFor("cat cat dog dog", target).size());
+        //assertEquals(1, p.parseFor("cat dog cat dog", target).size());
+        //assertEquals(1, p.parseFor("cat dog dog cat", target).size());
+        //assertEquals(1, p.parseFor("dog cat dog cat", target).size());
     }
 
     public void testSearchingParse() throws Exception 
@@ -663,13 +741,10 @@ public class ParserTest extends TestCase
         
         Parser p = new Parser(rules);
         
-        Edge[][] results = p.parseFor("cat dog", "must_CAT_must_DOG");
-        assertEquals(1, results.length);
+        List edges = p.parseFor("cat dog", "must_CAT_must_DOG");
+        assertEquals(1, edges.size());
         
-        Edge[] result = results[0];
-        assertEquals(1, result.length);
-        
-        Edge instance = result[0];
+        Edge instance = (Edge)( edges.get(0) );
         assertEquals("must_CAT_must_DOG", instance.symbol());
         
         Edge CAT = instance.part(0);
@@ -679,95 +754,95 @@ public class ParserTest extends TestCase
         assertEquals("DOG", DOG.symbol());
 
         String target = "must_CAT_must_DOG";
-        assertEquals(0, p.parseFor("",                target).length);
-        assertEquals(0, p.parseFor("dog",             target).length);
-        assertEquals(0, p.parseFor("cat",             target).length);
-        assertEquals(0, p.parseFor("cat cat",         target).length);
-        assertEquals(1, p.parseFor("cat dog",         target).length);
-        assertEquals(1, p.parseFor("dog cat",         target).length);
-        assertEquals(0, p.parseFor("dog dog",         target).length);
-        assertEquals(0, p.parseFor("cat cat cat",     target).length);
-        assertEquals(0, p.parseFor("cat cat dog",     target).length);
-        assertEquals(0, p.parseFor("cat dog cat",     target).length);
-        assertEquals(0, p.parseFor("dog cat dog",     target).length);
-        assertEquals(0, p.parseFor("dog dog dog",     target).length);
-        assertEquals(0, p.parseFor("cat cat dog dog", target).length);
-        assertEquals(0, p.parseFor("cat dog cat dog", target).length);
-        assertEquals(0, p.parseFor("cat dog dog cat", target).length);
-        assertEquals(0, p.parseFor("dog cat dog cat", target).length);
+        assertEquals(0, p.parseFor("",                target).size());
+        assertEquals(0, p.parseFor("dog",             target).size());
+        assertEquals(0, p.parseFor("cat",             target).size());
+        assertEquals(0, p.parseFor("cat cat",         target).size());
+        assertEquals(1, p.parseFor("cat dog",         target).size());
+        assertEquals(1, p.parseFor("dog cat",         target).size());
+        assertEquals(0, p.parseFor("dog dog",         target).size());
+        assertEquals(0, p.parseFor("cat cat cat",     target).size());
+        assertEquals(0, p.parseFor("cat cat dog",     target).size());
+        assertEquals(0, p.parseFor("cat dog cat",     target).size());
+        assertEquals(0, p.parseFor("dog cat dog",     target).size());
+        assertEquals(0, p.parseFor("dog dog dog",     target).size());
+        assertEquals(0, p.parseFor("cat cat dog dog", target).size());
+        assertEquals(0, p.parseFor("cat dog cat dog", target).size());
+        assertEquals(0, p.parseFor("cat dog dog cat", target).size());
+        assertEquals(0, p.parseFor("dog cat dog cat", target).size());
 
         target = "maybe_CAT_must_DOG";
-        assertEquals(0, p.parseFor("",                target).length);
-        assertEquals(1, p.parseFor("dog",             target).length);
-        assertEquals(0, p.parseFor("cat",             target).length);
-        assertEquals(0, p.parseFor("cat cat",         target).length);
-        assertEquals(1, p.parseFor("cat dog",         target).length);
-        assertEquals(1, p.parseFor("dog cat",         target).length);
-        assertEquals(0, p.parseFor("dog dog",         target).length);
-        assertEquals(0, p.parseFor("cat cat cat",     target).length);
-        assertEquals(0, p.parseFor("cat cat dog",     target).length);
-        assertEquals(0, p.parseFor("cat dog cat",     target).length);
-        assertEquals(0, p.parseFor("dog cat dog",     target).length);
-        assertEquals(0, p.parseFor("dog dog dog",     target).length);
-        assertEquals(0, p.parseFor("cat cat dog dog", target).length);
-        assertEquals(0, p.parseFor("cat dog cat dog", target).length);
-        assertEquals(0, p.parseFor("cat dog dog cat", target).length);
-        assertEquals(0, p.parseFor("dog cat dog cat", target).length);
+        assertEquals(0, p.parseFor("",                target).size());
+        assertEquals(1, p.parseFor("dog",             target).size());
+        assertEquals(0, p.parseFor("cat",             target).size());
+        assertEquals(0, p.parseFor("cat cat",         target).size());
+        assertEquals(1, p.parseFor("cat dog",         target).size());
+        assertEquals(1, p.parseFor("dog cat",         target).size());
+        assertEquals(0, p.parseFor("dog dog",         target).size());
+        assertEquals(0, p.parseFor("cat cat cat",     target).size());
+        assertEquals(0, p.parseFor("cat cat dog",     target).size());
+        assertEquals(0, p.parseFor("cat dog cat",     target).size());
+        assertEquals(0, p.parseFor("dog cat dog",     target).size());
+        assertEquals(0, p.parseFor("dog dog dog",     target).size());
+        assertEquals(0, p.parseFor("cat cat dog dog", target).size());
+        assertEquals(0, p.parseFor("cat dog cat dog", target).size());
+        assertEquals(0, p.parseFor("cat dog dog cat", target).size());
+        assertEquals(0, p.parseFor("dog cat dog cat", target).size());
 
         target = "maybe_CAT_maybe_DOG";
-        assertEquals(0, p.parseFor("",                target).length);
-        assertEquals(1, p.parseFor("dog",             target).length);
-        assertEquals(1, p.parseFor("cat",             target).length);
-        assertEquals(0, p.parseFor("cat cat",         target).length);
-        assertEquals(1, p.parseFor("cat dog",         target).length);
-        assertEquals(1, p.parseFor("dog cat",         target).length);
-        assertEquals(0, p.parseFor("dog dog",         target).length);
-        assertEquals(0, p.parseFor("cat cat cat",     target).length);
-        assertEquals(0, p.parseFor("cat cat dog",     target).length);
-        assertEquals(0, p.parseFor("cat dog cat",     target).length);
-        assertEquals(0, p.parseFor("dog cat dog",     target).length);
-        assertEquals(0, p.parseFor("dog dog dog",     target).length);
-        assertEquals(0, p.parseFor("cat cat dog dog", target).length);
-        assertEquals(0, p.parseFor("cat dog cat dog", target).length);
-        assertEquals(0, p.parseFor("cat dog dog cat", target).length);
-        assertEquals(0, p.parseFor("dog cat dog cat", target).length);
+        assertEquals(0, p.parseFor("",                target).size());
+        assertEquals(1, p.parseFor("dog",             target).size());
+        assertEquals(1, p.parseFor("cat",             target).size());
+        assertEquals(0, p.parseFor("cat cat",         target).size());
+        assertEquals(1, p.parseFor("cat dog",         target).size());
+        assertEquals(1, p.parseFor("dog cat",         target).size());
+        assertEquals(0, p.parseFor("dog dog",         target).size());
+        assertEquals(0, p.parseFor("cat cat cat",     target).size());
+        assertEquals(0, p.parseFor("cat cat dog",     target).size());
+        assertEquals(0, p.parseFor("cat dog cat",     target).size());
+        assertEquals(0, p.parseFor("dog cat dog",     target).size());
+        assertEquals(0, p.parseFor("dog dog dog",     target).size());
+        assertEquals(0, p.parseFor("cat cat dog dog", target).size());
+        assertEquals(0, p.parseFor("cat dog cat dog", target).size());
+        assertEquals(0, p.parseFor("cat dog dog cat", target).size());
+        assertEquals(0, p.parseFor("dog cat dog cat", target).size());
 
         target = "maybe_CATs_maybe_DOGs";
-        assertEquals(0, p.parseFor("",                target).length);
-        assertEquals(1, p.parseFor("dog",             target).length);
-        assertEquals(1, p.parseFor("cat",             target).length);
-        assertEquals(1, p.parseFor("cat cat",         target).length);
-        assertEquals(1, p.parseFor("cat dog",         target).length);
-        assertEquals(1, p.parseFor("dog cat",         target).length);
-        assertEquals(1, p.parseFor("dog dog",         target).length);
-        assertEquals(1, p.parseFor("cat cat cat",     target).length);
-        assertEquals(1, p.parseFor("cat cat dog",     target).length);
-        assertEquals(1, p.parseFor("cat dog cat",     target).length);
-        assertEquals(1, p.parseFor("dog cat dog",     target).length);
-        assertEquals(1, p.parseFor("dog dog cat",     target).length);
-        assertEquals(1, p.parseFor("dog dog dog",     target).length);
-        assertEquals(1, p.parseFor("cat cat dog dog", target).length);
-        assertEquals(1, p.parseFor("cat dog cat dog", target).length);
-        assertEquals(1, p.parseFor("cat dog dog cat", target).length);
-        assertEquals(1, p.parseFor("dog cat dog cat", target).length);
+        assertEquals(0, p.parseFor("",                target).size());
+        assertEquals(1, p.parseFor("dog",             target).size());
+        assertEquals(1, p.parseFor("cat",             target).size());
+        assertEquals(1, p.parseFor("cat cat",         target).size());
+        assertEquals(1, p.parseFor("cat dog",         target).size());
+        assertEquals(1, p.parseFor("dog cat",         target).size());
+        assertEquals(1, p.parseFor("dog dog",         target).size());
+        assertEquals(1, p.parseFor("cat cat cat",     target).size());
+        assertEquals(1, p.parseFor("cat cat dog",     target).size());
+        assertEquals(1, p.parseFor("cat dog cat",     target).size());
+        assertEquals(1, p.parseFor("dog cat dog",     target).size());
+        assertEquals(1, p.parseFor("dog dog cat",     target).size());
+        assertEquals(1, p.parseFor("dog dog dog",     target).size());
+        assertEquals(1, p.parseFor("cat cat dog dog", target).size());
+        assertEquals(1, p.parseFor("cat dog cat dog", target).size());
+        assertEquals(1, p.parseFor("cat dog dog cat", target).size());
+        assertEquals(1, p.parseFor("dog cat dog cat", target).size());
 
         target = "must_CATs_must_DOGs";
-        assertEquals(0, p.parseFor("",                target).length);
-        assertEquals(0, p.parseFor("dog",             target).length);
-        assertEquals(0, p.parseFor("cat",             target).length);
-        assertEquals(0, p.parseFor("cat cat",         target).length);
-        assertEquals(1, p.parseFor("cat dog",         target).length);
-        assertEquals(1, p.parseFor("dog cat",         target).length);
-        assertEquals(0, p.parseFor("dog dog",         target).length);
-        assertEquals(0, p.parseFor("cat cat cat",     target).length);
-        assertEquals(1, p.parseFor("cat cat dog",     target).length);
-        assertEquals(1, p.parseFor("cat dog cat",     target).length);
-        assertEquals(1, p.parseFor("dog cat dog",     target).length);
-        assertEquals(0, p.parseFor("dog dog dog",     target).length);
-        assertEquals(1, p.parseFor("cat cat dog dog", target).length);
-        assertEquals(1, p.parseFor("cat dog cat dog", target).length);
-        assertEquals(1, p.parseFor("cat dog dog cat", target).length);
-        assertEquals(1, p.parseFor("dog cat dog cat", target).length);
+        assertEquals(0, p.parseFor("",                target).size());
+        assertEquals(0, p.parseFor("dog",             target).size());
+        assertEquals(0, p.parseFor("cat",             target).size());
+        assertEquals(0, p.parseFor("cat cat",         target).size());
+        assertEquals(1, p.parseFor("cat dog",         target).size());
+        assertEquals(1, p.parseFor("dog cat",         target).size());
+        assertEquals(0, p.parseFor("dog dog",         target).size());
+        assertEquals(0, p.parseFor("cat cat cat",     target).size());
+        assertEquals(1, p.parseFor("cat cat dog",     target).size());
+        assertEquals(1, p.parseFor("cat dog cat",     target).size());
+        assertEquals(1, p.parseFor("dog cat dog",     target).size());
+        assertEquals(0, p.parseFor("dog dog dog",     target).size());
+        assertEquals(1, p.parseFor("cat cat dog dog", target).size());
+        assertEquals(1, p.parseFor("cat dog cat dog", target).size());
+        assertEquals(1, p.parseFor("cat dog dog cat", target).size());
+        assertEquals(1, p.parseFor("dog cat dog cat", target).size());
     }
 
     /*
@@ -795,7 +870,7 @@ public class ParserTest extends TestCase
     /**
      * Asserts equality (equivalence) between two Instances, 
      * either Rules or Words
-     * @param a The first Instance (expected)
+     * @param a The first  Instance (expected)
      * @param b The second Instance (actual)
      */
     void assertEquals(Edge a, Edge b)
@@ -891,12 +966,10 @@ public class ParserTest extends TestCase
     public void testParseEnglishExample_1_1_a()  
     {        
         Parser p = new Parser(english);
-        Edge[][] results = p.parseFor("the man saw the woman", "SENTENCE");
+        List edges = p.parseFor("the man saw the woman", "SENTENCE");
+        assertEquals(1, edges.size());
         
-        assertEquals(1, results.length);
-        Edge[] result = results[0];
-        
-        Edge SENTENCE = result[0];
+        Edge SENTENCE = (Edge)( edges.get(0) );
         assertEquals("SENTENCE", SENTENCE.symbol());
         
         Edge CLAUSE = SENTENCE.part(0);
@@ -943,10 +1016,10 @@ public class ParserTest extends TestCase
             new RuleEdge(english[5], new RuleEdge[]{
                     new RuleEdge(english[4], new RuleEdge[]{
                             new RuleEdge(english[0], new WordEdge[]{
-                                    new WordEdge("the", english[0].part(0))
+                                    new WordEdge("the", 0, english[0].part(0))
                             }, english[4].part(0)),
                             new RuleEdge(english[1], new WordEdge[]{
-                                    new WordEdge("man", english[1].part(0))
+                                    new WordEdge("man", 1, english[1].part(0))
                             }, english[4].part(1))
                     }, english[5].part(0))
         }, english[7].part(0));
@@ -955,10 +1028,10 @@ public class ParserTest extends TestCase
             new RuleEdge(english[6], new RuleEdge[]{
                     new RuleEdge(english[4], new RuleEdge[]{
                             new RuleEdge(english[0], new WordEdge[]{
-                                    new WordEdge("the", english[0].part(0))
+                                    new WordEdge("the", 3, english[0].part(0))
                             }, english[4].part(0)),
                             new RuleEdge(english[2], new WordEdge[]{
-                                    new WordEdge("woman", english[2].part(0))
+                                    new WordEdge("woman", 4, english[2].part(0))
                             }, english[4].part(1))
                     }, english[6].part(0))
         }, english[7].part(2));
@@ -971,14 +1044,14 @@ public class ParserTest extends TestCase
                                         actor,
                                         new RuleEdge(english[3], 
                                                 new WordEdge[]{
-                                                new WordEdge("saw", 
+                                                new WordEdge("saw", 2,
                                                         english[3].part(0))
                                         }, english[7].part(1)),
                                         undergoer
                                 }, english[8].part(0))
                         }, english[9].part(0))
                 }),
-                results[0][0]
+                (Edge)( edges.get(0) )
         );
     }
     
@@ -1030,9 +1103,10 @@ public class ParserTest extends TestCase
         return new RuleEdge(rule, new Edge[]{i1, i2, i3});
     }
 
-    private RuleEdge newRuleInstance(Rule rule, String s1)
+    private RuleEdge newRuleInstance(Rule rule, int pos, String s1)
     {
-        Edge i1 = new WordEdge(s1, rule.part(0));
+        assertEquals(s1, rule.part(0).symbol());
+        Edge i1 = new WordEdge(s1, pos, rule.part(0));
         return new RuleEdge(rule, new Edge[]{i1});
     }
 
@@ -1063,7 +1137,7 @@ public class ParserTest extends TestCase
     throws AlreadyBoundException
     {        
         Parser p = new Parser(english);
-        Edge[][] results = p.parseFor("the woman saw the man", "SENTENCE");
+        List edges = p.parseFor("the woman saw the man", "SENTENCE");
         
         RuleEdge actor = newRuleInstance
         (
@@ -1071,12 +1145,8 @@ public class ParserTest extends TestCase
                 newRuleInstance
                 (
                         english[4], 
-                        new RuleEdge(english[0], new WordEdge[]{
-                                new WordEdge("the", english[0].part(0))
-                        }),
-                        new RuleEdge(english[2], new WordEdge[]{
-                                new WordEdge("woman", english[2].part(0))
-                        })
+                        newRuleInstance(english[0], 0, "the"),
+                        newRuleInstance(english[2], 1, "woman")
                 )
         );
 
@@ -1086,8 +1156,8 @@ public class ParserTest extends TestCase
                 newRuleInstance
                 (
                         english[4], 
-                        newRuleInstance(english[0], "the"),
-                        newRuleInstance(english[1], "man")
+                        newRuleInstance(english[0], 3, "the"),
+                        newRuleInstance(english[1], 4, "man")
                 )
         );
 
@@ -1102,12 +1172,12 @@ public class ParserTest extends TestCase
                                 (
                                         english[7],
                                         actor,
-                                        newRuleInstance(english[3], "saw"), 
+                                        newRuleInstance(english[3], 2, "saw"), 
                                         undergoer
                                 )
                         )
                 ),
-                results[0][0]
+                (Edge)( edges.get(0) )
         );
     }
 
@@ -1141,8 +1211,8 @@ public class ParserTest extends TestCase
             newRuleInstance
             (
                     dyirbal[9], 
-                    newRuleInstance(dyirbal[1], "bangul"),
-                    newRuleInstance(dyirbal[5], "yara-ngu")
+                    newRuleInstance(dyirbal[1], 0, "bangul"),
+                    newRuleInstance(dyirbal[5], 0, "yara-ngu")
             )
     );
 
@@ -1152,8 +1222,8 @@ public class ParserTest extends TestCase
             newRuleInstance
             (
                     dyirbal[12], 
-                    newRuleInstance(dyirbal[0], "balan"),
-                    newRuleInstance(dyirbal[6], "dugumbil")
+                    newRuleInstance(dyirbal[0], 0, "balan"),
+                    newRuleInstance(dyirbal[6], 0, "dugumbil")
             )
     );
 
@@ -1163,8 +1233,8 @@ public class ParserTest extends TestCase
             newRuleInstance
             (
                     dyirbal[11], 
-                    newRuleInstance(dyirbal[3], "bayi"),
-                    newRuleInstance(dyirbal[4], "yara")
+                    newRuleInstance(dyirbal[3], 0, "bayi"),
+                    newRuleInstance(dyirbal[4], 0, "yara")
             )
     );
 
@@ -1174,12 +1244,12 @@ public class ParserTest extends TestCase
             newRuleInstance
             (
                     dyirbal[10], 
-                    newRuleInstance(dyirbal[2], "bangun"),
-                    newRuleInstance(dyirbal[7], "dugumbi-ru")
+                    newRuleInstance(dyirbal[2], 0, "bangun"),
+                    newRuleInstance(dyirbal[7], 0, "dugumbi-ru")
             )
     );
 
-    RuleEdge dyirbal_verb_see = newRuleInstance(dyirbal[8], "buran");
+    RuleEdge dyirbal_verb_see = newRuleInstance(dyirbal[8], 0, "buran");
 
     RuleEdge dyirbal_SENTENCE_CORE(RuleEdge core)
     {
@@ -1197,22 +1267,13 @@ public class ParserTest extends TestCase
     private void doParseDyirbalExample(String input, RuleEdge example)
     {
         Parser p = new Parser(dyirbal);
-        Edge[][] results = p.parseFor(input, "SENTENCE");
-        if (results.length == 0)
-        {
-            assertTrue("Parse failed: '"+input+"'", false);
-        }
-        if (results.length > 1)
-        {
-            assertEquals("Ambiguous parse: '"+input+"'", 1, results.length);
-        }
-        assertEquals(1, results.length);
-        assertEquals(1, results[0].length);
+        List edges = p.parseFor(input, "SENTENCE");
+        assertEquals(input, 1, edges.size());
 
         assertEquals
         (
                 dyirbal_SENTENCE_CORE(example),
-                results[0][0]
+                (Edge)( edges.get(0) )
         );
     }
     
@@ -1409,13 +1470,11 @@ public class ParserTest extends TestCase
     public void testParseHebrewGenesis2_8()  
     {        
         Parser p = new Parser(hebrew);
-        Edge[][] results = p.parseFor(
+        List edges = p.parseFor(
             "W NV<[ JHWH/ >LHJM/ GN/ B <DN=/ MN QDM/", "CLAUSE", false);
-        assertEquals(1, results.length);
+        assertEquals(1, edges.size());
 
-        Edge[] result = results[0];
-        assertEquals(1, result.length);
-        Edge CLAUSE = result[0];
+        Edge CLAUSE = (Edge)( edges.get(0) );
         
         assertEquals("{CLAUSE {CLM {CONJ \"W\"}} " +
                 "{CORE " +

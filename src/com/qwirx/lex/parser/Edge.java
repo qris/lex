@@ -28,4 +28,6 @@ public interface Edge
     
     Edge getBoundCopy();
     Edge getUnboundCopy();
+    
+    boolean isAt(int pos);
 }

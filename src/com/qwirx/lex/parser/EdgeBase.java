@@ -70,6 +70,7 @@ public abstract class EdgeBase implements Edge
      * @param a The first Instance (expected)
      * @param b The second Instance (actual)
      */
+    /*
     public boolean equals(Object object)
     {
         Edge other = (Edge)object;
@@ -141,4 +142,5 @@ public abstract class EdgeBase implements Edge
     
         return true;
     }
+    */
 }
