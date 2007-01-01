@@ -5,6 +5,7 @@
  */
 package com.qwirx.lex;
 
+import java.util.ArrayList;
 import java.util.Hashtable;
 import java.util.Iterator;
 import java.util.List;
@@ -14,6 +15,7 @@ import junit.framework.TestCase;
 
 import com.qwirx.lex.parser.Chart;
 import com.qwirx.lex.parser.Edge;
+import com.qwirx.lex.parser.MorphEdge;
 import com.qwirx.lex.parser.Parser;
 import com.qwirx.lex.parser.Rule;
 import com.qwirx.lex.parser.RuleEdge;
@@ -1444,7 +1446,7 @@ public class ParserTest extends TestCase
     // and planted yahweh god      garden in eden    from east
     // and he planted Yahweh God a garden in Eden from [the] east
     
-    Rule [] hebrew = new Rule[] {
+    Rule [] hebrewCons = new Rule[] {
         Rule.makeFromString(1,  "CONJ",    "W"),
         Rule.makeFromString(2,  "V",       "NV<["),
         Rule.makeFromString(3,  "Nprop",   "JHWH/"),
@@ -1467,11 +1469,11 @@ public class ParserTest extends TestCase
         Rule.makeFromString(20, "CLAUSE",  "{CLM} {CORE} {PERIPH}"),
     };
 
-    public void testParseHebrewGenesis2_8()  
+    public void testParseHebrewConsGenesis2_8()  
     {        
-        Parser p = new Parser(hebrew);
+        Parser p = new Parser(hebrewCons);
         List edges = p.parseFor(
-            "W NV<[ JHWH/ >LHJM/ GN/ B <DN=/ MN QDM/", "CLAUSE", false);
+            "W NV<[ JHWH/ >LHJM/ GN/ B <DN=/ MN QDM/", "CLAUSE");
         assertEquals(1, edges.size());
 
         Edge CLAUSE = (Edge)( edges.get(0) );
@@ -1486,6 +1488,106 @@ public class ParserTest extends TestCase
                 "{PP {NUC {PRED {P \"B\"}}} {NP {Nprop \"<DN=/\"}}} " +
                 "{PP {NUC {PRED {P \"MN\"}}} {NP {Nprop \"QDM/\"}}}" +
                 "}}", CLAUSE.toString());
+    }
+
+    // Gen 02,08
+    //
+    // WA-  | J.I-  | Ø-    | V.A62<- | Ø     | J:HW@94H- | Ø         
+    // CONJ | V/TNS | V/STM | V/LEX   | V/PGN | N/PROP    | N/GNS  
+    //
+    // >:ELOH- | I91Jm | G.An&- | Ø     | B.:- | <;73DEn- | Ø     
+    // N/PROP  | N/GNS | N/COM  | N/GNS | P    | N/PROP   | N/GNS 
+    //
+    // MI- | Q.E92DEm- | Ø
+    // P   | N/PROP    | N/GNS
+    //
+    // Expected output:
+    // | SENTENCE                                                                                                |
+    // | CLAUSE                                                                                                  |
+    // | CLM  | CORE                                                       | PERIPH                              |
+    // |      | NUC                       | ARG            | ARG           | PP               | PP               |
+    // |      | CORE/V                    | NP             | NP            | NUC/P   | NP     | NUC/P   | NP     |
+    // |      | OPT | IGN | NUC/V | ARG/V |                |               | PRED/P  |        | PRED/P  |        |
+    // | CONJ | TNS | STM | LEX   | PGN   | N/PROP | N/GNS | N/COM | N/GNS | P       | N/PROP | P       | N/PROP |
+    
+    Rule [] hebrewQuest = new Rule[] {
+        Rule.makeFromString(0,  "CLM",     "{CONJ}"),
+        Rule.makeFromString(1,  "OPT",     "{V/TNS}"),
+        Rule.makeFromString(2,  "IGN",     "{V/STM}"),
+        Rule.makeFromString(3,  "NUC/V",   "{V/LEX}"),
+        Rule.makeFromString(4,  "ARG/V",   "{V/PGN}"),
+        Rule.makeFromString(5,  "CORE/V",  "{OPT} {IGN} {NUC/V} {ARG/V}"),
+        Rule.makeFromString(5,  "N/PROP",  "{HEAD/NPROP} {MARK/N}"),
+        Rule.makeFromString(5,  "N/COM",   "{HEAD/NCOM} {MARK/N}"),
+        Rule.makeFromString(6,  "NP",      "{N/PROP}+"),
+        Rule.makeFromString(7,  "NP",      "{N/COM}"),
+        Rule.makeFromString(8,  "PRED/P",  "{P}"),
+        Rule.makeFromString(9,  "NUC/P",   "{PRED/P}"),
+        Rule.makeFromString(10, "NUC",     "{CORE/V}"),
+        Rule.makeFromString(11, "ARG",     "{NP}"),
+        Rule.makeFromString(12, "PP",      "{NUC/P} {NP}"),
+        Rule.makeFromString(14, "CORE",    "{NUC} {ARG} {ARG}"),
+        Rule.makeFromString(15, "PERIPH",  "{PP}*"),
+        Rule.makeFromString(16, "CLAUSE",  "{CLM} {CORE} {PERIPH}"),
+        Rule.makeFromString(17, "SENTENCE","{CLAUSE}"),
+    };
+
+    public void testParseHebrewQuestGenesis2_8()  
+    {        
+        Parser p = new Parser(hebrewQuest);
+        
+        List input = new ArrayList();
+        
+        input.add(new MorphEdge("CONJ",   "WA-",      0)); 
+        input.add(new MorphEdge("V/TNS",  "J.I",      1)); 
+        input.add(new MorphEdge("V/STM",  "",         2)); 
+        input.add(new MorphEdge("V/LEX",  "V.A62<",   3)); 
+        input.add(new MorphEdge("V/PGN",  "",         4)); 
+        input.add(new MorphEdge("HEAD/NPROP", "J:HW@94H", 5)); 
+        input.add(new MorphEdge("MARK/N",  "",         6)); 
+        input.add(new MorphEdge("HEAD/NPROP", ">:ELOH",   7)); 
+        input.add(new MorphEdge("MARK/N",  "I91Jm",    8)); 
+        input.add(new MorphEdge("HEAD/NCOM",  "G.An&-",   9)); 
+        input.add(new MorphEdge("MARK/N",  "",         10)); 
+        input.add(new MorphEdge("P",      "B.:-",     11)); 
+        input.add(new MorphEdge("HEAD/NPROP", "<;73DEn",  12)); 
+        input.add(new MorphEdge("MARK/N",  "",         13)); 
+        input.add(new MorphEdge("P",      "MI-",      14)); 
+        input.add(new MorphEdge("HEAD/NPROP", "Q.E92DEm", 15)); 
+        input.add(new MorphEdge("MARK/N",  "",         16)); 
+        
+        p.setVerbose(true);
+        List edges = p.parseFor(input, "SENTENCE");
+        assertEquals(1, edges.size());
+
+        Edge CLAUSE = (Edge)( edges.get(0) );
+        
+        assertEquals("{SENTENCE " +
+            "{CLAUSE {CLM {CONJ \"WA-\"}} " +
+            "{CORE " +
+            "{NUC {CORE/V " +
+            "{OPT {V/TNS \"J.I\"}} " +
+            "{IGN {V/STM \"\"}} " +
+            "{NUC/V {V/LEX \"V.A62<\"}} " +
+            "{ARG/V {V/PGN \"\"}}" +
+            "}} " +
+            "{ARG {NP " +
+            "{N/PROP {HEAD/NPROP \"J:HW@94H\"} {MARK/N \"\"}} " +
+            "{N/PROP {HEAD/NPROP \">:ELOH\"} {MARK/N \"I91Jm\"}}" +
+            "}} " +
+            "{ARG {NP " +
+            "{N/COM {HEAD/NCOM \"G.An&-\"} {MARK/N \"\"}}" +
+            "}}} " +
+            "{PERIPH " +
+            "{PP " +
+            "{NUC/P {PRED/P {P \"B.:-\"}}} " +
+            "{NP {N/PROP {HEAD/NPROP \"<;73DEn\"} {MARK/N \"\"}}}" +
+            "} " +
+            "{PP " +
+            "{NUC/P {PRED/P {P \"MI-\"}}} " +
+            "{NP {N/PROP {HEAD/NPROP \"Q.E92DEm\"} {MARK/N \"\"}}}" +
+            "}" +
+            "}}}", CLAUSE.toString());
     }
 
 	public static void main(String[] args) 
