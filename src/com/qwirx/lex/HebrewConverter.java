@@ -328,6 +328,7 @@ public class HebrewConverter
             else if (substr.matches(":A.*"))
             {
                 output.append("ă");
+                i++;
             }
             else if (c == 'A')
             {
