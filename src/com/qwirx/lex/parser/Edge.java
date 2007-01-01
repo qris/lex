@@ -9,6 +9,7 @@ package com.qwirx.lex.parser;
 import java.util.Map;
 import java.util.Vector;
 
+import com.qwirx.lex.TreeNode;
 import com.qwirx.lex.parser.EdgeBase.AlreadyBoundException;
 
 public interface Edge
@@ -31,4 +32,5 @@ public interface Edge
     
     boolean isAt(int pos);
     boolean includes(Edge other);
+    TreeNode toTree();
 }

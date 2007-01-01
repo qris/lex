@@ -7,11 +7,11 @@
 package com.qwirx.lex.parser;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Vector;
 
 import com.qwirx.lex.ImmutableMap;
+import com.qwirx.lex.TreeNode;
 
 public class WordEdge extends EdgeBase
 {
@@ -110,5 +110,9 @@ public class WordEdge extends EdgeBase
         WordEdge w = (WordEdge)other;
         return this.surface.equals(w.surface) &&
         this.m_Position == w.m_Position;
+    }
+    public TreeNode toTree()
+    {
+        return new TreeNode(surface);
     }
 }

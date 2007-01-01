@@ -13,7 +13,9 @@ import java.util.Map;
 import java.util.Vector;
 import java.util.Map.Entry;
 
+import com.qwirx.lex.HebrewConverter;
 import com.qwirx.lex.ImmutableMap;
+import com.qwirx.lex.TreeNode;
 
 public class MorphEdge extends EdgeBase
 {
@@ -97,5 +99,13 @@ public class MorphEdge extends EdgeBase
         return this.m_Surface.equals(m.m_Surface) &&
             this.m_Symbol.equals(m.m_Symbol) &&
             this.m_Position == m.m_Position;
+    }
+    
+    public TreeNode toTree()
+    {
+        TreeNode morph = new TreeNode(m_Symbol);
+        morph.createChild(HebrewConverter.toHtml(
+            HebrewConverter.toTranslit(m_Surface)));
+        return morph;
     }
 }

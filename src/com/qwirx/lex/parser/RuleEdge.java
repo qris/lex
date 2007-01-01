@@ -12,6 +12,9 @@ import java.util.Map;
 import java.util.Vector;
 import java.util.Map.Entry;
 
+import com.qwirx.lex.HebrewConverter;
+import com.qwirx.lex.TreeNode;
+
 public class RuleEdge extends EdgeBase implements Cloneable
 {
 	private final Edge [] parts;
@@ -353,5 +356,14 @@ public class RuleEdge extends EdgeBase implements Cloneable
         }
         
         return false;
+    }
+    public TreeNode toTree()
+    {
+        TreeNode mine = new TreeNode(symbol());
+        for (int i = 0; i < parts.length; i++)
+        {
+            mine.add(parts[i].toTree());
+        }
+        return mine;
     }
 }
