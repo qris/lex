@@ -56,15 +56,22 @@ public class Parser
     {
 		this.rules = rules;
 	}
-	
-	public Chart parse(String input) 
+    
+    private boolean m_Verbose = false;
+    
+    public void setVerbose(boolean verbose)
     {
-		String[] words = input.split(" ");
-        Chart chart = new Chart(words.length);
-		
-		for (int i = 0; i < words.length; i++) 
+        m_Verbose = verbose;
+    }
+	
+	public Chart parse(List input) 
+    {
+        Chart chart = new Chart(input.size());
+        
+		for (int i = 0; i < input.size(); i++)
         {
-            chart.add(new WordEdge(words[i], i));
+            Edge inputEdge = (Edge)( input.get(i) );
+            chart.add(inputEdge);
             
 			for (int r = 0; r < rules.length; r++) 
             {
@@ -81,35 +88,15 @@ public class Parser
 			}
 		}
 
-		System.out.println("Parse finished.");
+        if (m_Verbose)
+        {
+            System.out.println("Parse finished.");
+        }
         
         return chart;
 	}
 
-    public List parseFor(String input, String goal)
-    {
-        return parseFor(input, goal, false);
-    }
-    
-    /*
-    private String getStringFromArray(Object [] array)
-    {
-        StringBuffer sb = new StringBuffer();
-        
-        for (int i = 0; i < array.length; i++)
-        {
-            sb.append(array[i]);
-            if (i < array.length - 1)
-            {
-                sb.append(" ");
-            }
-        }
-        
-        return sb.toString();
-    }
-    */
-
-	public List parseFor(String input, String goal, boolean verbose) 
+	public List parseFor(List input, String goal) 
     {
 		Chart chart = parse(input);
 		
@@ -121,7 +108,7 @@ public class Parser
             Edge edge = (Edge)( i.next() );
             if (! edge.symbol().equals(goal))
             {
-                if (verbose)
+                if (m_Verbose)
                 {
                     System.out.println("Rejected non-goal edge: " + edge);
                 }   
@@ -142,7 +129,7 @@ public class Parser
             
             if (hasHoles)
             {
-                if (verbose)
+                if (m_Verbose)
                 {
                     System.out.println("Rejected edge with holes: " + edge);
                 }   
@@ -151,7 +138,7 @@ public class Parser
             
    			goals.add(edge);
 
-            if (verbose)
+            if (m_Verbose)
             {
                 System.out.println("Accepted edge: " + edge);
             }   
@@ -159,4 +146,17 @@ public class Parser
 		
 		return goals;
 	}
+
+    public List parseFor(String input, String goal) 
+    {
+        List edges = new ArrayList();
+        String[] words = input.split(" ");
+        
+        for (int i = 0; i < words.length; i++) 
+        {
+            edges.add(new WordEdge(words[i], i));
+        }
+        
+        return parseFor(edges, goal);
+    }
 }
