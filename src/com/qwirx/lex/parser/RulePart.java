@@ -156,7 +156,7 @@ public class RulePart
             String symbolToMatch = symbol(); 
             String symbolOnStackName = instance.symbol();
             
-            if (! (instance instanceof RuleEdge)) 
+            if (instance instanceof WordEdge) 
             {
                 m_log.debug
                 (
