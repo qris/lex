@@ -1498,23 +1498,23 @@ public class ParserTest extends TestCase
         Rule.makeFromString(3,  "NUC/V",   "{V/LEX}"),
         Rule.makeFromString(4,  "ARG/V",   "{V/PGN}"),
         Rule.makeFromString(5,  "CORE/V",  "{OPT} {IGN} {NUC/V} {ARG/V}"),
-        Rule.makeFromString(5,  "N/PROP",  "{HEAD/NPROP} {MARK/N}"),
-        Rule.makeFromString(5,  "N/COM",   "{HEAD/NCOM} {MARK/N}"),
-        Rule.makeFromString(6,  "NP",      "{P} {DET} {N/COM}"),
-        Rule.makeFromString(6,  "NP",      "{N/PROP}+"),
-        Rule.makeFromString(7,  "NP",      "{N/COM}"),
-        Rule.makeFromString(6,  "NP",      "{NP} {CONJ} {NP}"),
-        Rule.makeFromString(8,  "PRED/P",  "{P}"),
-        Rule.makeFromString(9,  "NUC/P",   "{PRED/P}"),
-        Rule.makeFromString(10, "NUC",     "{CORE/V}"),
-        Rule.makeFromString(11, "ARG",     "{NP}"),
-        Rule.makeFromString(12, "CORE/P",  "{NUC/P} {NP}"),
-        Rule.makeFromString(12, "PP",      "{CORE/P}"),
-        Rule.makeFromString(12, "PreCS",   "{PP}"),
-        Rule.makeFromString(14, "CORE",    "{NUC} {ARG} {ARG}"),
-        Rule.makeFromString(15, "PERIPH",  "{PP}*"),
-        Rule.makeFromString(16, "CLAUSE",  "{CLM}? {PreCS}? {CORE} {PERIPH}?"),
-        Rule.makeFromString(17, "SENTENCE","{CLAUSE}"),
+        Rule.makeFromString(6,  "N/PROP",  "{HEAD/NPROP} {MARK/N}"),
+        Rule.makeFromString(7,  "N/COM",   "{HEAD/NCOM} {MARK/N}"),
+        Rule.makeFromString(8,  "NP",      "{P} {DET} {N/COM}"),
+        Rule.makeFromString(9,  "NP",      "{N/PROP}+"),
+        Rule.makeFromString(10, "NP",      "{N/COM}"),
+        Rule.makeFromString(11, "NP",      "{NP} {CONJ} {NP}"),
+        Rule.makeFromString(12, "PRED/P",  "{P}"),
+        Rule.makeFromString(13, "NUC/P",   "{PRED/P}"),
+        Rule.makeFromString(14, "NUC",     "{CORE/V}"),
+        Rule.makeFromString(15, "ARG",     "{NP}"),
+        Rule.makeFromString(16, "CORE/P",  "{NUC/P} {NP}"),
+        Rule.makeFromString(17, "PP",      "{CORE/P}"),
+        Rule.makeFromString(18, "PreCS",   "{PP}"),
+        Rule.makeFromString(19, "CORE",    "{NUC} {ARG} {ARG}"),
+        Rule.makeFromString(20, "PERIPH",  "{PP}*"),
+        Rule.makeFromString(21, "CLAUSE",  "{CLM}? {PreCS}? {CORE} {PERIPH}?"),
+        Rule.makeFromString(22, "SENTENCE","{CLAUSE}"),
     };
 
     // Gen 02,08
@@ -1543,23 +1543,23 @@ public class ParserTest extends TestCase
         
         List input = new ArrayList();
         
-        input.add(new MorphEdge("CONJ",   "WA-",      0)); 
-        input.add(new MorphEdge("V/TNS",  "J.I",      1)); 
-        input.add(new MorphEdge("V/STM",  "",         2)); 
-        input.add(new MorphEdge("V/LEX",  "V.A62<",   3)); 
-        input.add(new MorphEdge("V/PGN",  "",         4)); 
+        input.add(new MorphEdge("CONJ",       "WA-",      0)); 
+        input.add(new MorphEdge("V/TNS",      "J.I",      1)); 
+        input.add(new MorphEdge("V/STM",      "",         2)); 
+        input.add(new MorphEdge("V/LEX",      "V.A62<",   3)); 
+        input.add(new MorphEdge("V/PGN",      "",         4)); 
         input.add(new MorphEdge("HEAD/NPROP", "J:HW@94H", 5)); 
-        input.add(new MorphEdge("MARK/N",  "",         6)); 
+        input.add(new MorphEdge("MARK/N",     "",         6)); 
         input.add(new MorphEdge("HEAD/NPROP", ">:ELOH",   7)); 
-        input.add(new MorphEdge("MARK/N",  "I91Jm",    8)); 
-        input.add(new MorphEdge("HEAD/NCOM",  "G.An&",   9)); 
-        input.add(new MorphEdge("MARK/N",  "",         10)); 
-        input.add(new MorphEdge("P",      "B.:-",     11)); 
+        input.add(new MorphEdge("MARK/N",     "I91Jm",    8)); 
+        input.add(new MorphEdge("HEAD/NCOM",  "G.An&",    9)); 
+        input.add(new MorphEdge("MARK/N",     "",         10)); 
+        input.add(new MorphEdge("P",          "B.:-",     11)); 
         input.add(new MorphEdge("HEAD/NPROP", "<;73DEn",  12)); 
-        input.add(new MorphEdge("MARK/N",  "",         13)); 
-        input.add(new MorphEdge("P",      "MI-",      14)); 
+        input.add(new MorphEdge("MARK/N",     "",         13)); 
+        input.add(new MorphEdge("P",          "MI-",      14)); 
         input.add(new MorphEdge("HEAD/NPROP", "Q.E92DEm", 15)); 
-        input.add(new MorphEdge("MARK/N",  "",         16)); 
+        input.add(new MorphEdge("MARK/N",     "",         16)); 
         
         p.setVerbose(true);
         List edges = p.parseFor(input, "SENTENCE");
