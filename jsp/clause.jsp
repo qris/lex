@@ -256,25 +256,24 @@
 
 						HebrewFeatureConverter hfc = 
 							new HebrewFeatureConverter(root, word, hebrewText);
-
+						
 						String person = (String)persons.get(
 							word.getEMdFValue("person").toString());
 						if      (person.equals("pers_first"))  person = "1";
 						else if (person.equals("pers_second")) person = "2";
 						else if (person.equals("pers_third"))  person = "3";
-
-													
+						
 						String gender = ((String)genders.get(
 							word.getEMdFValue("gender").toString()
 							)).substring(0, 1);
-								
+						
 						String number = ((String)numbers.get(
 							word.getEMdFValue("number").toString()
 							)).substring(0, 1);
-
+						
 						String state = (String)states.get(
 							word.getEMdFValue("state").toString());
-
+						
 						String gloss = word.getEMdFValue("wordnet_gloss")
 							.getString();
 						
