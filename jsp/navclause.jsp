@@ -16,17 +16,22 @@
 	
 	{
 		Integer sessionBookNum = (Integer)( session.getAttribute("bookNum") );
-		if (sessionBookNum != null) {
+		if (sessionBookNum != null) 
+		{
 			selBookNum = sessionBookNum.intValue();
 		}
 	}
 	
-	try { 
+	try 
+	{ 
 		int newBookNum = Integer.parseInt(request.getParameter("book"));
 		selBookNum = newBookNum;
-	} catch (Exception e) { /* ignore it and use default book */ }
+	} 
+	catch (Exception e) { /* ignore it and use default book */ }
 	
 	{
+		Map books = emdros.getEnumerationConstants("book_name_t",false);
+
 		boolean foundBook = false;
 	
 		Sheaf bookSheaf = emdros.getSheaf
@@ -57,7 +62,7 @@
 			%> value="<%= 
 				book.getEMdFValue("book_number").getInt() 
 			%>"><%= 
-				book.getEMdFValue("book").toString()
+				books.get(book.getEMdFValue("book").toString())
 			%><%
 		}
 
