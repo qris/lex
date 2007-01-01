@@ -66,7 +66,7 @@ public class Parser
 	
 	public Chart parse(List input) 
     {
-        Chart chart = new Chart(input.size());
+        Chart chart = new Chart();
         
 		for (int i = 0; i < input.size(); i++)
         {
@@ -118,21 +118,23 @@ public class Parser
             
             boolean hasHoles = false;
             
-            for (int j = 0; j < chart.getWidth(); j++)
+            for (Iterator j = input.iterator(); j.hasNext(); )
             {
-                if (! edge.isAt(j))
+                Edge other = (Edge)( j.next() );
+                if (!edge.includes(other))
                 {
                     hasHoles = true;
+                    if (m_Verbose)
+                    {
+                        System.out.println("Rejected edge: " + edge +
+                            ": does not contain " + other);
+                    }
                     break;
                 }
             }
             
             if (hasHoles)
             {
-                if (m_Verbose)
-                {
-                    System.out.println("Rejected edge with holes: " + edge);
-                }   
                 continue;
             }
             

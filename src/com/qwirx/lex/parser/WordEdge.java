@@ -104,4 +104,11 @@ public class WordEdge extends EdgeBase
     {
         return m_Position == position;
     }
+    public boolean includes(Edge other)
+    {
+        if (!(other instanceof WordEdge)) return false;
+        WordEdge w = (WordEdge)other;
+        return this.surface.equals(w.surface) &&
+        this.m_Position == w.m_Position;
+    }
 }

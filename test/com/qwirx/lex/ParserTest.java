@@ -46,7 +46,7 @@ public class ParserTest extends TestCase
     
     public void testAddToChart()
     {
-        Chart chart = new Chart(2);
+        Chart chart = new Chart();
         List edges = chart.getEdges();
         assertEquals(0, edges.size());
         
@@ -76,7 +76,7 @@ public class ParserTest extends TestCase
     
     public void testApplyRuleToChartReturnsEdge()
     {
-        Chart chart = new Chart(2);
+        Chart chart = new Chart();
         chart.add(new WordEdge("the", 0));
         chart.add(new WordEdge("cat", 1));
         Rule r1 = Rule.makeFromString(1, "DET", "the");
@@ -313,6 +313,7 @@ public class ParserTest extends TestCase
 		};
 		
 		Parser p = new Parser(rules);
+        p.setVerbose(true);
 		List results = p.parseFor("the cat sat on the mat by the door", "SENTENCE");
 		
 		assertEquals(1, results.size());
@@ -577,7 +578,7 @@ public class ParserTest extends TestCase
         Rule dog = Rule.makeFromString(2, "DOG", "dog");
         Rule test = Rule.makeFromString(3, "maybe_CATs_maybe_DOGs", "# {CAT}* {DOG}*");
         
-        Chart chart = new Chart(2);
+        Chart chart = new Chart();
         chart.add(new RuleEdge(cat, new Edge[]{
             new WordEdge("cat", 0, cat.part(0))
         }));

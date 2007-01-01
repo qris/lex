@@ -554,8 +554,7 @@ public class Rule
             
             // check that the edge doesn't overlap any previously chosen ones
             boolean overlaps = false;
-            for (int j = rightmostEmptyPos + 1; 
-                j < m_CurrentChart.getWidth(); j++)
+            for (int j = rightmostEmptyPos + 1; j < m_PositionsUsed.length; j++)
             {
                 if (edge.isAt(j))
                 {

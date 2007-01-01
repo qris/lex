@@ -90,4 +90,12 @@ public class MorphEdge extends EdgeBase
     {
         return m_Position == position;
     }
+    public boolean includes(Edge other)
+    {
+        if (!(other instanceof MorphEdge)) return false;
+        MorphEdge m = (MorphEdge)other;
+        return this.m_Surface.equals(m.m_Surface) &&
+            this.m_Symbol.equals(m.m_Symbol) &&
+            this.m_Position == m.m_Position;
+    }
 }

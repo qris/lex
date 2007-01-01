@@ -30,4 +30,5 @@ public interface Edge
     Edge getUnboundCopy();
     
     boolean isAt(int pos);
+    boolean includes(Edge other);
 }
