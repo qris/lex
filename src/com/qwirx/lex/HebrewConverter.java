@@ -78,7 +78,8 @@ public class HebrewConverter
             else if (c == '#') { output.append("\u05e9"); } // S/hin with no dot
             else if (c == 'D') { output.append("\u05d3"); } // Dalet
             else if (c == 'E') { output.append("\u05b6"); } // Segol
-            else if (c == 'F') { output.append("\u05e9"); } // 05c2 // Shin, Sin Dotelse if (c == 'G') { output.append("\u05d2"); } // Gimel
+            else if (c == 'F') { output.append("\u05e9"); } // 05c2 // Shin, Sin Dot
+            else if (c == 'G') { output.append("\u05d2"); } // Gimel
             else if (c == 'H') { output.append("\u05d4"); } // He
             else if (c == 'I') { output.append("\u05b4"); } // Hiriq
             else if (c == 'J') { output.append("\u05d9"); } // Yod
