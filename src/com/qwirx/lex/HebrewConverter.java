@@ -21,22 +21,41 @@ package com.qwirx.lex;
 
 public class HebrewConverter
 {
-    public static String convert(String input)
+    public static String toHtml(String input)
     {
         StringBuffer output = new StringBuffer();
         
-        for (int i = 0; i < output.length();)
+        for (int i = 0; i < input.length(); i++)
         {
-            char c  = input.charAt(i++);
-            char c2 = input.charAt(i);
-            String substr = input.substring(i, i + 2);
+            char c = input.charAt(i);
+            if (c >= 0x80)
+            {
+                output.append("&#" + (int)c + ";");
+            }
+            else
+            {
+                output.append(c);
+            }
+        }
+        
+        return output.toString();
+    }
+    
+    public static String toHebrew(String input)
+    {
+        StringBuffer output = new StringBuffer();
+        
+        for (int i = 0; i < input.length(); i++)
+        {
+            char c = input.charAt(i);
+            String substr = input.substring(i);
             
             if      (c == '.') { output.append("\u05bc"); } // Dagesh 
             else if (c == ',') { output.append("\u05bf"); } // Rafe
             
             else if (c == ':') 
             {
-                i++;
+                char c2 = input.charAt(++i);
                 if      (c2 == '@') { output.append("\u05b3"); } // Hataph Qamets
                 else if (c2 == 'A') { output.append("\u05b2"); } // Hataph Patah
                 else if (c2 == 'E') { output.append("\u05b1"); } // Hataph Segol
@@ -83,7 +102,7 @@ public class HebrewConverter
 
             else if (c == '0')
             {
-                i++;
+                char c2 = input.charAt(++i);
                 if      (c2 == '0') { output.append("\u05c3"); } // sof pasuq (handled in script)
                 else if (c2 == '1') { output.append("\u0592"); } // segol
                 else if (c2 == '2') { output.append("\u05ae"); } // zarqa; tsinnor
@@ -95,7 +114,7 @@ public class HebrewConverter
             
             else if (c == '1')
             {
-                i++;
+                char c2 = input.charAt(++i);
                 if      (c2 == '0') { output.append("\u059a"); } // yetiv
                 else if (c2 == '1') { output.append("\u059d"); } // geresh muqdam
                 else if (c2 == '3') { output.append("\u05ad"); } // dechi
@@ -103,23 +122,31 @@ public class HebrewConverter
                 else { throw new IllegalArgumentException(substr); }
             }
             
-            else if (c == '2' && c2 == '4')
-            { i++; output.append("\u05a9"); } // tlisha qtana
+            else if (c == '2')
+            {
+                char c2 = input.charAt(++i);
+                if (c2 == '4') { output.append("\u05a9"); } // tlisha qtana
+                else { throw new IllegalArgumentException(substr); }
+            }
             
             else if (c == '3')
             {
-                i++;
+                char c2 = input.charAt(++i);
                 if      (c2 == '3') { output.append("\u05a8"); } // pashta
                 else if (c2 == '5') { output.append("\u05bd"); } // meteg (between)
                 else { throw new IllegalArgumentException(substr); }
             }
             
-            else if (c == '4' && c2 == '4') 
-            { i++; output.append("\u05a0"); } // tlisha gdola
+            else if (c == '4')
+            {
+                char c2 = input.charAt(++i);
+                if (c2 == '4') { output.append("\u05a0"); } // tlisha gdola
+                else { throw new IllegalArgumentException(substr); }
+            }
             
             else if (c == '6')
             {
-                i++;
+                char c2 = input.charAt(++i);
                 if      (c2 == '0') { output.append("\u05ab"); } // ole
                 else if (c2 == '1') { output.append("\u059c"); } // geresh
                 else if (c2 == '2') { output.append("\u059e"); } // gershayim
@@ -131,19 +158,19 @@ public class HebrewConverter
             
             else if (c == '7')
             {
-                i++;
+                char c2 = input.charAt(++i);
                 if      (c2 == '0') { output.append("\u05a4"); } // mahpakh
                 else if (c2 == '1') { output.append("\u05a5"); } // merkha; yored
                 else if (c2 == '2') { output.append("\u05a6"); } // merkha khfula
                 else if (c2 == '3') { output.append("\u0596"); } // tipcha; m�ayla; tarcha
                 else if (c2 == '4') { output.append("\u05a3"); } // munnach
                 else if (c2 == '5') { output.append("\u05bd"); } // meteg, silluq (standard=left)
-                else { throw new IllegalArgumentException(substr); }
+                else { throw new IllegalArgumentException(c + c2 + " / " + substr); }
             }
             
             else if (c == '8')
             {
-                i++;
+                char c2 = input.charAt(++i);
                 if      (c2 == '0') { output.append("\u0594"); } // zaqef qatan
                 else if (c2 == '1') { output.append("\u0597"); } // revia
                 else if (c2 == '2') { output.append("\u0598"); } // tsinnorit
@@ -155,6 +182,7 @@ public class HebrewConverter
             
             else if (c == '9')
             {
+                char c2 = input.charAt(++i);
                 if      (c2 == '1') { output.append("\u059b"); } // tvir
                 else if (c2 == '2') { output.append("\u0591"); } // atnach
                 else if (c2 == '3') { output.append("\u05aa"); } // galgal; atnach hafukh
@@ -176,7 +204,7 @@ public class HebrewConverter
 
             else if (c == '5')
             {
-                i++;
+                char c2 = input.charAt(++i);
                 if      (c2 == '2') { output.append("\u05c4"); } // Puncta Extraordinaria above (not a revia!)
                 else if (c2 == '3') { output.append("\u0323"); } // Puncta Extraordinaria below; Ps 27:13 only
                 else { throw new IllegalArgumentException(substr); }
@@ -195,6 +223,175 @@ public class HebrewConverter
             else
             {
                 throw new IllegalArgumentException(substr);
+            }
+        }
+        
+        return output.toString();
+    }
+    
+    public static String toTranslit(String input)
+    {
+        StringBuffer output = new StringBuffer();
+
+        input = input.replaceAll("\\d\\d", "").toUpperCase();
+        
+        for (int i = 0; i < input.length(); i++)
+        {
+            String substr = input.substring(i);
+            char c = input.charAt(i);
+            
+            if (substr.matches("[BGDKPT]\\.[@AEIOUW;:].*"))
+            {
+                output.append(substr.substring(0, 1).toLowerCase());
+                i++; // skip the dagesh (.)
+            }
+            else if (substr.matches("[BCDFGJKLMNPQSTVWYZ]\\..*"))
+            {
+                if (c == 'W')
+                {
+                    output.append("ū");
+                }
+                else if (c == 'V')
+                {
+                    output.append("ťť");
+                    
+                }
+                else if (c == 'Y')
+                {
+                    output.append("tsts");
+                }
+                else if (c == 'F')
+                {
+                    output.append("śś");
+                }
+                else if (c == 'C')
+                {
+                    output.append("shsh");
+                }
+                else
+                {
+                    String s = "" + c + c;
+                    output.append(s.toLowerCase());
+                }
+                
+                i++; // skip the dagesh (.)
+            }
+            else if (c == '>')
+            {
+                output.append("?");
+            }
+            else if (c == 'B')
+            {
+                output.append("v");
+            }
+            else if (c == 'X')
+            {
+                output.append("ħ");
+            }
+            else if (c == 'V')
+            {
+                output.append("ť");
+            }
+            else if (c == '<')
+            {
+                output.append("¿");
+            }
+            else if (c == 'Y')
+            {
+                output.append("ts");
+            }
+            else if (c == 'F')
+            {
+                output.append("ś");
+            }
+            else if (c == 'C')
+            {
+                output.append("sh");
+            }
+            else if (c == '@')
+            {
+                output.append("ā");
+            }
+            else if (c == 'G' || c == 'D' || c == 'H' || c == 'W' ||
+                c == 'Z' || c == 'J' || c == 'K' || c == 'L' || c == 'M' ||
+                c == 'N' || c == 'S' || c == 'P' || c == 'Q' || c == 'R' ||
+                c == 'T')
+            {
+                output.append(("" + c).toLowerCase());
+            }
+            else if (substr.matches("A:.*"))
+            {
+                output.append("ă");
+            }
+            else if (c == 'A')
+            {
+                output.append("a");
+            }
+            else if (substr.matches("O:.*"))
+            {
+                output.append("ŏ");
+                i++;
+            }
+            else if (substr.matches("OW.*"))
+            {
+                output.append("ô");
+                i++;
+            }
+            else if (c == 'O')
+            {
+                output.append("ō");
+            }
+            else if (c == ';')
+            {
+                output.append("ē");
+            }
+            else if (substr.matches("E:.*"))
+            {
+                output.append("ĕ");
+                i++;
+            }
+            else if (c == 'E')
+            {
+                output.append("e");
+            }
+            else if (c == 'U')
+            {
+                output.append("u");
+            }
+            else if (substr.matches("IY.*"))
+            {
+                output.append("î");
+                i++;
+            }
+            else if (c == 'I')
+            {
+                output.append("i");
+            }
+            else if (c == ':')
+            {
+                output.append("ə");
+            }
+            
+            /* not sure about these */
+            else if (c == '&') { } // Maqaf
+            else if (c == '-') { output.append("-"); } // Word continues
+            else if (c == '_') { } // space
+            else if (c == '|') { } // Nun Inversum 
+            // (note that this is artificually produced from N by 
+            // wit2utf8.py:get_suffix_and_form_stripped_of_suffix
+            else if (c == '*') { } // asterisk indicates Qere/Ketiv
+            else if (c == '[') { } // Don't know function
+            else if (c == '!') { } // Don't know function
+            else if (c == '+') { } // Don't know function
+            else if (c == '=') { } // Don't know function
+            else if (c == ']') { } // Don't know function
+            else if (c == '~') { } // Don't know function
+            else if (c == '2') { } // Don't know function
+            else if (c == '/') { } // Geresh? (That's a guess)
+
+            else
+            {
+                throw new AssertionError("Unknown code: "+substr);
             }
         }
         
