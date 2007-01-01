@@ -46,6 +46,11 @@
 		text-align: center;
 	}
 	div.topmenu a.clause_jsp <%@ include file="hilite.inc" %>
+	td.hebrew
+	{
+		font-size: x-large;
+		font-family: Doulos SIL, serif;
+	}
 </style>
 <body onLoad="enableEditButton()">
 
@@ -84,6 +89,24 @@
 	Map verbal_stems = emdros.getEnumerationConstants
 		("verbal_stem_t",false);
 
+	Map persons = emdros.getEnumerationConstants
+		("person_t",false);
+
+	Map numbers = emdros.getEnumerationConstants
+		("number_t",false);
+
+	Map genders = emdros.getEnumerationConstants
+		("gender_t",false);
+
+	Map states = emdros.getEnumerationConstants
+		("state_t",false);
+
+	Map tenses = emdros.getEnumerationConstants
+		("verbal_tense_t",false);
+
+	Map stems = emdros.getEnumerationConstants
+		("verbal_stem_t",false);
+
 	int clauseId = selClauseId;
 
 	if (request.getParameter("savearg") != null)
@@ -118,12 +141,29 @@
 		"       GET logical_struct_id, logical_structure "+
 		"        [phrase GET phrase_type, function, argument_name, "+
 		"                    type_id, macrorole_number "+
-		"          [word GET lexeme, pdpsp, verbal_stem, wordnet_gloss, "+
-		"                    wordnet_synset]"+
+		"          [word GET lexeme, pdpsp, verbal_stem, verbal_tense, " +
+		"                    wordnet_gloss, wordnet_synset, " +
+		"                    graphical_preformative, " +
+		"                    graphical_locative, " +
+		"                    graphical_lexeme, " +
+		"                    graphical_pron_suffix, " +
+		"                    graphical_verbal_ending, " +
+		"                    graphical_root_formation, " +
+		"                    graphical_nominal_ending, " +
+		"                    person, number, gender, state " +
+		"          ]"+
 		"        ]"+
 		"      ]"
 	);
 
+	class BorderTableRenderer extends TableRenderer
+	{
+	    public String getTable(String contents)
+	    {
+	        return "<table class=\"tree\" border>" + contents + "</table>\n";
+	    }
+	}
+	
 	MatchedObject clause = null;
 	{
 		SheafConstIterator sci = sheaf.const_iterator();
@@ -144,45 +184,143 @@
 	} 
 	else 
 	{
+		OntologyDb ontology = Lex.getOntologyDb();
+		
 		String predicate_text = "";
-
+		
 		/* Prescan to find the predicate lexeme */
+		
 		{
-			SheafConstIterator phrases = clause.getSheaf().const_iterator();
-	
-			while (phrases.hasNext()) 
+			TreeNode root = new TreeNode("root");
+
 			{
-				MatchedObject phrase =
-					phrases.next().const_iterator().next();
+				SheafConstIterator phrases = clause.getSheaf().const_iterator();
 	
-				String function_name = (String)( phrase_functions.get(
-					phrase.getEMdFValue("function").toString())
-				);
-	
-				if (function_name == null)
-					continue;
-					
-				if (! function_name.equals("Pred"))
-					continue;
-	
-				SheafConstIterator words = phrase.getSheaf().const_iterator();
-				while (words.hasNext()) 
+				while (phrases.hasNext()) 
 				{
-					MatchedObject word =
-						words.next().const_iterator().next();
-					
-					String psp = (String)( parts_of_speech.get(
-						word.getEMdFValue("pdpsp").toString()) 
+					MatchedObject phrase =
+						phrases.next().const_iterator().next();
+	
+					String function_name = (String)( phrase_functions.get(
+						phrase.getEMdFValue("function").toString())
 					);
+	
+					SheafConstIterator words = phrase.getSheaf().const_iterator();
+					while (words.hasNext()) 
+					{
+						MatchedObject word = words.next().const_iterator().next();
+	
+						String psp = (String)( parts_of_speech.get(
+							word.getEMdFValue("pdpsp").toString()) 
+						);
 						
-					if (! psp.equals("verb"))
-						continue;
-					
-					predicate_text = word.getEMdFValue("lexeme").getString();
+						class HebrewFeatureConverter
+						{
+							private TreeNode m_root;
+							private MatchedObject m_word;
+							public HebrewFeatureConverter(TreeNode root,
+								MatchedObject word)
+							{
+								m_root = root;
+								m_word = word;
+							}
+							public void convert(String surface, String desc)
+							{
+								String raw  = m_word.getEMdFValue(surface).getString();
+
+								String hebrew = HebrewConverter.toHebrew(raw);
+								hebrew = HebrewConverter.toHtml(hebrew);
+								if (hebrew.equals("")) hebrew = "&oslash;";
+								TreeNode node = m_root.createChild(hebrew, "hebrew");
+
+								String translit = HebrewConverter.toTranslit(raw);
+								translit = HebrewConverter.toHtml(translit);
+								node = node.createChild(translit);
+
+								node = node.createChild(raw);
+								node.createChild(desc);
+							}
+						}
+
+						HebrewFeatureConverter hfc = 
+							new HebrewFeatureConverter(root, word);
+
+						String person = (String)persons.get(
+							word.getEMdFValue("person").toString());
+						if      (person.equals("pers_first"))  person = "1";
+						else if (person.equals("pers_second")) person = "2";
+						else if (person.equals("pers_third"))  person = "3";
+
+													
+						String gender = ((String)genders.get(
+							word.getEMdFValue("gender").toString()
+							)).substring(0, 1);
+								
+						String number = ((String)numbers.get(
+							word.getEMdFValue("number").toString()
+							)).substring(0, 1);
+
+						String state = (String)states.get(
+							word.getEMdFValue("state").toString());
+
+						String gloss = word.getEMdFValue("wordnet_gloss")
+							.getString();
+						
+						if (gloss.equals(""))
+						{
+							String lexeme = word.getEMdFValue("lexeme")
+								.getString();
+								
+							OntologyDb.OntologyEntry entry = 
+								ontology.getWordByLexeme(lexeme);
+								
+							if (entry != null)
+							{
+								gloss = entry.m_EnglishGloss;
+							}
+							else
+							{
+								gloss = null;
+							}
+						}
+	
+						if (psp.equals("verb"))
+						{
+							hfc.convert("graphical_preformative",
+								(String)tenses.get(word
+								.getEMdFValue("verbal_tense").toString()));
+							hfc.convert("graphical_root_formation",
+								(String)stems.get(word
+								.getEMdFValue("verbal_stem").toString()));
+							hfc.convert("graphical_lexeme", gloss);
+							hfc.convert("graphical_verbal_ending",
+								person + gender + number);
+						}
+						else if (psp.equals("noun")
+							|| psp.equals("proper_noun"))
+						{
+							hfc.convert("graphical_lexeme", gloss);
+							hfc.convert("graphical_nominal_ending",
+								gender + number + "." + state);
+						}
+						else
+						{
+							hfc.convert("graphical_lexeme", psp);
+						}							
+						
+						if (function_name != null && function_name.equals("Pred")
+							&& psp.equals("verb"))
+						{
+							predicate_text = 
+								word.getEMdFValue("lexeme").getString();
+						}
+					}
 				}
 			}
-		}
 		
+			%><%= root.toHtml(new BorderTableRenderer()) %><%
+		}
+			
 		/*
 		%>
 		<p>Predicate text is: <%= 
@@ -291,8 +429,6 @@
 		
 		DataType [] types = DataType.getAll();
 		Hashtable variables = new Hashtable();
-		
-		OntologyDb ontology = Lex.getOntologyDb();
 		
 		%>
 		<p>
@@ -1268,14 +1404,6 @@
 			TreeNode other = periphery.createChild("");
 			other.add(phraseNode);
 		}
-	}
-	
-	class BorderTableRenderer extends TableRenderer
-	{
-	    public String getTable(String contents)
-	    {
-	        return "<table class=\"tree\" border>" + contents + "</table>";
-	    }
 	}
 	
 %>
