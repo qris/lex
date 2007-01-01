@@ -4,15 +4,15 @@ public class TableRenderer
 {
     public String getTable(String contents)
     {
-        return "<table>" + contents + "</table>";
+        return "<table>" + contents + "</table>\n";
     }
 
     public String getRow(String contents)
     {
-        return "<tr>" + contents + "</tr>";
+        return "  <tr>" + contents + "</tr>\n";
     }
     
-    public String getCell(String contents, int width, int height)
+    public String getCell(String contents, String clazz, int width, int height)
     {
     	if (width  < 1) { return "bad width"; }
     	if (height < 1) { return "bad height"; }
@@ -28,8 +28,15 @@ public class TableRenderer
         {
             rowspan = " rowspan=\"" + height + "\"";
         }
-
-        return "<td"+colspan+rowspan+">" + contents + "</td>";
+        
+        String classString = "";
+        if (clazz != null)
+        {
+            classString = " class=\"" + clazz + "\"";
+        }
+        
+        return "    <td"+colspan+rowspan+classString+">" + 
+            contents + "</td>\n";
     }    
 
     private void assert(boolean condition) throws AssertionError
