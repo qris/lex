@@ -254,26 +254,29 @@ public class HebrewConverter
             }
             else if (substr.matches("[BCDFGJKLMNPQSTVWYZ]\\..*"))
             {
-                if (c == 'W')
+                if (c == 'C')
                 {
-                    output.append("ū");
-                }
-                else if (c == 'V')
-                {
-                    output.append("ťť");
-                    
-                }
-                else if (c == 'Y')
-                {
-                    output.append("tsts");
+                    output.append("šš");
                 }
                 else if (c == 'F')
                 {
                     output.append("śś");
                 }
-                else if (c == 'C')
+                else if (c == 'J')
                 {
-                    output.append("shsh");
+                    output.append("yy");
+                }
+                else if (c == 'V')
+                {
+                    output.append("ťť");
+                }
+                else if (c == 'W')
+                {
+                    output.append("ū");
+                }
+                else if (c == 'Y')
+                {
+                    output.append("tsts");
                 }
                 else
                 {
@@ -293,7 +296,7 @@ public class HebrewConverter
             }
             else if (c == 'X')
             {
-                output.append("ħ");
+                output.append("x");
             }
             else if (c == 'V')
             {
@@ -303,9 +306,13 @@ public class HebrewConverter
             {
                 output.append("¿");
             }
+            else if (c == 'P')
+            {
+                output.append("f");
+            }
             else if (c == 'Y')
             {
-                output.append("ts");
+                output.append("c");
             }
             else if (c == 'F')
             {
@@ -313,16 +320,16 @@ public class HebrewConverter
             }
             else if (c == 'C')
             {
-                output.append("sh");
+                output.append("š");
             }
             else if (c == '@')
             {
                 output.append("ā");
             }
-            else if (c == 'G' || c == 'D' || c == 'H' || c == 'W' ||
-                c == 'Z' || c == 'J' || c == 'K' || c == 'L' || c == 'M' ||
-                c == 'N' || c == 'S' || c == 'P' || c == 'Q' || c == 'R' ||
-                c == 'T')
+            else if (c == 'D' || c == 'G' || c == 'H' || 
+                c == 'J' || c == 'K' || c == 'L' || c == 'M' ||
+                c == 'N' || c == 'Q' || c == 'R' || c == 'S' || 
+                c == 'T' || c == 'W' || c == 'Z')
             {
                 output.append(("" + c).toLowerCase());
             }
