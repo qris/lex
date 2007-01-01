@@ -14,6 +14,7 @@
 	SqlDatabase    sql     = Lex.getSqlDatabase   (userhost);
 	EmdrosDatabase emdros  = Lex.getEmdrosDatabase(username, hostname);
 	int min_m = emdros.getMinM(), max_m = emdros.getMaxM();
+	int real_min_m = min_m, real_max_m = max_m;
 	
 	String userTextAccess = emdros.getVisibleMonadString();
 	
