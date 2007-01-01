@@ -28,20 +28,22 @@ public class Parser
 	
 	public Parser(SqlDatabase db) throws DatabaseException, SQLException 
     {
-		Vector ruleV = new Vector();
+		List rules = new ArrayList();
 		
 		try 
         {
 			db.prepareSelect(
-					"SELECT ID,Symbol,Lexeme FROM lexicon_entries");
+					"SELECT ID,Symbol,Lexeme FROM lexicon_entries " +
+                    "WHERE Symbol IS NOT NULL " +
+                    "AND   Lexeme IS NOT NULL");
 			ResultSet rs = db.select();
 			while (rs.next()) 
             {
 				int    id    = rs.getInt(1);
 				String left  = rs.getString(2);
 				String right = rs.getString(3);
-				Rule r = Rule.makeFromString(id, left, right);
-				ruleV.add(r);
+                Rule r = Rule.makeFromString(id, left, right);
+                rules.add(r);
 			}
 		} 
         finally 
@@ -49,7 +51,7 @@ public class Parser
 			db.finish();
 		}
 		
-		this.rules = (Rule[])( ruleV.toArray(new Rule[0]) );
+		this.rules = (Rule[])( rules.toArray(new Rule[0]) );
 	}
 	
 	public Parser(Rule[] rules) 
