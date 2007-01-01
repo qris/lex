@@ -46,7 +46,7 @@
 		text-align: center;
 	}
 	div.topmenu a.clause_jsp <%@ include file="hilite.inc" %>
-	td.hebrew
+	span.hebrew
 	{
 		font-size: x-large;
 		font-family: Doulos SIL, serif;
@@ -187,6 +187,7 @@
 		OntologyDb ontology = Lex.getOntologyDb();
 		
 		String predicate_text = "";
+		StringBuffer hebrewText = new StringBuffer();
 		
 		/* Prescan to find the predicate lexeme */
 		
@@ -218,24 +219,29 @@
 						{
 							private TreeNode m_root;
 							private MatchedObject m_word;
+							private StringBuffer m_hebrew;
+							
 							public HebrewFeatureConverter(TreeNode root,
-								MatchedObject word)
+								MatchedObject word, StringBuffer hebrew)
 							{
-								m_root = root;
-								m_word = word;
+								m_root   = root;
+								m_word   = word;
+								m_hebrew = hebrew;
 							}
-							public void convert(String surface, String desc)
+							
+							public void convert(String surface, 
+								boolean lastMorpheme, String desc)
 							{
 								String raw  = m_word.getEMdFValue(surface).getString();
 
 								String hebrew = HebrewConverter.toHebrew(raw);
-								hebrew = HebrewConverter.toHtml(hebrew);
-								if (hebrew.equals("")) hebrew = "&oslash;";
-								TreeNode node = m_root.createChild(hebrew, "hebrew");
+								m_hebrew.append(hebrew);
 
 								String translit = HebrewConverter.toTranslit(raw);
 								translit = HebrewConverter.toHtml(translit);
-								node = node.createChild(translit);
+								if (translit.equals("")) translit = "&Oslash;";
+								if (!lastMorpheme) translit += "-";
+								TreeNode node = m_root.createChild(translit);
 
 								node = node.createChild(raw);
 								node.createChild(desc);
@@ -243,7 +249,7 @@
 						}
 
 						HebrewFeatureConverter hfc = 
-							new HebrewFeatureConverter(root, word);
+							new HebrewFeatureConverter(root, word, hebrewText);
 
 						String person = (String)persons.get(
 							word.getEMdFValue("person").toString());
@@ -286,27 +292,29 @@
 	
 						if (psp.equals("verb"))
 						{
-							hfc.convert("graphical_preformative",
+							hfc.convert("graphical_preformative", false,
 								(String)tenses.get(word
 								.getEMdFValue("verbal_tense").toString()));
-							hfc.convert("graphical_root_formation",
+							hfc.convert("graphical_root_formation", false,
 								(String)stems.get(word
 								.getEMdFValue("verbal_stem").toString()));
-							hfc.convert("graphical_lexeme", gloss);
-							hfc.convert("graphical_verbal_ending",
+							hfc.convert("graphical_lexeme", false, gloss);
+							hfc.convert("graphical_verbal_ending", true,
 								person + gender + number);
 						}
 						else if (psp.equals("noun")
 							|| psp.equals("proper_noun"))
 						{
-							hfc.convert("graphical_lexeme", gloss);
-							hfc.convert("graphical_nominal_ending",
+							hfc.convert("graphical_lexeme", false, gloss);
+							hfc.convert("graphical_nominal_ending", true,
 								gender + number + "." + state);
 						}
 						else
 						{
-							hfc.convert("graphical_lexeme", psp);
-						}							
+							hfc.convert("graphical_lexeme", true, psp);
+						}	
+						
+						hebrewText.append(" ");						
 						
 						if (function_name != null && function_name.equals("Pred")
 							&& psp.equals("verb"))
@@ -318,6 +326,10 @@
 				}
 			}
 		
+			%><p>Hebrew text: <span class="hebrew"><%= 
+				HebrewConverter.toHtml(hebrewText.toString())
+			%></span></p><%
+	
 			%><%= root.toHtml(new BorderTableRenderer()) %><%
 		}
 			
