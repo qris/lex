@@ -30,44 +30,68 @@
 	catch (Exception e) { /* ignore it and use default book */ }
 	
 	{
-		Map books = emdros.getEnumerationConstants("book_name_t",false);
-
 		boolean foundBook = false;
 	
-		Sheaf bookSheaf = emdros.getSheaf
+		Table bookTable = emdros.getTable
 		(
-			"SELECT ALL OBJECTS IN " + 
-			emdros.getMonadSet(userTextAccess, min_m, max_m) +
-			" WHERE [book GET book, book_number]"
+			"SELECT OBJECTS HAVING MONADS IN " + 
+			emdros.getMonadSet(userTextAccess, min_m, max_m) + " [book]"
+		);
+		
+		StringBuffer id_dList = new StringBuffer();
+		
+		TableIterator rows = bookTable.iterator();
+        while (rows.hasNext()) 
+        {
+            TableRow row = rows.next();
+            id_dList.append(row.getColumn(3));
+            if (rows.hasNext())
+            {
+            	id_dList.append(",");
+            }
+        }
+        
+		Table featureTable = emdros.getTable
+		(
+			"GET FEATURES book, book_number FROM OBJECTS WITH ID_DS = " + 
+			id_dList.toString() + " [book]"
 		);
 
-		SheafConstIterator sci = bookSheaf.const_iterator();
-		while (sci.hasNext()) {
-			Straw straw = sci.next();
-			MatchedObject book = straw.const_iterator().next();
+		rows = featureTable.iterator();
+        while (rows.hasNext()) 
+        {
+        	TableRow row = rows.next();
+			int thisBookNum = Integer.parseInt(row.getColumn(3)); 
 			
-			int thisBookNum = book.getEMdFValue("book_number").getInt();
 			if (thisBookNum == selBookNum)
 			{
 				foundBook = true;
-				SetOfMonads som = new SetOfMonads();
-				book.getSOM(som, false);
-				min_m = som.first();
-				max_m = som.last();
+				Table monadTable = emdros.getTable
+				(
+					"GET MONADS FROM OBJECT WITH ID_D = " + row.getColumn(1) +
+					" [book]"
+				);
+				TableRow monad_row = monadTable.iterator().next();
+				int new_min_m = Integer.parseInt(monad_row.getColumn(2)); 	
+				int new_max_m = Integer.parseInt(monad_row.getColumn(3)); 	
+				if (min_m < new_min_m) min_m = new_min_m;
+				if (max_m > new_max_m) max_m = new_max_m;
 			}
 				
 			%>
 			<option <%=
 				thisBookNum == selBookNum ? "SELECTED" : ""
 			%> value="<%= 
-				book.getEMdFValue("book_number").getInt() 
+				row.getColumn(3) 
 			%>"><%= 
-				books.get(book.getEMdFValue("book").toString())
+				row.getColumn(2)
 			%><%
-		}
+        }
 
 		if (foundBook)
+		{
 			session.setAttribute("bookNum", new Integer(selBookNum));
+		}
 	}
 	
 %>
@@ -82,7 +106,9 @@
 		Integer sessionChapterNum = 
 			(Integer)( session.getAttribute("chapterNum") );
 		if (sessionChapterNum != null)
+		{
 			selChapNum = sessionChapterNum.intValue();
+		}
 	}
 
 	try 
@@ -95,37 +121,64 @@
 	{
 		boolean foundChapter = false;
 
-		Sheaf sheaf = emdros.getSheaf
+		Table chapterTable = emdros.getTable
 		(
-			"SELECT ALL OBJECTS IN " +
-			emdros.getMonadSet(userTextAccess, min_m, max_m) +
-			" WHERE [chapter book_number = "+selBookNum+" GET chapter]"
+			"SELECT OBJECTS HAVING MONADS IN " + 
+			emdros.getMonadSet(userTextAccess, min_m, max_m) + " [chapter]"
 		);
 
-		SheafConstIterator sci = sheaf.const_iterator();
-		while (sci.hasNext()) {
-			Straw straw = sci.next();
-			MatchedObject chapter = straw.const_iterator().next();
+		StringBuffer id_dList = new StringBuffer();
+		
+		TableIterator rows = chapterTable.iterator();
+        while (rows.hasNext()) 
+        {
+            TableRow row = rows.next();
+            id_dList.append(row.getColumn(3));
+            if (rows.hasNext())
+            {
+            	id_dList.append(",");
+            }
+        }
+        
+		Table featureTable = emdros.getTable
+		(
+			"GET FEATURES chapter FROM OBJECTS WITH ID_DS = " + 
+			id_dList.toString() + " [chapter]"
+		);
+
+		rows = featureTable.iterator();
+        while (rows.hasNext()) 
+        {
+        	TableRow row = rows.next();
+			int thisChapNum = Integer.parseInt(row.getColumn(2)); 
 			
-			int thisChapNum = chapter.getEMdFValue("chapter").getInt();
 			if (thisChapNum == selChapNum)
 			{
 				foundChapter = true;
-				SetOfMonads som = new SetOfMonads();
-				chapter.getSOM(som, false);
-				min_m = som.first();
-				max_m = som.last();
-			}				
-			%>
+				Table monadTable = emdros.getTable
+				(
+					"GET MONADS FROM OBJECT WITH ID_D = " + row.getColumn(1) +
+					" [chapter]"
+				);
+				TableRow monad_row = monadTable.iterator().next();
+				int new_min_m = Integer.parseInt(monad_row.getColumn(2)); 	
+				int new_max_m = Integer.parseInt(monad_row.getColumn(3)); 	
+				if (min_m < new_min_m) min_m = new_min_m;
+				if (max_m > new_max_m) max_m = new_max_m;
+			}
+			
+			%>	
 			<option<%=
 				thisChapNum == selChapNum ? " SELECTED" : ""
 			%>><%=
 				thisChapNum
 			%><%
-		}
+        }
 		
 		if (foundChapter)
+		{
 			session.setAttribute("chapterNum", new Integer(selChapNum));
+		}
 	}
 
 %>
