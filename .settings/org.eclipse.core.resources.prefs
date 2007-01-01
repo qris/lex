@@ -1,4 +1,4 @@
-#Thu Dec 28 16:00:40 GMT 2006
+#Sun Dec 31 12:36:17 GMT 2006
 eclipse.preferences.version=1
 encoding//jsp/auth.jsp=UTF-8
 encoding//jsp/clause.jsp=UTF-8
@@ -8,3 +8,4 @@ encoding//jsp/images/test.jsp=UTF-8
 encoding//jsp/index.jsp=UTF-8
 encoding//jsp/login.jsp=UTF-8
 encoding//jsp/lsedit.jsp=UTF-8
+encoding//jsp/navclause.jsp=UTF-8
