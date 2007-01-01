@@ -10,18 +10,26 @@ public class TreeNode implements List
 {
     private List   m_children = new ArrayList();
     private String m_label;
+    private String m_class;
     
     public TreeNode()
     {
-        m_label = null;
+        this(null, null);
     }
 
     public TreeNode(String label)
     {
-        m_label = label;
+        this(label, null);
     }
-    
+
+    public TreeNode(String label, String clazz)
+    {
+        m_label = label;
+        m_class = clazz;
+    }
+
     public String getLabel() { return m_label; }
+    public String getClazz() { return m_class; }
 
     public List getChildren()   { return this; }
     public int  getChildCount() { return size(); }
@@ -306,24 +314,24 @@ public class TreeNode implements List
 
     private String getHtmlCell(TableRenderer rend)
     {
-        return getHtmlCell(m_label, rend);
+        return rend.getCell(m_label, m_class, getWidth(), 1);
     }
 
     private String getHtmlPlaceholderSpanningRows(int depth, 
             TableRenderer rend)
     {
-        return rend.getCell("", getWidth(), depth);
+        return rend.getCell("", null, getWidth(), depth);
     }
 
-    private String getHtmlCell(String content, TableRenderer rend)
+    public TreeNode createChild(String label, String clazz)
     {
-        return rend.getCell(content, getWidth(), 1);
+        TreeNode child = new TreeNode(label, clazz);
+        this.add(child);
+        return child;
     }
 
     public TreeNode createChild(String label)
     {
-        TreeNode child = new TreeNode(label);
-        this.add(child);
-        return child;
+        return createChild(label, null);
     }
 }
