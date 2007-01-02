@@ -413,8 +413,8 @@ public class ParserTest extends TestCase
 						"{NP:X.state=construct} {NP:Y.state=absolute}",
 						absolute, copyNothing),
 		};
+        
 		Parser p = new Parser(rules);
-		
 		List results = p.parseFor("TWLDWT/ H CMJM/ W H >RY/", "NP");
 		assertEquals(2, results.size());
 		
@@ -424,7 +424,7 @@ public class ParserTest extends TestCase
 					r.getDepthScore());	
 		}
 		
-		Edge NP_all = (Edge)(results.get(1));
+		Edge NP_all = (Edge)(results.get(0));
 		assertEquals("NP",       NP_all.symbol());
 		assertEquals("absolute", NP_all.attribute("state"));
 		
@@ -437,8 +437,8 @@ public class ParserTest extends TestCase
 		Edge NP_heavens_and_earth = NP_all.part(1);
 		assertEquals("NP",       NP_heavens_and_earth.symbol());
 		assertEquals("absolute", NP_heavens_and_earth.attribute("state"));
-		
-		assertEquals("X",     NP_heavens_and_earth.partName(0));
+		assertEquals("X",        NP_heavens_and_earth.partName(0));
+        
 		Edge NP_heavens = NP_heavens_and_earth.part(0);
 		assertEquals("NP",       NP_heavens.symbol());
 		assertEquals("absolute", NP_heavens.attribute("state"));
