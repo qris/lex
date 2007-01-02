@@ -6,6 +6,7 @@
  */
 package com.qwirx.lex.parser;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Vector;
 
@@ -33,4 +34,9 @@ public interface Edge
     boolean isAt(int pos);
     boolean includes(Edge other);
     TreeNode toTree();
+    
+    void getLeavesInto(List leaves);
+    boolean overlaps(Edge other);
+    int getLeftPosition();
+    int getRightPosition();
 }

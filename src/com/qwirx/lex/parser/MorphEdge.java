@@ -108,4 +108,24 @@ public class MorphEdge extends EdgeBase
             HebrewConverter.toTranslit(m_Surface)));
         return morph;
     }
+    
+    public void getLeavesInto(List leaves)
+    {
+        leaves.add(this);
+    }
+    
+    public boolean overlaps(Edge other)
+    {
+        return other.includes(this);
+    }
+
+    public int getLeftPosition()
+    {
+        return m_Position;
+    }
+    
+    public int getRightPosition()
+    {
+        return m_Position;
+    }
 }

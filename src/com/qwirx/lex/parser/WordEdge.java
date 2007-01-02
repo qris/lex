@@ -7,6 +7,7 @@
 package com.qwirx.lex.parser;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Vector;
 
@@ -96,14 +97,17 @@ public class WordEdge extends EdgeBase
 	public String partName  (int partNum) { return null; }
 	public String symbol    () { return surface; }
 	public Map    attributes() { return attribs; }
+    
     public Edge getUnboundCopy()
     {
         return new WordEdge(surface, m_Position);
     }
+    
     public boolean isAt(int position)
-    {
+    {  
         return m_Position == position;
     }
+    
     public boolean includes(Edge other)
     {
         if (!(other instanceof WordEdge)) return false;
@@ -111,8 +115,29 @@ public class WordEdge extends EdgeBase
         return this.surface.equals(w.surface) &&
         this.m_Position == w.m_Position;
     }
+    
     public TreeNode toTree()
     {
         return new TreeNode(surface);
+    }
+    
+    public void getLeavesInto(List leaves)
+    {
+        leaves.add(this);
+    }
+    
+    public boolean overlaps(Edge other)
+    {
+        return other.includes(this);
+    }
+
+    public int getLeftPosition()
+    {
+        return m_Position;
+    }
+    
+    public int getRightPosition()
+    {
+        return m_Position;
     }
 }

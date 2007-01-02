@@ -6,10 +6,6 @@
  */
 package com.qwirx.lex.parser;
 
-import java.util.Hashtable;
-import java.util.Iterator;
-import java.util.Map;
-
 public abstract class EdgeBase implements Edge 
 {
 	public Edge part(int partNum) 

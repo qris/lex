@@ -6,13 +6,14 @@
  */
 package com.qwirx.lex.parser;
 
+import java.util.ArrayList;
 import java.util.Hashtable;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Vector;
 import java.util.Map.Entry;
 
-import com.qwirx.lex.HebrewConverter;
 import com.qwirx.lex.TreeNode;
 
 public class RuleEdge extends EdgeBase implements Cloneable
@@ -345,6 +346,7 @@ public class RuleEdge extends EdgeBase implements Cloneable
         
         return false;
     }
+    
     public boolean includes(Edge other)
     {
         for (int i = 0; i < parts.length; i++)
@@ -357,6 +359,32 @@ public class RuleEdge extends EdgeBase implements Cloneable
         
         return false;
     }
+    
+    public void getLeavesInto(List leaves)
+    {
+        for (int i = 0; i < parts.length; i++)
+        {
+            parts[i].getLeavesInto(leaves);
+        }
+    }
+    
+    public boolean overlaps(Edge other)
+    {
+        List otherLeaves = new ArrayList();
+        other.getLeavesInto(otherLeaves);
+        
+        for (Iterator i = otherLeaves.iterator(); i.hasNext(); )
+        {
+            Edge otherLeaf = (Edge)( i.next() );
+            if (includes(otherLeaf))
+            {
+                return true;
+            }
+        }
+        
+        return false;
+    }
+
     public TreeNode toTree()
     {
         TreeNode mine = new TreeNode(symbol());
@@ -366,4 +394,27 @@ public class RuleEdge extends EdgeBase implements Cloneable
         }
         return mine;
     }
+    
+    public int getLeftPosition()
+    {
+        int pos = parts[0].getLeftPosition();
+        for (int i = 1; i < parts.length; i++)
+        {
+            int p2 = parts[i].getLeftPosition();
+            if (pos > p2) pos = p2;
+        }
+        return pos;
+    }
+    
+    public int getRightPosition()
+    {
+        int pos = parts[0].getRightPosition();
+        for (int i = 1; i < parts.length; i++)
+        {
+            int p2 = parts[i].getRightPosition();
+            if (pos < p2) pos = p2;
+        }
+        return pos;
+    }
+
 }
