@@ -12,7 +12,12 @@ public class Chart
     {
         return new ArrayList(m_Edges);
     }
-    
+
+    public int size()
+    {
+        return m_Edges.size();
+    }
+
     public void add(Edge e)
     {
         m_Edges.add(e);
@@ -40,6 +45,11 @@ public class Chart
         }
         
         return result;
+    }
+    
+    public Edge get(int index)
+    {
+        return (Edge)( m_Edges.get(index) );
     }
     
     public String toString() { return m_Edges.toString(); }
