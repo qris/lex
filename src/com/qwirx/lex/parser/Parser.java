@@ -11,7 +11,6 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Vector;
 
 import com.qwirx.lex.DatabaseException;
 import com.qwirx.lex.sql.SqlDatabase;
@@ -66,13 +65,14 @@ public class Parser
         m_Verbose = verbose;
     }
 	
-	public Chart parse(List input) 
+	public Chart parse(List inputOrig) 
     {
+        List inputCopy = new ArrayList(inputOrig);
         Chart chart = new Chart();
         
-		for (int i = 0; i < input.size(); i++)
+		for (int i = 0; i < inputCopy.size(); i++)
         {
-            Edge inputEdge = (Edge)( input.get(i) );
+            Edge inputEdge = (Edge)( inputCopy.get(i) );
             chart.add(inputEdge);
             
 			for (int r = 0; r < rules.length; r++) 
@@ -86,7 +86,7 @@ public class Parser
 
                 Rule rule = rules[r];
                 List newEdges = rule.applyTo(chart, i);
-                chart.add(newEdges);
+                inputCopy.addAll(i + 1, newEdges);
 			}
 		}
 

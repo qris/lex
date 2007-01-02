@@ -263,7 +263,7 @@ public class Rule
      * required to match this time (it may match elsewhere as well) 
      * @return A list of new Edges to be added to the Chart
      */
-    public List applyTo(Chart chart, int endPos)
+    public List applyTo(Chart chart, int requiredEdgeIndex)
     {
         m_CurrentChart = chart;
         
@@ -289,13 +289,13 @@ public class Rule
             }
         }
         
-        m_PositionsUsed = new boolean[endPos + 1];
+        m_PositionsUsed = new boolean[chart.size()];
 
         // we must always match an edge at the specified end position,
         // which will be different every time we are called,
         // otherwise we will generate duplicate edges.
         
-        List oldEdges = chart.getEdgesAt(endPos);
+        Edge required = chart.get(requiredEdgeIndex);
         List newEdges = new ArrayList();
         
         if (m_isSearching || m_isPermutable)
@@ -315,13 +315,9 @@ public class Rule
             {
                 RulePart part = right[partIndex];
                 
-                for (Iterator i = oldEdges.iterator(); i.hasNext(); )
+                if (part.matches(required))
                 {
-                    Edge edge = (Edge)( i.next() );
-                    if (part.matches(edge))
-                    {
-                        bindAndContinueParse(partIndex, edge, newEdges);
-                    }
+                    bindAndContinueParse(partIndex, requiredEdgeIndex, newEdges);
                 }
                 
                 if (!part.canSkip())
@@ -343,8 +339,30 @@ public class Rule
         return newEdges;
     }
     
-    private void bindAndContinueParse(int partIndex, Edge edge, List newEdges)
+    private void bindAndContinueParse(int partIndex, int edgeIndex, 
+        List newEdges)
     {
+        Edge edge = m_CurrentChart.get(edgeIndex);
+        
+        for (int i = 0; i < m_PositionsUsed.length; i++)
+        {
+            if (!m_PositionsUsed[i])
+            {
+                continue;
+            }
+            
+            Edge included = m_CurrentChart.get(i);
+            
+            if (edge.overlaps(included))
+            {
+                throw new AssertionError
+                (
+                    "Not allowed to bind an edge that overlaps an existing " +
+                    "bound edge"
+                );
+            }
+        }
+        
         for (int i = 0; i < right.length; i++)
         {
             if (m_PartBindingLists[i].contains(edge))
@@ -358,31 +376,22 @@ public class Rule
 
         m_PartBindingLists[partIndex].add(0, edge);
 
+        if (m_PositionsUsed[edgeIndex])
+        {
+            throw new AssertionError
+            (
+                "Not allowed to bind an edge that is already bound"
+            );
+        }
+        
+        m_PositionsUsed[edgeIndex] = true;
+        
         if (m_PartsFinished[partIndex])
         {
             throw new AssertionError
             (
                 "Not allowed to bind a rule part that is already finished"
             );
-        }
-        
-        for (int i = 0; i < m_PositionsUsed.length; i++)
-        {
-            if (!edge.isAt(i))
-            {
-                continue;
-            }
-            
-            if (m_PositionsUsed[i])
-            {
-                throw new AssertionError
-                (
-                    "Not allowed to bind an edge that overlaps an existing " +
-                    "bound edge"
-                );
-            }
-            
-            m_PositionsUsed[i] = true;
         }
         
         if (right[partIndex].canRepeat())
@@ -396,23 +405,15 @@ public class Rule
             m_PartsFinished[partIndex] = false;
         }
         
-        for (int i = 0; i < m_PositionsUsed.length; i++)
+        if (!m_PositionsUsed[edgeIndex])
         {
-            if (!edge.isAt(i))
-            {
-                continue;
-            }
-            
-            if (!m_PositionsUsed[i])
-            {
-                throw new AssertionError
-                (
-                    "Positions used by this edge should be marked as used"
-                );
-            }
-            
-            m_PositionsUsed[i] = false;
+            throw new AssertionError
+            (
+                "The edge should be marked as bound at this point"
+            );
         }
+        
+        m_PositionsUsed[edgeIndex] = false;
 
         for (int i = 0; i < right.length; i++)
         {
@@ -529,24 +530,44 @@ public class Rule
             );
         }
 
-        // find any other edges that we can use
+        // find any other edges that we can use, and try each in turn
         
-        int rightmostEmptyPos = -1;
-        for (int i = m_PositionsUsed.length - 1; i >= 0; i--)
+        int leftPos = -1;
+
+        for (int j = 0; j < m_PositionsUsed.length; j++)
         {
-            if (!m_PositionsUsed[i])
+            if (!m_PositionsUsed[j])
             {
-                rightmostEmptyPos = i;
-                break;
+                continue;
+            }
+            
+            Edge included = m_CurrentChart.get(j);
+            int newLeftPos = included.getLeftPosition();
+            
+            if (leftPos == -1 || leftPos > newLeftPos)
+            {
+                leftPos = newLeftPos;
             }
         }
         
-        List edges = m_CurrentChart.getEdgesAt(rightmostEmptyPos);
+        if (leftPos == -1)
+        {
+            throw new AssertionError("should have some edges by now");
+        }
+
         RulePart part = right[partIndex];
                 
-        for (Iterator i = edges.iterator(); i.hasNext(); )
+        for (int i = 0; i < m_CurrentChart.size(); i++)
         {
-            Edge edge = (Edge)( i.next() );
+            Edge edge = m_CurrentChart.get(i);
+            
+            // check that it's in the right place
+            if (edge.getRightPosition() != leftPos - 1)
+            {
+                continue;
+            }
+            
+            // check that it actually matches!
             if (!part.matches(edge))
             {
                 continue;
@@ -554,9 +575,17 @@ public class Rule
             
             // check that the edge doesn't overlap any previously chosen ones
             boolean overlaps = false;
-            for (int j = rightmostEmptyPos + 1; j < m_PositionsUsed.length; j++)
+            
+            for (int j = 0; j < m_PositionsUsed.length; j++)
             {
-                if (edge.isAt(j))
+                if (!m_PositionsUsed[j])
+                {
+                    continue;
+                }
+                
+                Edge included = m_CurrentChart.get(j);
+                
+                if (edge.overlaps(included))
                 {
                     overlaps = true;
                     break;
@@ -568,7 +597,7 @@ public class Rule
                 continue;
             }
             
-            bindAndContinueParse(partIndex, edge, newEdges);
+            bindAndContinueParse(partIndex, i, newEdges);
         }
         
         // Optional elements may only be skipped (match 0 times)
