@@ -387,11 +387,15 @@ public class RuleEdge extends EdgeBase implements Cloneable
 
     public TreeNode toTree()
     {
-        TreeNode mine = new TreeNode(symbol());
+        String label = symbol();
+        label = label.replaceAll("/(.*)", "<sub>$1</sub>");
+        TreeNode mine = new TreeNode(label);
+        
         for (int i = 0; i < parts.length; i++)
         {
             mine.add(parts[i].toTree());
         }
+        
         return mine;
     }
     

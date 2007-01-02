@@ -103,9 +103,12 @@ public class MorphEdge extends EdgeBase
     
     public TreeNode toTree()
     {
-        TreeNode morph = new TreeNode(m_Symbol);
+        String label = m_Symbol.replaceAll("/(.*)", "<sub>$1</sub>");
+        TreeNode morph = new TreeNode(label);
+
         morph.createChild(HebrewConverter.toHtml(
             HebrewConverter.toTranslit(m_Surface)));
+        
         return morph;
     }
     

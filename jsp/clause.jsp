@@ -5,6 +5,7 @@
 <%@ page import="jemdros.*" %>
 <%@ page import="com.qwirx.lex.ontology.*" %>
 <%@ page import="com.qwirx.lex.wordnet.*" %>
+<%@ page import="com.qwirx.lex.parser.*" %>
 <%@ page import="net.didion.jwnl.data.POS" %>
 <%@ page import="net.didion.jwnl.data.Synset" %>
 <html>
@@ -170,6 +171,8 @@
 	    }
 	}
 	
+	BorderTableRenderer rend = new BorderTableRenderer();
+	
 	MatchedObject clause = null;
 	{
 		SheafConstIterator sci = sheaf.const_iterator();
@@ -194,8 +197,9 @@
 		
 		String predicate_text = "";
 		StringBuffer hebrewText = new StringBuffer();
+		List morphEdges = new ArrayList();
 		
-		/* Prescan to find the predicate lexeme */
+		/* Prescan to find the predicate lexeme and populate the chart */
 		
 		{
 			TreeNode root = new TreeNode("root");
@@ -238,7 +242,7 @@
 							public void convert(String surface, 
 								boolean lastMorpheme, String desc)
 							{
-								String raw  = m_word.getEMdFValue(surface).getString();
+								String raw = m_word.getEMdFValue(surface).getString();
 
 								String hebrew = HebrewConverter.toHebrew(raw);
 								m_hebrew.append(hebrew);
@@ -306,6 +310,19 @@
 							hfc.convert("graphical_lexeme", false, gloss);
 							hfc.convert("graphical_verbal_ending", true,
 								person + gender + number);
+								
+							morphEdges.add(new MorphEdge("V/TNS", word
+								.getEMdFValue("graphical_preformative")
+								.getString(), morphEdges.size()));
+							morphEdges.add(new MorphEdge("V/STM", word
+								.getEMdFValue("graphical_root_formation")
+								.getString(), morphEdges.size()));
+							morphEdges.add(new MorphEdge("V/LEX", word
+								.getEMdFValue("graphical_lexeme")
+								.getString(), morphEdges.size()));
+							morphEdges.add(new MorphEdge("V/PGN", word
+								.getEMdFValue("graphical_verbal_ending")
+								.getString(), morphEdges.size()));
 						}
 						else if (psp.equals("noun")
 							|| psp.equals("proper_noun"))
@@ -313,10 +330,78 @@
 							hfc.convert("graphical_lexeme", false, gloss);
 							hfc.convert("graphical_nominal_ending", true,
 								gender + number + "." + state);
+
+							String type = "HEAD/NCOM";
+							if (psp.equals("proper_noun"))
+							{
+								type = "HEAD/NPROP";
+							}
+							
+							morphEdges.add(new MorphEdge(type, word
+								.getEMdFValue("graphical_lexeme")
+								.getString(), morphEdges.size()));
+							morphEdges.add(new MorphEdge("MARK/N", word
+								.getEMdFValue("graphical_nominal_ending")
+								.getString(), morphEdges.size()));
 						}
 						else
 						{
 							hfc.convert("graphical_lexeme", true, psp);
+							
+							String type;
+							if (psp.equals("adjective"))
+							{
+								type = "ADJ";
+							}
+							else if (psp.equals("adverb"))
+							{
+								type = "ADV";
+							}
+							else if (psp.equals("article"))
+							{
+								type = "DET";
+							}
+							else if (psp.equals("conjunction"))
+							{
+								type = "CONJ";
+							}
+							else if (psp.equals("demonstrative_pronoun"))
+							{
+								type = "PRON/DEM";
+							}
+							else if (psp.equals("interjection"))
+							{
+								type = "INTJ";
+							}
+							else if (psp.equals("interrogative"))
+							{
+								type = "INTR";
+							}
+							else if (psp.equals("interrogative_pronoun"))
+							{
+								type = "PRON/INT";
+							}
+							else if (psp.equals("negative"))
+							{
+								type = "NEG";
+							}
+							else if (psp.equals("personal_pronoun"))
+							{
+								type = "PRON/PERS";
+							}
+							else if (psp.equals("preposition"))
+							{
+								type = "P";
+							}
+							else
+							{
+								throw new IllegalArgumentException("Unknown " +
+									"part of speech: " + psp);
+							}
+							
+							morphEdges.add(new MorphEdge(type, word
+								.getEMdFValue("graphical_lexeme")
+								.getString(), morphEdges.size()));
 						}	
 						
 						hebrewText.append(" ");						
@@ -335,7 +420,7 @@
 				HebrewConverter.toHtml(hebrewText.toString())
 			%></span></p><%
 	
-			%><%= root.toHtml(new BorderTableRenderer()) %><%
+			%><%= root.toHtml(rend) %><%
 		}
 			
 		/*
@@ -1145,6 +1230,42 @@
 		%>
 		</table>
 		</p>
+	
+		<%
+		
+		{
+			Parser p = new Parser(sql);
+			p.setVerbose(true);
+			List sentences = p.parseFor(morphEdges, "SENTENCE");
+			
+			if (sentences.size() == 0)
+			{
+				%>
+		<p>
+			Parse failed. Click 
+			<a href="parsedebug.jsp?clause=<%= clauseId %>">here</a>
+			to fix it.
+		</p> 
+				<%
+			}
+			else
+			{
+				for (int i = 0; i < sentences.size() && i < 3; i++)
+				{
+					Edge sentence = (Edge)( sentences.get(i) );
+					
+					%><%= sentence.toTree().toHtml(rend) %><%
+				}
+				
+				%><p>
+				Click 
+				<a href="parsedebug.jsp?clause=<%= clauseId %>">here</a>
+				to see and edit all <%= sentences.size() %> parses.
+				</p><%
+			}
+		}
+		
+		%>
 
 		<p>
 		<%
@@ -1328,104 +1449,8 @@
 			ch.execute();
 		}
 	}
-
-	TreeNode clauseNode  = new TreeNode("Clause");
-	TreeNode coreNode    = null;
-	TreeNode nucleusNode = null;
-	TreeNode leftPeripheryNode  = null;
-	TreeNode rightPeripheryNode = null;
-
-	SheafConstIterator phrases = null;
-	
-	if (clause != null)
-	{
-		phrases = clause.getSheaf().const_iterator();
-	}
-	
-	while (phrases != null && phrases.hasNext()) 
-	{
-		MatchedObject phrase =
-			phrases.next().const_iterator().next();
-
-		String function_name = (String)( phrase_functions.get(
-			phrase.getEMdFValue("function").toString())
-		);
-
-		String phrase_type = (String)( phrase_types.get(
-			phrase.getEMdFValue("phrase_type").toString())
-		);
-		
-		TreeNode phraseNode = new TreeNode(phrase_type);
-		TreeNode phraseFunc = phraseNode.createChild(function_name);
-		
-		SheafConstIterator words = phrase.getSheaf().const_iterator();
-		while (words.hasNext()) 
-		{
-			MatchedObject word =
-				words.next().const_iterator().next();
-			
-			String lexeme = 
-				word.getEMdFValue("lexeme").getString()
-				.replaceAll("<", "&lt;")
-				.replaceAll(">", "&gt;");
-			
-			TreeNode wordNode = phraseFunc.createChild(lexeme);
-		}
-	
-		if (phrase_type.equals("VP") && nucleusNode == null)
-		{
-			if (coreNode == null)
-			{
-				coreNode = clauseNode.createChild("Core");
-			}
-			
-			nucleusNode = coreNode.createChild("Nucleus");
-			nucleusNode.add(phraseNode);
-		}
-		else if (phrase_type.equals("NP") ||
-				 phrase_type.equals("IrPronNP") ||
-				 phrase_type.equals("PersPronNP") ||
-				 phrase_type.equals("DemPronNP") ||
-				 phrase_type.equals("PropNP") ||
-				 (phrase_type.equals("PP") && ! function_name.equals("Time")))
-		{
-			if (coreNode == null)
-			{
-				coreNode = clauseNode.createChild("Core");
-			}
-			
-			TreeNode argument = coreNode.createChild("Argument");
-			argument.add(phraseNode);
-		}
-		else
-		{
-			TreeNode periphery;
-			
-			if (coreNode == null)
-			{
-				if (leftPeripheryNode == null)
-				{
-					leftPeripheryNode = clauseNode.createChild("Periphery");
-				}
-				periphery = leftPeripheryNode;
-			}
-			else
-			{
-				if (rightPeripheryNode == null)
-				{
-					rightPeripheryNode = clauseNode.createChild("Periphery");
-				}
-				periphery = rightPeripheryNode;
-			}
-			
-			TreeNode other = periphery.createChild("");
-			other.add(phraseNode);
-		}
-	}
 	
 %>
-
-<%= clauseNode.toHtml(new BorderTableRenderer()) %>
 
 <h2>Notes</h2>
 
