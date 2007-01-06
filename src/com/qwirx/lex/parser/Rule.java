@@ -183,7 +183,7 @@ public class Rule
             for (Iterator i = toCopy.contained.iterator(); i.hasNext(); )
             {
                 Edge instance = (Edge)( i.next() );
-                contained.add(instance.getBoundCopy());
+                // contained.add(instance.getBoundCopy());
             }
         }
         int [] counts;
@@ -199,7 +199,7 @@ public class Rule
             for (Iterator s = stack.iterator(); s.hasNext(); )
             {
                 Edge i = (Edge)( s.next() );
-                result.add(i.getBoundCopy());
+                // result.add(i.getBoundCopy());
             }
             return result;
         }
