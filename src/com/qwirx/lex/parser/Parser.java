@@ -100,55 +100,7 @@ public class Parser
 
 	public List parseFor(List input, String goal) 
     {
-		Chart chart = parse(input);
-		
-        List edges = chart.getEdges();
-		List goals = new ArrayList();
-        
-		for (Iterator i = edges.iterator(); i.hasNext(); ) 
-        {
-            Edge edge = (Edge)( i.next() );
-            if (! edge.symbol().equals(goal))
-            {
-                if (m_Verbose)
-                {
-                    System.out.println("Rejected non-goal edge: " + edge);
-                }   
-                
-                continue;
-            }
-            
-            boolean hasHoles = false;
-            
-            for (Iterator j = input.iterator(); j.hasNext(); )
-            {
-                Edge other = (Edge)( j.next() );
-                if (!edge.includes(other))
-                {
-                    hasHoles = true;
-                    if (m_Verbose)
-                    {
-                        System.out.println("Rejected edge: " + edge +
-                            ": does not contain " + other);
-                    }
-                    break;
-                }
-            }
-            
-            if (hasHoles)
-            {
-                continue;
-            }
-            
-   			goals.add(edge);
-
-            if (m_Verbose)
-            {
-                System.out.println("Accepted edge: " + edge);
-            }   
-		}
-		
-		return goals;
+        return parse(input).filter(goal, input, m_Verbose);
 	}
 
     public List parseFor(String input, String goal) 
