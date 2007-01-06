@@ -1,13 +1,14 @@
+<%@ page import="jemdros.*" %>
 <form name="nav" method="get">
 <table>
-<tr bgcolor="#FFCCCC"><th colspan=4>Navigator</th></tr>
-<tr bgcolor="#FFEEEE">
+<tr bgcolor="#ffcccc"><th colspan=4>Navigator</th></tr>
+<tr bgcolor="#ffeeee">
   <th>Book</th>
   <th>Chapter</th>
   <th>Verse</th>
   <th>Clause</th>
 </tr>
-<tr bgcolor="#FFCCCC">
+<tr bgcolor="#ffcccc">
   <td>
 	<select name="book" onChange="document.forms.nav.submit()">
 <%
