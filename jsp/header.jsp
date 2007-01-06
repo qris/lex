@@ -15,6 +15,7 @@
 		class="db_jsp"     >Databases</a><a 
 		class="clause_jsp" href="clause.jsp">Text</a><a 
 		class="lsedit_jsp" href="lsedit.jsp">Lexicon</a><a  
+		class="parse_jsp"  href="parse.jsp" >Parser</a><a  
 		class="dump_jsp"   href="dump.jsp"  >Database Dump</a><a  
 		class="login_jsp"   
 	<%
