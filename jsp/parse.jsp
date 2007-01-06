@@ -124,23 +124,24 @@
 		var sel_left  = -1;
 		var sel_right = -1;
 		var any_checked = false;
+		var checked_list = new Array();
 	
 		for (var i = 0; i < edges.length; i++)
 		{
 			var edge = edges[i];
-			var checkbox = document.forms.rulecmd[edge[0]];
+			var checkbox = document.forms.rulecmd[edge.id];
 	
-			if (checkbox.checked)
+			if (checkbox != null && checkbox.checked)
 			{
-				any_checked = true;
+				checked_list[checked_list.length] = edge;
 	
-				if (sel_left == -1 || sel_left > edge[1])
+				if (sel_left == -1 || sel_left > edge.left)
 				{
-					sel_left = edge[1];
+					sel_left = edge.left;
 				}
-				if (sel_right == -1 || sel_right < edge[2])
+				if (sel_right == -1 || sel_right < edge.right)
 				{
-					sel_right = edge[2];
+					sel_right = edge.right;
 				}
 			}
 		}
@@ -149,14 +150,20 @@
 		{
 			var edge = edges[i];
 			var enabled = false;
-			var checkbox = document.forms.rulecmd[edge[0]];
+			var checkbox = document.forms.rulecmd[edge.id];
 	
-			if (!any_checked)
+			if (checkbox == null)
 			{
-				// allow the first checkbox to be checked
+				// fake edges don't have checkboxes
+				continue;
+			}
+			
+			if (checked_list.length == 0)
+			{
+				// if none are checked yet, allow any to be checked
 				enabled = true;
 			}
-			else if (edge[1] == sel_right + 1 || edge[2] == sel_left - 1)
+			else if (edge.left == sel_right + 1 || edge.right == sel_left - 1)
 			{
 				// allow expansion at the edges
 				enabled = true;
@@ -165,13 +172,64 @@
 			{
 				enabled = false;
 			}
-			else if (edge[1] == sel_left || edge[2] == sel_right)
+			else if (edge.left == sel_left || edge.right == sel_right)
 			{
 				// allow deselection at the left and right edges only
 				enabled = true;
 			}
 			
 			checkbox.disabled = !enabled;
+		}
+	
+		var parts = document.forms.rulecmd.new_rule_parts;
+		parts.value = "";
+	
+		for (var i = 0; i < checked_list.length; i++)
+		{
+			var edge = checked_list[i];
+	
+			if (edge.terminal)
+			{
+				parts.value += "\"" + edge.symbol + "\"";
+			}
+			else
+			{
+				parts.value += "{" + edge.symbol + "}";
+			}
+	
+			if (i < checked_list.length - 1)
+			{
+				parts.value += " ";
+			}
+		}
+	
+		return true;
+	}
+	
+	function edge (id, left, right, symbol, terminal, fake)
+	{
+		this.id = id;
+		this.left = left;
+		this.right = right;
+		this.symbol = symbol;
+		this.terminal = terminal;
+		this.fake = fake;
+	}
+	
+	function on_rule_add_click()
+	{
+		var form = document.forms.rulecmd;
+		
+		if (form.new_rule_sym.value == "")
+		{
+			alert("You must enter a top symbol for the new rule!");
+			return false;
+		}
+	
+		if (form.new_rule_parts.value == "")
+		{
+			alert("You must select some edges for the new rule!");
+			return false;
 		}
 	
 		return true;
@@ -482,6 +540,28 @@
 				HebrewConverter.toHtml(hebrewText.toString())
 			%></span></p><%
 		}
+		
+		if (request.getParameter("rule_add") != null)
+		{
+			String symbol = request.getParameter("new_rule_sym");
+			String parts  = request.getParameter("new_rule_parts");
+			
+			if (symbol == null || symbol.equals("") ||
+				parts  == null || parts.equals(""))
+			{
+				%>
+				<h2>Error: some required parameters were missing or empty</h2>
+				<%
+			}
+			else
+			{
+				Change ch = sql.createChange(SqlChange.INSERT, 
+					"lexicon_entries", null);
+				ch.setString("Symbol", symbol);
+				ch.setString("Lexeme", parts);
+				ch.execute();
+			}
+		}
 
 		{
 			Parser p = new Parser(sql);
@@ -494,12 +574,13 @@
 				%>
 				<h3>Parse failed</h3>
 				<p>The edges found were:</p> 
-				<form name="rulecmd">
+				<form name="rulecmd" method="post">
 				<%
 				
 				Map  edgeIds   = new Hashtable();
 				Map  idEdges   = new Hashtable();
 				Map  fakeChild = new Hashtable();
+				List fakeEdges = new ArrayList();
 				List depths    = new ArrayList();
 				List edges     = chart.getEdges();
 				int  maxDepth  = 0;
@@ -522,6 +603,7 @@
 							me.getLeftPosition());
 						i.add(we);
 						fakeChild.put(me, we);
+						fakeEdges.add(we);
 					}
 				}
 
@@ -581,17 +663,19 @@
 				<table border>
 				<%
 				
-				class LeftComparator implements Comparator
+				class EdgeComparator implements Comparator
 				{
 					public int compare(Object o1, Object o2) 
 					{
 						Edge e1 = (Edge)o1;
 						Edge e2 = (Edge)o2;
-						return e1.getLeftPosition() - e2.getLeftPosition();
+						int diff = e1.getLeftPosition() - e2.getLeftPosition();
+						if (diff != 0) return diff;
+						return e2.getRightPosition() - e1.getRightPosition();
 					}
 				}
 				
-				Comparator comp = new LeftComparator();
+				Comparator comp = new EdgeComparator();
 				
 				for (int i = maxDepth; i >= 0; i--)
 				{
@@ -655,13 +739,20 @@
 								onMouseOver="return highlight  (this);"
 								onMouseOut=" return unhighlight_all();"
 								><% /*
-								[<%= edgeIds.get(next) %>] <% */ %>
+								[<%= edgeIds.get(next) %>] <% */ 
+								
+								if (!fakeEdges.contains(next))
+								{
+								%>
 								<span class="cb">
 									<input name="<%= edgeIds.get(next) %>"
 										type="checkbox" 
 										onClick="return on_checkbox_click(this);" />
 								</span>
-								<%= next.getHtmlLabel() %>
+								<%
+								}
+								
+								%><%= next.getHtmlLabel() %>
 							</td>
 							<%
 							
@@ -752,11 +843,12 @@
 					Edge e = (Edge)( i.next() );
 					String id = (String)( edgeIds.get(e) );
 					%>
-					new Array("<%= id %>", <%= 
+					new edge("<%= id %>", <%= 
 						e.getLeftPosition() %>, <%=
 						e.getRightPosition() %>, "<%=
 						e.symbol() %>", <%=
-						e.isTerminal() %>)<%
+						e.isTerminal() %>, <%=
+						fakeEdges.contains(e) %>)<%
 					if (i.hasNext())
 					{
 						%>,
@@ -768,19 +860,27 @@
 				
 				//--></script>
 										
-				<p>Add a new rule:</p>
+				<p></p>
 				
 				<table>
 					<tr bgcolor="#ffcccc">
-						<th>Top node name (symbol)</th>
-						<th>Component node names (parts)</th>
+						<th colspan="3">Create a new rule</th>
 					</tr>
 					<tr bgcolor="#ffeeee">
+						<td>Top node name (symbol)</td>
+						<td>Component node names (parts)</td>
+						<td>Command</td>
+					</tr>
+					<tr bgcolor="#ffcccc">
 						<td>
 							<input name="new_rule_sym" />
 						</td>
 						<td>
-							<input name="new_rule_parts" />
+							<input name="new_rule_parts" size="30"/>
+						</td>
+						<td>
+							<input name="rule_add" type="submit" value="Create" 
+								onClick="return on_rule_add_click()" />
 						</td>
 					</tr>
 				</table>
