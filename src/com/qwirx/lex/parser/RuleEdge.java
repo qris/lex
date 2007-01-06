@@ -459,6 +459,6 @@ public class RuleEdge extends EdgeBase implements Cloneable
     
     public boolean isTerminal()
     {
-        return true;
+        return false;
     }
 }
