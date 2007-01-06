@@ -53,4 +53,54 @@ public class Chart
     }
     
     public String toString() { return m_Edges.toString(); }
+    
+    public List filter(String goal, List requiredEdges, boolean verbose) 
+    {
+        List goals = new ArrayList();
+        
+        for (Iterator i = m_Edges.iterator(); i.hasNext(); ) 
+        {
+            Edge edge = (Edge)( i.next() );
+            if (! edge.symbol().equals(goal))
+            {
+                if (verbose)
+                {
+                    System.out.println("Rejected non-goal edge: " + edge);
+                }   
+                
+                continue;
+            }
+            
+            boolean hasHoles = false;
+            
+            for (Iterator j = requiredEdges.iterator(); j.hasNext(); )
+            {
+                Edge required = (Edge)( j.next() );
+                if (!edge.includes(required))
+                {
+                    hasHoles = true;
+                    if (verbose)
+                    {
+                        System.out.println("Rejected edge: " + edge +
+                            ": does not contain " + required);
+                    }
+                    break;
+                }
+            }
+            
+            if (hasHoles)
+            {
+                continue;
+            }
+            
+            goals.add(edge);
+
+            if (verbose)
+            {
+                System.out.println("Accepted edge: " + edge);
+            }   
+        }
+        
+        return goals;
+    }
 }
