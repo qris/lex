@@ -20,6 +20,7 @@ public class WordEdge extends EdgeBase
     private static final Edge[]   parts   = new Edge[0];
     private static final ImmutableMap attribs = new ImmutableMap(new HashMap());
     private int m_Position;
+    private WordEdge m_UnboundOriginal = null;
     
     /**
      * Default constructor, creates an instance of the given text as a 
@@ -100,7 +101,23 @@ public class WordEdge extends EdgeBase
     
     public Edge getUnboundCopy()
     {
-        return new WordEdge(surface, m_Position);
+        WordEdge e = new WordEdge(surface, m_Position);
+
+        if (m_UnboundOriginal != null)
+        {
+            e.m_UnboundOriginal = m_UnboundOriginal;
+        }
+        else
+        {
+            e.m_UnboundOriginal = this;
+        }
+
+        return e;
+    }
+    
+    public Edge getUnboundOriginal()
+    {
+        return m_UnboundOriginal;
     }
     
     public boolean isAt(int position)
@@ -116,9 +133,14 @@ public class WordEdge extends EdgeBase
         this.m_Position == w.m_Position;
     }
     
+    public String getHtmlLabel()
+    {
+        return surface;
+    }
+    
     public TreeNode toTree()
     {
-        return new TreeNode(surface);
+        return new TreeNode(getHtmlLabel());
     }
     
     public void getLeavesInto(List leaves)
@@ -139,5 +161,15 @@ public class WordEdge extends EdgeBase
     public int getRightPosition()
     {
         return m_Position;
+    }
+    
+    public int getDepth()
+    {
+        return 0; // surface
+    }
+    
+    public boolean isTerminal()
+    {
+        return true;
     }
 }

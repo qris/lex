@@ -24,6 +24,7 @@ public class MorphEdge extends EdgeBase
     private static final ImmutableMap m_Attribs = 
         new ImmutableMap(new HashMap());
     private int m_Position;
+    private MorphEdge m_UnboundOriginal = null;
     
     /**
      * Default constructor, creates an instance of the given text as a 
@@ -86,12 +87,30 @@ public class MorphEdge extends EdgeBase
     
     public Edge getUnboundCopy()
     {
-        return new MorphEdge(m_Symbol, m_Surface, m_Position);
+        MorphEdge e = new MorphEdge(m_Symbol, m_Surface, m_Position);
+        
+        if (m_UnboundOriginal != null)
+        {
+            e.m_UnboundOriginal = m_UnboundOriginal;
+        }
+        else
+        {
+            e.m_UnboundOriginal = this;
+        }
+
+        return e;
     }
+    
+    public Edge getUnboundOriginal()
+    {
+        return m_UnboundOriginal;
+    }
+    
     public boolean isAt(int position)
     {
         return m_Position == position;
     }
+    
     public boolean includes(Edge other)
     {
         if (!(other instanceof MorphEdge)) return false;
@@ -101,15 +120,21 @@ public class MorphEdge extends EdgeBase
             this.m_Position == m.m_Position;
     }
     
+    public String getHtmlLabel()
+    {
+        return m_Symbol.replaceAll("/(.*)", "<sub>$1</sub>");
+    }
+    
+    public String getHtmlSurface()
+    {
+        return HebrewConverter.toHtml(m_Surface);
+    }
+    
     public TreeNode toTree()
     {
-        String label = m_Symbol.replaceAll("/(.*)", "<sub>$1</sub>");
-        TreeNode morph = new TreeNode(label);
-
-        morph.createChild(HebrewConverter.toHtml(
-            HebrewConverter.toTranslit(m_Surface)));
-        
-        return morph;
+        TreeNode node = new TreeNode(getHtmlLabel());
+        node.createChild(getHtmlSurface());
+        return node;
     }
     
     public void getLeavesInto(List leaves)
@@ -130,5 +155,15 @@ public class MorphEdge extends EdgeBase
     public int getRightPosition()
     {
         return m_Position;
+    }
+    
+    public int getDepth()
+    {
+        return 1; // surface + morphological analysis
+    }
+    
+    public boolean isTerminal()
+    {
+        return false; // contains a morpheme inside
     }
 }

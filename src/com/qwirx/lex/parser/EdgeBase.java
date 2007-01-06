@@ -32,8 +32,9 @@ public abstract class EdgeBase implements Edge
     }
     
     public RuleEdge getBoundInstance() { return m_container; }
-    public RulePart     getBoundLocation() { return m_location;  }
+    public RulePart getBoundLocation() { return m_location;  }
 
+    /*
     public Edge getBoundCopy()
     {
         Edge newInstance = getUnboundCopy();
@@ -47,6 +48,7 @@ public abstract class EdgeBase implements Edge
         }
         return newInstance;
     }
+    */
     
     public class AlreadyBoundException extends Exception
     {

@@ -23,20 +23,25 @@ public interface Edge
 	String partName(int partNum);
 	Map attributes();
 	String attribute(String name);
+    boolean isTerminal();
+    
     void bindTo(RuleEdge container, RulePart location)
-    throws AlreadyBoundException;
+        throws AlreadyBoundException;
     RuleEdge getBoundInstance();
     RulePart getBoundLocation();
     
-    Edge getBoundCopy();
+    // Edge getBoundCopy();
     Edge getUnboundCopy();
+    Edge getUnboundOriginal();
     
     boolean isAt(int pos);
     boolean includes(Edge other);
     TreeNode toTree();
+    String getHtmlLabel();
     
     void getLeavesInto(List leaves);
     boolean overlaps(Edge other);
     int getLeftPosition();
     int getRightPosition();
+    int getDepth();
 }

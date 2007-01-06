@@ -18,6 +18,7 @@ import com.qwirx.lex.TreeNode;
 
 public class RuleEdge extends EdgeBase implements Cloneable
 {
+    private RuleEdge m_UnboundOriginal = null;
 	private final Edge [] parts;
 	private final Rule    rule;
 	private Map attribs = new Hashtable();
@@ -331,7 +332,23 @@ public class RuleEdge extends EdgeBase implements Cloneable
     
     public Edge getUnboundCopy()
     {
-        return new RuleEdge(rule, parts);
+        RuleEdge e = new RuleEdge(rule, parts);
+
+        if (m_UnboundOriginal != null)
+        {
+            e.m_UnboundOriginal = m_UnboundOriginal;
+        }
+        else
+        {
+            e.m_UnboundOriginal = this;
+        }
+
+        return e;
+    }
+    
+    public Edge getUnboundOriginal()
+    {
+        return m_UnboundOriginal;
     }
     
     public boolean isAt(int position)
@@ -384,19 +401,22 @@ public class RuleEdge extends EdgeBase implements Cloneable
         
         return false;
     }
+    
+    public String getHtmlLabel()
+    {
+        return symbol().replaceAll("/(.*)", "<sub>$1</sub>");
+    }
 
     public TreeNode toTree()
     {
-        String label = symbol();
-        label = label.replaceAll("/(.*)", "<sub>$1</sub>");
-        TreeNode mine = new TreeNode(label);
+        TreeNode node = new TreeNode(getHtmlLabel());
         
         for (int i = 0; i < parts.length; i++)
         {
-            mine.add(parts[i].toTree());
+            node.add(parts[i].toTree());
         }
         
-        return mine;
+        return node;
     }
     
     public int getLeftPosition()
@@ -421,4 +441,24 @@ public class RuleEdge extends EdgeBase implements Cloneable
         return pos;
     }
 
+    public int getDepth()
+    {
+        int maxChildDepth = 1;
+        
+        for (int i = 0; i < parts.length; i++)
+        {
+            int d = parts[i].getDepth();
+            if (maxChildDepth < d)
+            {
+                maxChildDepth = d;
+            }
+        }
+        
+        return maxChildDepth + 1;
+    }
+    
+    public boolean isTerminal()
+    {
+        return true;
+    }
 }
