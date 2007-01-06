@@ -2,7 +2,6 @@
 <%@ page import="java.util.regex.*" %>
 <%@ page import="java.net.*" %>
 <%@ page import="java.sql.*" %>
-<%@ page import="jemdros.*" %>
 <%@ page import="com.qwirx.lex.ontology.*" %>
 <%@ page import="com.qwirx.lex.wordnet.*" %>
 <%@ page import="com.qwirx.lex.parser.*" %>
@@ -10,7 +9,7 @@
 <%@ page import="net.didion.jwnl.data.Synset" %>
 <html>
 <head>
-<title>Lex: Edit Clause</title>
+<title>Lex: Text Browser</title>
 <script type="text/javascript"><!--
 
 	function enableEditButton()
@@ -53,11 +52,6 @@
 		text-align: center;
 	}
 	div.topmenu a.clause_jsp <%@ include file="hilite.inc" %>
-	span.hebrew
-	{
-		font-size: x-large;
-		font-family: Doulos SIL, serif;
-	}
 </style>
 <body onLoad="enableEditButton()">
 
@@ -114,8 +108,6 @@
 	Map stems = emdros.getEnumerationConstants
 		("verbal_stem_t",false);
 
-	int clauseId = selClauseId;
-
 	if (request.getParameter("savearg") != null)
 	{
 		String phraseIdString = request.getParameter("phraseid");
@@ -144,7 +136,7 @@
 	(
 		"SELECT ALL OBJECTS IN " +
 		emdros.getMonadSet(userTextAccess, min_m, max_m) +
-		" WHERE [clause self = "+clauseId+
+		" WHERE [clause self = "+selClauseId+
 		"       GET logical_struct_id, logical_structure "+
 		"        [phrase GET phrase_type, function, argument_name, "+
 		"                    type_id, macrorole_number "+
@@ -189,7 +181,7 @@
 		 
 	if (clause == null) 
 	{
-		%><p><b>No clause found!</b></p><%
+		%><p>Selected clause not found or access denied.</p><%
 	} 
 	else 
 	{
@@ -230,17 +222,21 @@
 							private TreeNode m_root;
 							private MatchedObject m_word;
 							private StringBuffer m_hebrew;
+							private List m_morphs;
 							
 							public HebrewFeatureConverter(TreeNode root,
-								MatchedObject word, StringBuffer hebrew)
+								MatchedObject word, StringBuffer hebrew,
+								List morphs)
 							{
 								m_root   = root;
 								m_word   = word;
 								m_hebrew = hebrew;
+								m_morphs = morphs;
 							}
 							
 							public void convert(String surface, 
-								boolean lastMorpheme, String desc)
+								boolean lastMorpheme, String desc,
+								String morphNode)
 							{
 								String raw = m_word.getEMdFValue(surface).getString();
 
@@ -255,11 +251,15 @@
 
 								node = node.createChild(raw);
 								node.createChild(desc);
+								
+								m_morphs.add(new MorphEdge(morphNode, 
+									translit, m_morphs.size()));
 							}
 						}
 
 						HebrewFeatureConverter hfc = 
-							new HebrewFeatureConverter(root, word, hebrewText);
+							new HebrewFeatureConverter(root, word, hebrewText,
+							morphEdges);
 						
 						String person = (String)persons.get(
 							word.getEMdFValue("person").toString());
@@ -303,52 +303,35 @@
 						{
 							hfc.convert("graphical_preformative", false,
 								(String)tenses.get(word
-								.getEMdFValue("verbal_tense").toString()));
+								.getEMdFValue("verbal_tense").toString()),
+								"V/TNS");
 							hfc.convert("graphical_root_formation", false,
 								(String)stems.get(word
-								.getEMdFValue("verbal_stem").toString()));
-							hfc.convert("graphical_lexeme", false, gloss);
+								.getEMdFValue("verbal_stem").toString()),
+								"V/STM");
+							hfc.convert("graphical_lexeme", false, gloss,
+								"V/LEX");
 							hfc.convert("graphical_verbal_ending", true,
-								person + gender + number);
-								
-							morphEdges.add(new MorphEdge("V/TNS", word
-								.getEMdFValue("graphical_preformative")
-								.getString(), morphEdges.size()));
-							morphEdges.add(new MorphEdge("V/STM", word
-								.getEMdFValue("graphical_root_formation")
-								.getString(), morphEdges.size()));
-							morphEdges.add(new MorphEdge("V/LEX", word
-								.getEMdFValue("graphical_lexeme")
-								.getString(), morphEdges.size()));
-							morphEdges.add(new MorphEdge("V/PGN", word
-								.getEMdFValue("graphical_verbal_ending")
-								.getString(), morphEdges.size()));
+								person + gender + number, "V/PGN");
 						}
 						else if (psp.equals("noun")
 							|| psp.equals("proper_noun"))
 						{
-							hfc.convert("graphical_lexeme", false, gloss);
-							hfc.convert("graphical_nominal_ending", true,
-								gender + number + "." + state);
-
 							String type = "HEAD/NCOM";
+							
 							if (psp.equals("proper_noun"))
 							{
 								type = "HEAD/NPROP";
 							}
 							
-							morphEdges.add(new MorphEdge(type, word
-								.getEMdFValue("graphical_lexeme")
-								.getString(), morphEdges.size()));
-							morphEdges.add(new MorphEdge("MARK/N", word
-								.getEMdFValue("graphical_nominal_ending")
-								.getString(), morphEdges.size()));
+							hfc.convert("graphical_lexeme", false, gloss, type);
+							hfc.convert("graphical_nominal_ending", true,
+								gender + number + "." + state, "MARK/N");
 						}
 						else
 						{
-							hfc.convert("graphical_lexeme", true, psp);
-							
 							String type;
+
 							if (psp.equals("adjective"))
 							{
 								type = "ADJ";
@@ -399,9 +382,7 @@
 									"part of speech: " + psp);
 							}
 							
-							morphEdges.add(new MorphEdge(type, word
-								.getEMdFValue("graphical_lexeme")
-								.getString(), morphEdges.size()));
+							hfc.convert("graphical_lexeme", true, psp, type);
 						}	
 						
 						hebrewText.append(" ");						
@@ -476,7 +457,7 @@
 			if (selLsId != currentLsId && lsSaveString != null) 
 			{
 				Change ch = emdros.createChange(EmdrosChange.UPDATE,
-					"clause", new int[]{clauseId});
+					"clause", new int[]{selClauseId});
 				ch.setInt("logical_struct_id", selLsId);
 				ch.execute();
 				currentLsId = selLsId;
@@ -1241,15 +1222,20 @@
 			if (sentences.size() == 0)
 			{
 				%>
-		<p>
-			Parse failed. Click 
-			<a href="parsedebug.jsp?clause=<%= clauseId %>">here</a>
-			to fix it.
-		</p> 
+				<p>
+				Parse failed. Click <a href="parse.jsp">here</a> to fix it.
+				</p> 
 				<%
 			}
 			else
 			{
+				%>
+				<p>
+				Parse finished with <%= sentences.size() %> possible trees.
+				Showing the first 
+				<%= sentences.size() > 3 ? 3 : sentences.size() %>:
+				</p> 
+				<%
 				for (int i = 0; i < sentences.size() && i < 3; i++)
 				{
 					Edge sentence = (Edge)( sentences.get(i) );
@@ -1259,7 +1245,7 @@
 				
 				%><p>
 				Click 
-				<a href="parsedebug.jsp?clause=<%= clauseId %>">here</a>
+				<a href="parse.jsp">here</a>
 				to see and edit all <%= sentences.size() %> parses.
 				</p><%
 			}
@@ -1444,7 +1430,7 @@
 			.getString();
 		if (! currentStruct.equals(structure) ) {
 			Change ch = emdros.createChange(EmdrosChange.UPDATE,
-				"clause", new int[]{clauseId});
+				"clause", new int[]{selClauseId});
 			ch.setString("logical_structure", structure);
 			ch.execute();
 		}
@@ -1510,7 +1496,7 @@
 	
 		Sheaf clauseSheaf = emdros.getSheaf
 			("SELECT ALL OBJECTS IN { "+min_m+" - "+max_m+"} "+
-			 "WHERE [clause self = "+clauseId+
+			 "WHERE [clause self = "+selClauseId+
 			 " [note GET text]"+
 			 "]");
 
