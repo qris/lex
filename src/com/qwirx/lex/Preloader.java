@@ -43,7 +43,11 @@ public class Preloader {
             {
                 path = "/usr/local/lib/emdros/libjemdros.so";
             }
-        
+            if (! new java.io.File(path).exists())
+            {
+                path = "/home/chris/tomcat/common/lib/libjemdros.so";
+            }
+            
             if (new java.io.File(path).exists())
             {
                 System.out.println("Library path: "+path);
