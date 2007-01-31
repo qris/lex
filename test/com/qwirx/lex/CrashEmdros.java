@@ -65,6 +65,7 @@ public class CrashEmdros extends TestCase
     */
 
     public void testCrashWithGetStringOnFeature() 
+    throws Exception
     {
         System.load("/usr/local/lib/emdros/libjemdros.so");
         
@@ -85,7 +86,7 @@ public class CrashEmdros extends TestCase
         String str = mo.getEMdFValue("phrase_type").getString();
     }
 
-	public static void main(String[] args) 
+	public static void main(String[] args) throws Exception
     {
 		// junit.textui.TestRunner.run(CrashEmdros.class);
 		new CrashEmdros().testCrashWithGetStringOnFeature();
