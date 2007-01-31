@@ -56,7 +56,7 @@ public class EmdrosDatabaseTest extends TestCase
 	}
 	
 	public void testTableIteratorShouldWork()
-	throws DatabaseException {
+	throws Exception {
 		Table table = emdros.getTable("SELECT OBJECTS HAVING MONADS " +
 				"IN {1-10} [ALL] GO");
 		
@@ -92,7 +92,7 @@ public class EmdrosDatabaseTest extends TestCase
 	}
 
 	public void testWordShouldStillHaveFeaturesAfterQueries()
-	throws DatabaseException 
+	throws Exception 
 	{
 		emdros.getSheaf("SELECT ALL OBJECTS IN {1-28735} "+
 				"WHERE [verse "+
