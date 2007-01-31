@@ -736,6 +736,11 @@
 							}
 							else if (ewngId == wid && canWriteToWord) 
 							{
+								if (wordnetGloss == null)
+								{
+									wordnetGloss = "";
+								}
+								
 								wordnetCell.html = "<form method=\"post\">\n" +
 									"<input type=\"hidden\" name=\"ewng\"" +
 									" value=\"" + wid + "\">\n" +
