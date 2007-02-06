@@ -126,10 +126,14 @@ public class HebrewMorphemeGenerator
             m_Handler.convert("graphical_root_formation", false,
                 (String)m_Stems.get(stemNum), "V/STM");
             
-            m_Handler.convert("graphical_lexeme", false, gloss, "V/LEX");
+            m_Handler.convert("graphical_lexeme", false, 
+                gloss != null ? gloss : "&nbsp;", "V/LEX");
             
             m_Handler.convert("graphical_verbal_ending", true,
                 person + gender + number, "V/PGN");
+
+            m_Handler.convert("graphical_pron_suffix", true,
+                "&nbsp;", "V/SFX");
         }
         else if (psp.equals("noun")
             || psp.equals("proper_noun"))
