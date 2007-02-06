@@ -2,6 +2,7 @@
 <%@ page import="com.qwirx.lex.ontology.*" %>
 <%@ page import="com.qwirx.lex.wordnet.*" %>
 <%@ page import="com.qwirx.lex.parser.*" %>
+<%@ page import="com.qwirx.lex.morph.*" %>
 
 <html>
 <head>
@@ -252,28 +253,7 @@
 	Map phrase_types = emdros.getEnumerationConstants
 		("phrase_type_t",false);
 		
-	Map parts_of_speech = emdros.getEnumerationConstants
-		("psp_t",false);
-
 	Map verbal_stems = emdros.getEnumerationConstants
-		("verbal_stem_t",false);
-
-	Map persons = emdros.getEnumerationConstants
-		("person_t",false);
-
-	Map numbers = emdros.getEnumerationConstants
-		("number_t",false);
-
-	Map genders = emdros.getEnumerationConstants
-		("gender_t",false);
-
-	Map states = emdros.getEnumerationConstants
-		("state_t",false);
-
-	Map tenses = emdros.getEnumerationConstants
-		("verbal_tense_t",false);
-
-	Map stems = emdros.getEnumerationConstants
 		("verbal_stem_t",false);
 
 	OntologyDb ontology = Lex.getOntologyDb();
@@ -359,11 +339,7 @@
 					{
 						MatchedObject word = words.next().const_iterator().next();
 	
-						String psp = (String)( parts_of_speech.get(
-							word.getEMdFValue("pdpsp").toString()) 
-						);
-						
-						class HebrewFeatureConverter
+						class HebrewFeatureConverter implements MorphemeHandler
 						{
 							private TreeNode m_root;
 							private MatchedObject m_word;
@@ -407,129 +383,9 @@
 							new HebrewFeatureConverter(root, word, hebrewText,
 							morphEdges);
 						
-						String person = (String)persons.get(
-							word.getEMdFValue("person").toString());
-						if      (person.equals("pers_first"))  person = "1";
-						else if (person.equals("pers_second")) person = "2";
-						else if (person.equals("pers_third"))  person = "3";
-						
-						String gender = ((String)genders.get(
-							word.getEMdFValue("gender").toString()
-							)).substring(0, 1);
-						
-						String number = ((String)numbers.get(
-							word.getEMdFValue("number").toString()
-							)).substring(0, 1);
-						
-						String state = (String)states.get(
-							word.getEMdFValue("state").toString());
-						
-						String gloss = word.getEMdFValue("wordnet_gloss")
-							.getString();
-						
-						if (gloss.equals(""))
-						{
-							String lexeme = word.getEMdFValue("lexeme")
-								.getString();
-								
-							OntologyDb.OntologyEntry entry = 
-								ontology.getWordByLexeme(lexeme);
-								
-							if (entry != null)
-							{
-								gloss = entry.m_EnglishGloss;
-							}
-							else
-							{
-								gloss = null;
-							}
-						}
-	
-						if (psp.equals("verb"))
-						{
-							hfc.convert("graphical_preformative", false,
-								(String)tenses.get(word
-								.getEMdFValue("verbal_tense").toString()),
-								"V/TNS");
-							hfc.convert("graphical_root_formation", false,
-								(String)stems.get(word
-								.getEMdFValue("verbal_stem").toString()),
-								"V/STM");
-							hfc.convert("graphical_lexeme", false, gloss,
-								"V/LEX");
-							hfc.convert("graphical_verbal_ending", true,
-								person + gender + number, "V/PGN");
-						}
-						else if (psp.equals("noun")
-							|| psp.equals("proper_noun"))
-						{
-							String type = "HEAD/NCOM";
-							
-							if (psp.equals("proper_noun"))
-							{
-								type = "HEAD/NPROP";
-							}
-							
-							hfc.convert("graphical_lexeme", false, gloss, type);
-							hfc.convert("graphical_nominal_ending", true,
-								gender + number + "." + state, "MARK/N");
-						}
-						else
-						{
-							String type;
-
-							if (psp.equals("adjective"))
-							{
-								type = "ADJ";
-							}
-							else if (psp.equals("adverb"))
-							{
-								type = "ADV";
-							}
-							else if (psp.equals("article"))
-							{
-								type = "DET";
-							}
-							else if (psp.equals("conjunction"))
-							{
-								type = "CONJ";
-							}
-							else if (psp.equals("demonstrative_pronoun"))
-							{
-								type = "PRON/DEM";
-							}
-							else if (psp.equals("interjection"))
-							{
-								type = "INTJ";
-							}
-							else if (psp.equals("interrogative"))
-							{
-								type = "INTR";
-							}
-							else if (psp.equals("interrogative_pronoun"))
-							{
-								type = "PRON/INT";
-							}
-							else if (psp.equals("negative"))
-							{
-								type = "NEG";
-							}
-							else if (psp.equals("personal_pronoun"))
-							{
-								type = "PRON/PERS";
-							}
-							else if (psp.equals("preposition"))
-							{
-								type = "P";
-							}
-							else
-							{
-								throw new IllegalArgumentException("Unknown " +
-									"part of speech: " + psp);
-							}
-							
-							hfc.convert("graphical_lexeme", true, psp, type);
-						}	
+						HebrewMorphemeGenerator gen = 
+							new HebrewMorphemeGenerator(emdros, hfc);
+						gen.parse(word);
 						
 						hebrewText.append(" ");						
 					}
