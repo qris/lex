@@ -387,7 +387,7 @@ public class Lex
                             new DbColumn("Punctual",           "ENUM('0','1')", false),
                             new DbColumn("Has_Result_State",   "ENUM('0','1')", false),
                             new DbColumn("Telic",              "ENUM('0','1')", false),
-                            new DbColumn("Thematic_Relation",  "VARCHAR(10)", true),
+                            new DbColumn("Thematic_Relation",  "VARCHAR(11)", true),
                             new DbColumn("Dynamic",            "ENUM('0','1')", false),
                             new DbColumn("Has_Endpoint",       "ENUM('0','1')", false),
                             new DbColumn("Result_Predicate",   "VARCHAR(40)", true),
