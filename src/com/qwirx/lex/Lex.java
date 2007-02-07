@@ -355,7 +355,7 @@ public class Lex
 							new DbColumn("ID",        "INT(11)",     false, 
 									true, true),
 							new DbColumn("Lexeme",    "VARCHAR(40)", true),
-							new DbColumn("Structure", "VARCHAR(80)", true),
+							new DbColumn("Structure", "VARCHAR(160)", true),
 							new DbColumn("Domain_Parent_ID", "INT(11)",
 									true),
 							new DbColumn("Domain_Label", "VARCHAR(40)", 
