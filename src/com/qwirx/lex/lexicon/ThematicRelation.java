@@ -159,7 +159,7 @@ public final class ThematicRelation
         return out;
     }
     
-    private static final ThematicRelation[] m_relationsBase = 
+    private static final ThematicRelation[] m_relations = 
         new ThematicRelation[] {
         new ThematicRelation("STA-ind", "<x> is",            "broken", 
             Arguments.X, Theme.PATIENT),
@@ -206,12 +206,12 @@ public final class ThematicRelation
         new ThematicRelation("ACT-uses", "<x> uses <y>",       "use",    
             Arguments.XY, Theme.USER, Theme.IMPLEMENT),
     };
-    private static ThematicRelation[] m_relations; 
     
     private static final Map m_relationNameMap = new Hashtable();
     
     static
     {
+        /*
         List relations = new ArrayList();
         
         for (int i = 0; i < m_relationsBase.length; i++)
@@ -268,6 +268,7 @@ public final class ThematicRelation
         {
             m_relations[i] = (ThematicRelation)relations.get(i);
         }
+        */
         
         for (int i = 0; i < m_relations.length; i++)
         {

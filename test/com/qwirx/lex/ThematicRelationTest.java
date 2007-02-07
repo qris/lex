@@ -33,18 +33,12 @@ public class ThematicRelationTest extends TestCase
     {
         ThematicRelation[] rels = ThematicRelation.list();
         
-        assertEquals(new ThematicRelation("STA-ind-x", 
+        assertEquals(new ThematicRelation("STA-ind", 
             "<x> is", "broken", Arguments.X, Theme.PATIENT), rels[0]);
 
-        assertEquals(new ThematicRelation("STA-ind-y", 
-            "<y> is", "broken", Arguments.Y, Theme.PATIENT), rels[1]);
-
-        assertEquals(new ThematicRelation("STA-loc-xy", "<x> is at <y>", 
-            "be-LOC", Arguments.XY, Theme.LOCATION, Theme.THEME), rels[4]);
+        assertEquals(new ThematicRelation("STA-loc", "<x> is at <y>", 
+            "be-LOC", Arguments.XY, Theme.LOCATION, Theme.THEME), rels[2]);
         
-        assertEquals(new ThematicRelation("STA-loc-yx", "<y> is at <x>", 
-            "be-LOC", Arguments.YX, Theme.LOCATION, Theme.THEME), rels[5]);
-
         /*
         new ThematicRelation("STA-xst", "<x> exists",        "exist",  
             Arguments.X, Theme.ENTITY),
