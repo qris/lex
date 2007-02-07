@@ -250,8 +250,7 @@
 												
 						hebrewText.append(" ");						
 						
-						if (function_name != null && function_name.equals("Pred")
-							&& psp.equals("verb"))
+						if (psp.equals("verb"))
 						{
 							predicate_text = 
 								word.getEMdFValue("lexeme").getString();
@@ -267,7 +266,6 @@
 			%><%= root.toHtml(rend) %><%
 		}
 			
-		/*
 		%>
 		<p>Predicate text is: <%= 
 			predicate_text 
@@ -275,7 +273,6 @@
 				.replaceAll(">", "&gt;")
 		%></p>
 		<%
-		*/
 		
 		int numSyntacticMacroroles = -1;
 		int currentLsId = clause.getEMdFValue("logical_struct_id").getInt();
