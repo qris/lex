@@ -391,6 +391,7 @@ public class Lex
                             new DbColumn("Dynamic",            "ENUM('0','1')", false),
                             new DbColumn("Has_Endpoint",       "ENUM('0','1')", false),
                             new DbColumn("Result_Predicate",   "VARCHAR(40)", true),
+                            new DbColumn("Result_Predicate_Arg",   "VARCHAR(1)", true),
 						}
 					)
 				);

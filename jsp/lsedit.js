@@ -82,7 +82,8 @@ function getLS(prefix)
 
 		if (f.ls_endpoint[1].checked)
 		{
-			ls += " & INGR " + f.ls_pred_2.value + "(<x>)";
+			ls += " & INGR " + f.ls_pred_2.value + 
+				"(<" + selected(f.ls_arg_2).value + ">)";
 		}
 	}
 	
@@ -101,7 +102,8 @@ function updateLS()
 	f.ls_endpoint[0].disabled = !dynamic;
 	f.ls_endpoint[1].disabled = !dynamic;
 	f.ls_pred_2.disabled = !dynamic || !f.ls_endpoint[1].checked;
-
+	f.ls_arg_2.disabled  = !dynamic || !f.ls_endpoint[1].checked;
+	
 	var trel_old_value = "";
 	if (f.ls_trel.selectedIndex >= 0)
 	{

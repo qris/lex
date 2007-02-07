@@ -106,7 +106,7 @@ public class Lexeme implements Comparable
                     ls += m_resultPredicate;
                 }
                 
-                ls += "(<x>)";
+                ls += "(<" + m_resultPredicateArg + ">)";
             }
         }
 
@@ -157,6 +157,10 @@ public class Lexeme implements Comparable
     private String m_resultPredicate;
     public String getResultPredicate() { return m_resultPredicate; }
     public void setResultPredicate(String pred) { m_resultPredicate = pred; }
+
+    private String m_resultPredicateArg;
+    public String getResultPredicateArg() { return m_resultPredicateArg; }
+    public void setResultPredicateArg(String arg) { m_resultPredicateArg = arg; }
 
     // for sorting
     public int compareTo(Object o) 
@@ -215,6 +219,13 @@ public class Lexeme implements Comparable
         if (!compareMaybeNull(this.getResultPredicate(), 
             that.getResultPredicate())) 
             return false;
+        
+        if (!compareMaybeNull(this.getResultPredicateArg(), 
+            that.getResultPredicateArg())) 
+        {
+            return false;
+        }
+        
         return true;
     }
 
@@ -239,6 +250,7 @@ public class Lexeme implements Comparable
 
         l.setPredicate      (rs.getString("Predicate"));
         l.setResultPredicate(rs.getString("Result_Predicate"));
+        l.setResultPredicateArg(rs.getString("Result_Predicate_Arg"));
         
         l.setThematicRelation(ThematicRelation.get(
             rs.getString("Thematic_Relation")));
@@ -252,7 +264,7 @@ public class Lexeme implements Comparable
             "Domain_Parent_ID,Syntactic_Args, Caused, "+
             "Punctual, Has_Result_State, Telic, Predicate, "+
             "Thematic_Relation, Dynamic, Has_Endpoint, "+
-            "Result_Predicate";
+            "Result_Predicate, Result_Predicate_Arg";
     }
 
     public static Lexeme load(SqlDatabase sqldb, int id)
@@ -362,6 +374,7 @@ public class Lexeme implements Comparable
         ch.setString("Predicate",  getPredicate());
         ch.setString("Thematic_Relation", getThematicRelationName());
         ch.setString("Result_Predicate",  getResultPredicate());
+        ch.setString("Result_Predicate_Arg",  getResultPredicateArg());
         
         /*
         if (request.getParameter("lspred") != null)

@@ -393,6 +393,13 @@
 			pred = null;
 		}
 		lexeme.setResultPredicate(pred);
+
+		String arg2 = request.getParameter("ls_arg_2");
+		if (arg2 != null && arg2.equals(""))
+		{
+			arg2 = null;
+		}
+		lexeme.setResultPredicateArg(arg2);
 		
 		if (request.getParameter("ls_trel") != null)
 		{
@@ -864,6 +871,24 @@ else
 						current.getResultPredicate() == null ? "" :
 						current.getResultPredicate()
 					%>" onKeyUp="return updateLS()" />
+				</td>
+			</tr>
+			<tr>
+				<td></td>
+				<td>Argument:</td>
+				<td>
+					<select name="ls_arg_2" onChange="return updateLS()">
+					<option value="x" <%=
+						current.getResultPredicateArg() != null &&
+						current.getResultPredicateArg().equals("x") 
+						? "SELECTED " : ""
+					%>>&lt;x&gt;</option>
+					<option value="y" <%= 
+						current.getResultPredicateArg() != null &&
+						current.getResultPredicateArg().equals("y") 
+						? "SELECTED " : ""
+					%>>&lt;y&gt;</option>
+					</select>
 				</td>
 			</tr>
 			<tr>
