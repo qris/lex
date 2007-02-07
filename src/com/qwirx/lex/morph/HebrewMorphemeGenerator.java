@@ -148,6 +148,8 @@ public class HebrewMorphemeGenerator
             m_Handler.convert("graphical_lexeme", false, gloss, type);
             m_Handler.convert("graphical_nominal_ending", true,
                 gender + number + "." + state, "MARK/N");
+            m_Handler.convert("graphical_pron_suffix", true,
+                "&nbsp;", "SFX/N");
         }
         else
         {
