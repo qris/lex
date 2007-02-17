@@ -5,6 +5,13 @@ h1
 	margin:  0px;
 }
 
+h2
+{
+	background-color: #ddf;
+	padding: 4px;
+	margin:  0px;
+}
+
 div.topmenu
 {
 	background-color: #eef;
