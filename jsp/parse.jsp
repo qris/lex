@@ -424,15 +424,26 @@
 			p.setVerbose(true);
 			Chart chart = p.parse(morphEdges);
 			List sentences = chart.filter("SENTENCE", morphEdges, false);
-			
+
 			if (sentences.size() == 0)
 			{
 				%>
 				<h3>Parse failed</h3>
-				<p>The edges found were:</p> 
-				<form name="rulecmd" method="post">
 				<%
-				
+			}
+			else
+			{
+				%>
+				<h3>Parse succeeded</h3>
+				<%
+			}
+			
+			%>
+			<p>Complete sentences found: <%= sentences.size() %></p>
+			<p>The edges found were:</p> 
+			<form name="rulecmd" method="post">
+			<%
+			
 				Map  edgeIds   = new Hashtable();
 				Map  idEdges   = new Hashtable();
 				Map  fakeChild = new Hashtable();
@@ -545,6 +556,8 @@
 						throw new AssertionError("lost elements");
 					}
 					
+			
+							
 					while (remaining.size() > 0)
 					{
 						List added    = new ArrayList();
@@ -588,17 +601,20 @@
 							
 							int right = next.getRightPosition();
 							int colspan = right - left + 1;
-							
+
 							%>
 							<td <%= colspan>1 ? "colspan="+colspan : "" %>
 								id="<%= edgeIds.get(next) %>"
 								onMouseOver="return highlight  (this);"
 								onMouseOut=" return unhighlight_all();"
-								><% /*
-								[<%= edgeIds.get(next) %>] <% */ 
+								>
 								
-								if (!fakeEdges.contains(next))
-								{
+							<% /* %>
+							[<%= edgeIds.get(next) %>] 
+							<% */
+								
+							if (!fakeEdges.contains(next))
+							{
 								%>
 								<span class="cb">
 									<input name="<%= edgeIds.get(next) %>"
@@ -606,9 +622,25 @@
 										onClick="return on_checkbox_click(this);" />
 								</span>
 								<%
-								}
-								
-								%><%= next.getHtmlLabel() %>
+							}
+							
+							if (next instanceof RuleEdge)
+							{
+								RuleEdge re = (RuleEdge)next;
+								%><a href="rules.jsp?erid=<%= 
+									re.rule().id()
+								%>#rule_<%=
+									re.rule().id()
+								%>"><%=
+									next.getHtmlLabel() 
+								%></a><%
+							}
+							else
+							{
+								%><%= next.getHtmlLabel() %><%
+							}
+							
+							%>	
 							</td>
 							<%
 							
@@ -742,24 +774,8 @@
 				</table>
 				
 				</form>
-				<%
-			}
-			else
-			{
-				%>
-				<h3>Parse finished</h3>
-				<p>The trees found were:</p> 
-				<%
-				for (int i = 0; i < sentences.size(); i++)
-				{
-					Edge sentence = (Edge)( sentences.get(i) );
-					
-					%>
-					<h4>Tree <%= i + 1 %></h4>
-					<%= sentence.toTree().toHtml(rend) %>
-					<%
-				}
-			}
+
+			<%
 		}
 	}
 	
