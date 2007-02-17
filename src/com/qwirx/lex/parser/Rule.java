@@ -182,7 +182,7 @@ public class Rule
             contained = new Vector();
             for (Iterator i = toCopy.contained.iterator(); i.hasNext(); )
             {
-                Edge instance = (Edge)( i.next() );
+                // Edge instance = (Edge)( i.next() );
                 // contained.add(instance.getBoundCopy());
             }
         }
@@ -198,7 +198,7 @@ public class Rule
             Stack result = new Stack();
             for (Iterator s = stack.iterator(); s.hasNext(); )
             {
-                Edge i = (Edge)( s.next() );
+                // Edge i = (Edge)( s.next() );
                 // result.add(i.getBoundCopy());
             }
             return result;
