@@ -62,7 +62,7 @@ public class Lex
         
 		EmdrosEnv env = new EmdrosEnv(eOutputKind.kOKConsole, 
 			eCharsets.kCSISO_8859_1, "localhost", "emdf", "changeme", 
-			"wihebrew1202");
+			"wihebrew");
 
 		if (!env.connectionOk()) 
         {

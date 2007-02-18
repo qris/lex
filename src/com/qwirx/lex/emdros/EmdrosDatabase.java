@@ -13,12 +13,16 @@ import java.sql.SQLException;
 import java.util.Hashtable;
 import java.util.Map;
 
+import jemdros.BadMonadsException;
+import jemdros.EMdFDBDBError;
 import jemdros.EmdrosEnv;
+import jemdros.EmdrosException;
 import jemdros.MatchedObject;
 import jemdros.MonadSetElement;
 import jemdros.SetOfMonads;
 import jemdros.Sheaf;
 import jemdros.Table;
+import jemdros.TableException;
 import jemdros.TableIterator;
 import jemdros.TableRow;
 
@@ -58,7 +62,28 @@ public class EmdrosDatabase implements Database
 		// Execute query
 		boolean[] bCompilerResult = new boolean[1];
 
-		boolean bDBResult = env.executeString(query, bCompilerResult, false, false);
+        boolean bDBResult = false;
+        
+        try
+        {
+            bDBResult = env.executeString(query, bCompilerResult, false, false);
+        }
+        catch (TableException e)
+        {
+            throw new DatabaseException(e, query);
+        }
+        catch (BadMonadsException e)
+        {
+            throw new DatabaseException(e, query);
+        }
+        catch (EMdFDBDBError e)
+        {
+            throw new DatabaseException(e, query);
+        }
+        catch (EmdrosException e)
+        {
+            throw new DatabaseException(e, query);
+        }
 	
 		if (!bDBResult) {
 			throw new DatabaseException(
@@ -103,17 +128,34 @@ public class EmdrosDatabase implements Database
 	public int getMinM() throws DatabaseException 
     {
 		Table min_m_table = getTable("SELECT MIN_M");
-		return Integer.parseInt(
-			min_m_table.iterator().next().iterator().next()
+        try
+        {
+            return Integer.parseInt
+            (
+                min_m_table.iterator().next().iterator().next()
 			);
+        }
+        catch (TableException e)
+        {
+            throw new DatabaseException(e, "SELECT MIN_M");
+        }
 	}
 
 	public int getMaxM() throws DatabaseException 
     {
 		Table max_m_table = getTable("SELECT MAX_M");
-		return Integer.parseInt(
-			max_m_table.iterator().next().iterator().next()
+        
+        try
+        {
+            return Integer.parseInt
+            (
+                max_m_table.iterator().next().iterator().next()
 			);
+        }
+        catch (TableException e)
+        {
+            throw new DatabaseException(e, "SELECT MAX_M");
+        }
 	}
 	
 	public Map getEnumerationConstants(String type, boolean byName) 
@@ -124,18 +166,28 @@ public class EmdrosDatabase implements Database
 		Table table = getTable("SELECT ENUMERATION CONSTANTS FROM "+type);
 		
 		TableIterator rows = table.iterator();
-		while (rows.hasNext()) {
-			TableRow row = rows.next();
-			
-			String name   = row.getColumn(1);
-			String number = row.getColumn(2);
-			
-			if (byName)
-				result.put(name, number);
-			else
-				result.put(number, name);
-		}
-		
+        
+        try 
+        {
+    		while (rows.hasNext()) 
+            {
+    			TableRow row = rows.next();
+    			
+    			String name   = row.getColumn(1);
+    			String number = row.getColumn(2);
+    			
+    			if (byName)
+    				result.put(name, number);
+    			else
+    				result.put(number, name);
+    		}
+        }
+        catch (TableException e)
+        {
+            throw new DatabaseException(e, 
+                "SELECT ENUMERATION CONSTANTS FROM "+type);
+        }
+        
 		return result;
 	}
     
@@ -147,19 +199,26 @@ public class EmdrosDatabase implements Database
         
         Table table = getTable("MONAD SET CALCULATION "+query);
         TableIterator rows = table.iterator();
-        
-        while (rows.hasNext()) 
+
+        try
         {
-            TableRow row = rows.next();
-            
-            String min = row.getColumn(1);
-            String max = row.getColumn(2);
-            
-            result.append(min+"-"+max);
-            if (rows.hasNext())
+            while (rows.hasNext()) 
             {
-                result.append(",");
+                TableRow row = rows.next();
+                
+                String min = row.getColumn(1);
+                String max = row.getColumn(2);
+                
+                result.append(min+"-"+max);
+                if (rows.hasNext())
+                {
+                    result.append(",");
+                }
             }
+        }
+        catch (TableException e)
+        {
+            throw new DatabaseException(e, "MONAD SET CALCULATION "+query);
         }
         
         result.append("}");
@@ -187,7 +246,7 @@ public class EmdrosDatabase implements Database
                     " " + objectIds);
             }
         }
-        catch (SQLException e)
+        catch (DatabaseException e)
         {
             throw new DatabaseException("Failed to determine object access",
                 e, null);
@@ -204,17 +263,24 @@ public class EmdrosDatabase implements Database
     {
 		TableIterator features =
 			getTable("SELECT FEATURES FROM ["+objectType+"]").iterator();
-			
-		while (features.hasNext()) 
+
+        try
         {
-			TableRow tr = features.next();
-			String name = tr.getColumn(1);
-			if (name.equals(feature))
+    		while (features.hasNext()) 
             {
-			    return;
-            }
-		}
-		
+    			TableRow tr = features.next();
+    			String name = tr.getColumn(1);
+    			if (name.equals(feature))
+                {
+    			    return;
+                }
+    		}
+        }
+        catch (TableException e)
+        {
+            throw new DatabaseException(e, "SELECT FEATURES FROM ["+objectType+"]");
+        }
+
 		executeDirect("UPDATE OBJECT TYPE "+
 			"["+objectType+" ADD "+feature+" : "+featureType+";]");
     }
@@ -226,16 +292,23 @@ public class EmdrosDatabase implements Database
     
         TableIterator features =
             getTable("SELECT OBJECT TYPES").iterator();
-            
-        while (features.hasNext()) 
+        
+        try
         {
-            TableRow tr = features.next();
-            String name = tr.getColumn(1);
-            if (name.equals(objectType))
+            while (features.hasNext()) 
             {
-                haveType = true;
-                break;
+                TableRow tr = features.next();
+                String name = tr.getColumn(1);
+                if (name.equals(objectType))
+                {
+                    haveType = true;
+                    break;
+                }
             }
+        }
+        catch (TableException e)
+        {
+            throw new DatabaseException(e, "SELECT OBJECT TYPES");
         }
         
         if (!haveType)
@@ -287,7 +360,7 @@ public class EmdrosDatabase implements Database
     }
 
     public boolean canWriteTo(MatchedObject object)
-    throws SQLException
+    throws DatabaseException
     {
         SetOfMonads monads = new SetOfMonads();
         object.getSOM(monads, false);
@@ -295,13 +368,13 @@ public class EmdrosDatabase implements Database
     }
 
     public boolean canWriteTo(String objectType, int objectId)
-    throws DatabaseException, SQLException
+    throws DatabaseException
     {
         return canWriteTo(objectType, new int[]{objectId});
     }
     
     public boolean canWriteTo(String objectType, int[] objectIds)
-    throws DatabaseException, SQLException
+    throws DatabaseException
     {
         String query = "GET MONADS FROM OBJECTS WITH ID_DS = ";
         
@@ -319,42 +392,73 @@ public class EmdrosDatabase implements Database
         TableIterator rows = table.iterator();
         SetOfMonads monads = new SetOfMonads();
         
-        while (rows.hasNext()) 
+        try
         {
-            TableRow row = rows.next();
-            int first = Integer.parseInt(row.getColumn(2)); 
-            int last  = Integer.parseInt(row.getColumn(3));
-            monads.add(first, last);
+            while (rows.hasNext()) 
+            {
+                TableRow row = rows.next();
+                int first = Integer.parseInt(row.getColumn(2)); 
+                int last  = Integer.parseInt(row.getColumn(3));
+                monads.add(first, last);
+            }
+        }
+        catch (TableException e)
+        {
+            throw new DatabaseException(e, query);
         }
         
         return canWriteTo(monads);
     }
 
     private boolean canWriteTo(SetOfMonads monads)
-    throws SQLException
+    throws DatabaseException
     {
-        PreparedStatement stmt = conn.prepareStatement
-        (
-            "SELECT Monad_First, Monad_Last " +
-            "FROM   user_text_access " +
-            "WHERE  (User_Name = ? OR User_Name = 'anonymous') " +
-            "AND    Write_Access = '1'"
-        );
-        stmt.setString(1, username);
+        PreparedStatement stmt = null;
+        ResultSet rs = null;
         
-        ResultSet rs = stmt.executeQuery();
+        String query = "SELECT Monad_First, Monad_Last " +
+        "FROM   user_text_access " +
+        "WHERE  (User_Name = ? OR User_Name = 'anonymous') " +
+        "AND    Write_Access = '1'";
         
-        while (rs.next()) 
+        try
         {
-            int first = rs.getInt(1);
-            int last  = rs.getInt(2);
-            MonadSetElement mse = new MonadSetElement(first, last);
-            monads.removeMSE(mse);
+            stmt = conn.prepareStatement(query);
+            stmt.setString(1, username);
+            rs = stmt.executeQuery();
+        }
+        catch (SQLException e)
+        {
+            throw new DatabaseException(e, query);
         }
         
-        stmt.close();
-        rs.close();
+        int first = 0;
+        int last  = 0;
 
+        try
+        {
+            while (rs.next()) 
+            {
+                first = rs.getInt(1);
+                last  = rs.getInt(2);
+                MonadSetElement mse = new MonadSetElement(first, last);
+                monads.removeMSE(mse);
+            }
+
+            stmt.close();
+            rs.close();
+        }
+        catch (SQLException e)
+        {
+            throw new DatabaseException(e, "constructing monad set "+
+                first+"-"+last);
+        }
+        catch (BadMonadsException e)
+        {
+            throw new DatabaseException(e, "constructing monad set "+
+                first+"-"+last);
+        }
+        
         return monads.isEmpty();
     }
 

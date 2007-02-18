@@ -16,7 +16,7 @@ public class HebrewMorphemeGenerator
 {
     private MorphemeHandler m_Handler;
     private static Map m_Persons, m_Genders, m_Numbers, m_States, 
-        m_PartsOfSpeech, m_Tenses, m_Stems;
+        m_PartsOfSpeech, m_Tenses;
     private OntologyDb m_Ontology;
     
     public HebrewMorphemeGenerator(EmdrosDatabase emdros, 
@@ -27,39 +27,42 @@ public class HebrewMorphemeGenerator
         
         if (m_Persons == null)
         {
-            m_Persons = emdros.getEnumerationConstants("person_t", false);
+            m_Persons = emdros.getEnumerationConstants("person_e", false);
         }
         
         if (m_Genders == null)
         {
-            m_Genders = emdros.getEnumerationConstants("gender_t", false);
+            m_Genders = emdros.getEnumerationConstants("gender_e", false);
         }
         
         if (m_Numbers == null)
         {
-            m_Numbers = emdros.getEnumerationConstants("number_t", false);
+            m_Numbers = emdros.getEnumerationConstants("number_e", false);
         }
         
         if (m_States == null)
         {
-            m_States = emdros.getEnumerationConstants("state_t", false);
+            m_States = emdros.getEnumerationConstants("state_e", false);
         }
         
         if (m_PartsOfSpeech == null)
         {
-            m_PartsOfSpeech = emdros.getEnumerationConstants("psp_t", false);
+            m_PartsOfSpeech = emdros.getEnumerationConstants("part_of_speech_e",
+                false);
         }
 
         if (m_Tenses == null)
         {
-            m_Tenses = emdros.getEnumerationConstants("verbal_tense_t", false);
+            m_Tenses = emdros.getEnumerationConstants("tense_e", false);
         }
 
+        /*
         if (m_Stems == null)
         {
             m_Stems = emdros.getEnumerationConstants("verbal_stem_t", false);
             
         }
+        */
 
         if (m_Ontology == null)
         {
@@ -75,14 +78,14 @@ public class HebrewMorphemeGenerator
         }
         
         String psp = (String)( m_PartsOfSpeech.get(
-            word.getEMdFValue("pdpsp").toString()) 
+            word.getEMdFValue("phrase_dependent_part_of_speech").toString()) 
         );
         
         String person = (String)m_Persons.get(
             word.getEMdFValue("person").toString());
-        if      (person.equals("pers_first"))  person = "1";
-        else if (person.equals("pers_second")) person = "2";
-        else if (person.equals("pers_third"))  person = "3";
+        if      (person.equals("first_person"))  person = "1";
+        else if (person.equals("second_person")) person = "2";
+        else if (person.equals("third_person"))  person = "3";
         
         String gender = ((String)m_Genders.get(
             word.getEMdFValue("gender").toString()
@@ -118,13 +121,13 @@ public class HebrewMorphemeGenerator
 
         if (psp.equals("verb"))
         {
-            String tenseNum = word.getEMdFValue("verbal_tense").toString();
+            String tenseNum = word.getEMdFValue("tense").toString();
             m_Handler.convert("graphical_preformative", false,
                 (String)m_Tenses.get(tenseNum), "V/TNS");
             
-            String stemNum = word.getEMdFValue("verbal_stem").toString();
+            // String stemNum = word.getEMdFValue("verbal_stem").toString();
             m_Handler.convert("graphical_root_formation", false,
-                (String)m_Stems.get(stemNum), "V/STM");
+                "(stem)", "V/STM");
             
             m_Handler.convert("graphical_lexeme", false, 
                 gloss != null ? gloss : "&nbsp;", "V/LEX");
@@ -194,6 +197,10 @@ public class HebrewMorphemeGenerator
             else if (psp.equals("personal_pronoun"))
             {
                 type = "PRON/PERS";
+            }
+            else if (psp.equals("pronoun"))
+            {
+                type = "PRON";
             }
             else if (psp.equals("preposition"))
             {

@@ -1,3 +1,6 @@
+<%
+	response.setContentType("text/html; charset=UTF-8");
+%>
 <%@ page import="java.util.Enumeration" %>
 <%@ page import="java.util.Hashtable" %>
 <%@ page import="java.util.Vector" %>

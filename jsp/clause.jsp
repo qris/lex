@@ -80,16 +80,13 @@
 <%
 
 	Map phrase_functions = emdros.getEnumerationConstants
-		("phrase_function_t",false);
+		("phrase_function_e",false);
 
 	Map phrase_types = emdros.getEnumerationConstants
-		("phrase_type_t",false);
+		("phrase_type_e",false);
 		
 	Map parts_of_speech = emdros.getEnumerationConstants
-		("psp_t",false);
-
-	Map verbal_stems = emdros.getEnumerationConstants
-		("verbal_stem_t",false);
+		("part_of_speech_e",false);
 
 	if (request.getParameter("savearg") != null)
 	{
@@ -121,10 +118,10 @@
 		emdros.getMonadSet(userTextAccess, min_m, max_m) +
 		" WHERE [clause self = "+selClauseId+
 		"       GET logical_struct_id, logical_structure "+
-		"        [phrase GET phrase_type, function, argument_name, "+
+		"        [phrase GET phrase_type, phrase_function, argument_name, "+
 		"                    type_id, macrorole_number "+
-		"          [word GET lexeme, pdpsp, verbal_stem, verbal_tense, " +
-		"                    wordnet_gloss, wordnet_synset, " +
+		"          [word GET lexeme, phrase_dependent_part_of_speech, " +
+		"                    tense, wordnet_gloss, wordnet_synset, " +
 		"                    graphical_preformative, " +
 		"                    graphical_locative, " +
 		"                    graphical_lexeme, " +
@@ -188,7 +185,7 @@
 						phrases.next().const_iterator().next();
 	
 					String function_name = (String)( phrase_functions.get(
-						phrase.getEMdFValue("function").toString())
+						phrase.getEMdFValue("phrase_function").toString())
 					);
 	
 					SheafConstIterator words = phrase.getSheaf().const_iterator();
@@ -197,7 +194,7 @@
 						MatchedObject word = words.next().const_iterator().next();
 	
 						String psp = (String)( parts_of_speech.get(
-							word.getEMdFValue("pdpsp").toString()) 
+							word.getEMdFValue("phrase_dependent_part_of_speech").toString()) 
 						);
 						
 						class HebrewFeatureConverter implements MorphemeHandler
@@ -425,7 +422,7 @@
 				boolean canWriteToPhrase = emdros.canWriteTo(phrase);
 	
 				String function_name = (String)( phrase_functions.get(
-					phrase.getEMdFValue("function").toString())
+					phrase.getEMdFValue("phrase_function").toString())
 				);
 
 				String phrase_type = (String)( phrase_types.get(
@@ -442,10 +439,8 @@
 					if (type.equals("word")) {
 						String lexeme = 
 							word.getEMdFValue("lexeme").getString();
-						String verbal_stem = 
-							word.getEMdFValue("verbal_stem").toString();
 						String part_of_speech = (String)
-							parts_of_speech.get(word.getEMdFValue("pdpsp")
+							parts_of_speech.get(word.getEMdFValue("phrase_dependent_part_of_speech")
 								.toString());
 							
 						Cell cell = new Cell();
@@ -727,23 +722,13 @@
 										"\">change</a>]";
 							}
 						}
-						
-						{
-							Cell stemCell = new Cell();
-							cell.subcells.add(stemCell);
-							
-							stemCell.html = 
-								(String)( verbal_stems.get(verbal_stem) );
-							if (stemCell.html.equals("NA"))
-								stemCell.html = "";
-						}
 					}
 				}
 				
 				if (type.equals("phrase")) 
 				{
 					Cell pCell    = new Cell();
-					pCell.label   = phrase.getEMdFValue("function").toString();
+					pCell.label   = phrase.getEMdFValue("phrase_function").toString();
 					pCell.columns = column - first_col;
 					struct_row.addElement(pCell);
 
@@ -1303,7 +1288,7 @@
 	
 %>
 
-<h2>Notes</h2>
+<h3>Notes</h3>
 
 <%
 	if (request.getParameter("nc") != null &&
@@ -1443,9 +1428,9 @@
 </form></p>
 
 <hr>
-Book    <%= session.getAttribute("bookNum") %>
-Chapter <%= session.getAttribute("chapterNum") %>
-Verse   <%= session.getAttribute("verseNum") %>
+        <%= session.getAttribute("book") %>,
+Chapter <%= session.getAttribute("chapterNum") %>,
+Verse   <%= session.getAttribute("verseNum") %>,
 Clause  <%= session.getAttribute("clauseId") %>
 </form>
 </body></html>	

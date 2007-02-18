@@ -247,15 +247,9 @@
 
 <%
 
-	Map phrase_functions = emdros.getEnumerationConstants
-		("phrase_function_t",false);
-
 	Map phrase_types = emdros.getEnumerationConstants
-		("phrase_type_t",false);
-		
-	Map verbal_stems = emdros.getEnumerationConstants
-		("verbal_stem_t",false);
-
+		("phrase_type_e",false);
+	
 	OntologyDb ontology = Lex.getOntologyDb();
 
 	Wordnet wordnet = Wordnet.getInstance();
@@ -276,10 +270,10 @@
 		emdros.getMonadSet(userTextAccess, min_m, max_m) +
 		" WHERE [clause self = "+selClauseId+
 		"       GET logical_struct_id, logical_structure "+
-		"        [phrase GET phrase_type, function, argument_name, "+
+		"        [phrase GET phrase_type, argument_name, "+
 		"                    type_id, macrorole_number "+
-		"          [word GET lexeme, pdpsp, verbal_stem, verbal_tense, " +
-		"                    wordnet_gloss, wordnet_synset, " +
+		"          [word GET lexeme, phrase_dependent_part_of_speech, "+
+		"                    tense, wordnet_gloss, wordnet_synset, " +
 		"                    graphical_preformative, " +
 		"                    graphical_locative, " +
 		"                    graphical_lexeme, " +
@@ -329,10 +323,6 @@
 				{
 					MatchedObject phrase =
 						phrases.next().const_iterator().next();
-	
-					String function_name = (String)( phrase_functions.get(
-						phrase.getEMdFValue("function").toString())
-					);
 	
 					SheafConstIterator words = phrase.getSheaf().const_iterator();
 					while (words.hasNext()) 

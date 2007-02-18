@@ -18,6 +18,7 @@ import java.util.TreeSet;
 import java.util.Vector;
 
 import jemdros.Table;
+import jemdros.TableException;
 import jemdros.TableIterator;
 import jemdros.TableRow;
 import junit.framework.ComparisonFailure;
@@ -185,7 +186,7 @@ public final class EmdrosChange implements Change
 	}			
 
 	private void captureValues(boolean createRowChangeLogs, boolean storeAsNewValue) 
-	throws SQLException, DatabaseException 
+	throws SQLException, DatabaseException, TableException
     {
 		/*
 		System.out.println("Capturing values for "+type.toString()+" ("+
@@ -326,7 +327,7 @@ public final class EmdrosChange implements Change
 	}
 	
 	private void captureOldValues() 
-	throws DatabaseException, SQLException 
+	throws DatabaseException, SQLException, TableException
     {
 		if (changeType != UPDATE && changeType != DELETE)
 			throw new AssertionError("this method can only be used "+
@@ -336,7 +337,7 @@ public final class EmdrosChange implements Change
 	}
 	
 	private void captureNewValues() 
-	throws SQLException, DatabaseException 
+	throws SQLException, DatabaseException, TableException
 	{
 		if (changeType != CREATE && changeType != UPDATE)
 			throw new AssertionError("this method can only be used "+
@@ -515,7 +516,11 @@ public final class EmdrosChange implements Change
             m_log.error(sb.toString(), e);
 			throw new DatabaseException(e, sb.toString());
 		}
-        
+        catch (TableException e) 
+        {
+            m_log.error(sb.toString(), e);
+            throw new DatabaseException(e, sb.toString());
+        }        
 	}
 	
 	public void setInt(String feature, long value) 

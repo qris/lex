@@ -13,22 +13,23 @@
 	<select name="book" onChange="document.forms.nav.submit()">
 <%
 
-	int selBookNum = 1;
+	String selBook = "Genesis";
 	
 	{
-		Integer sessionBookNum = (Integer)( session.getAttribute("bookNum") );
-		if (sessionBookNum != null) 
+		String selBook2 = (String)( session.getAttribute("book") );
+		if (selBook2 != null) 
 		{
-			selBookNum = sessionBookNum.intValue();
+			selBook = selBook2;
 		}
 	}
 	
-	try 
 	{ 
-		int newBookNum = Integer.parseInt(request.getParameter("book"));
-		selBookNum = newBookNum;
+		String selBook2 = request.getParameter("book");
+		if (selBook2 != null) 
+		{
+			selBook = selBook2;
+		}
 	} 
-	catch (Exception e) { /* ignore it and use default book */ }
 	
 	{
 		boolean foundBook = false;
@@ -54,7 +55,7 @@
         
 		Table featureTable = emdros.getTable
 		(
-			"GET FEATURES book, book_number FROM OBJECTS WITH ID_DS = " + 
+			"GET FEATURES book FROM OBJECTS WITH ID_DS = " + 
 			id_dList.toString() + " [book]"
 		);
 
@@ -62,9 +63,9 @@
         while (rows.hasNext()) 
         {
         	TableRow row = rows.next();
-			int thisBookNum = Integer.parseInt(row.getColumn(3)); 
+			String thisBook = row.getColumn(2);
 			
-			if (thisBookNum == selBookNum)
+			if (thisBook.equals(selBook))
 			{
 				foundBook = true;
 				Table monadTable = emdros.getTable
@@ -81,9 +82,9 @@
 				
 			%>
 			<option <%=
-				thisBookNum == selBookNum ? "SELECTED" : ""
+				thisBook.equals(selBook) ? "SELECTED" : ""
 			%> value="<%= 
-				row.getColumn(3) 
+				row.getColumn(2) 
 			%>"><%= 
 				row.getColumn(2)
 			%><%
@@ -91,7 +92,7 @@
 
 		if (foundBook)
 		{
-			session.setAttribute("bookNum", new Integer(selBookNum));
+			session.setAttribute("book", selBook);
 		}
 	}
 	
@@ -210,8 +211,8 @@
 			"SELECT ALL OBJECTS IN " +
 			emdros.getMonadSet(userTextAccess, min_m, max_m) +
 			" WHERE [verse "+
-			"        book_number = "+selBookNum+" AND "+
-			"        chapter     = "+selChapNum+
+			"        book    = "+selBook+" AND "+
+			"        chapter = "+selChapNum+
 			"        GET verse, verse_label]"
 		);
 
@@ -275,9 +276,9 @@
 			"SELECT ALL OBJECTS IN " +
 			emdros.getMonadSet(userTextAccess, min_m, max_m) +
 			" WHERE [verse "+
-			"       book_number = "+selBookNum+" AND "+
-			"       chapter     = "+selChapNum+" AND "+
-			"       verse       = "+selVerseNum+
+			"       book    = "+selBook+" AND "+
+			"       chapter = "+selChapNum+" AND "+
+			"       verse   = "+selVerseNum+
 			"       GET bart_gloss "+
 			"       [clause "+
 			"        [word GET lexeme]"+
