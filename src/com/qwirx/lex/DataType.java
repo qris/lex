@@ -13,9 +13,6 @@ import java.sql.SQLException;
 import java.util.Hashtable;
 import java.util.Vector;
 
-import org.apache.log4j.Logger;
-
-
 public class DataType 
 {
 	public int id, supertype_id, depth;
