@@ -4,15 +4,14 @@
 	<classpathentry kind="src" path="src"/>
 	<classpathentry kind="lib" path="jsp/WEB-INF/lib/jemdros.jar"/>
 	<classpathentry kind="lib" path="jsp/WEB-INF/lib/junit.jar"/>
+	<classpathentry kind="lib" path="jsp/WEB-INF/lib/jwnl.jar"/>
+	<classpathentry kind="lib" path="jsp/WEB-INF/lib/httpunit.jar"/>
 	<classpathentry kind="src" path="test"/>
-	<classpathentry kind="var" path="TOMCAT_HOME/common/lib/servlet-api.jar"/>
-	<classpathentry kind="var" path="TOMCAT_HOME/common/lib/jasper-runtime.jar"/>
-	<classpathentry kind="var" path="TOMCAT_HOME/common/lib/jsp-api.jar"/>
 	<classpathentry kind="lib" path="jsp/WEB-INF/lib/mysql-connector-java-3.1.11-bin.jar"/>
 	<classpathentry kind="lib" path="jsp/WEB-INF/lib/log4j-1.2.8.jar"/>
 	<classpathentry kind="src" path="properties"/>
 	<classpathentry kind="lib" path="jsp/WEB-INF/lib/Tidy.jar"/>
-	<classpathentry combineaccessrules="false" kind="src" path="/HttpUnit"/>
-	<classpathentry combineaccessrules="false" kind="src" path="/jwnl"/>
+	<classpathentry kind="var" path="TOMCAT_HOME/common/lib/servlet.jar"/>
+	<classpathentry kind="var" path="TOMCAT_HOME/common/lib/jasper-runtime.jar"/>
 	<classpathentry kind="output" path="jsp/WEB-INF/classes"/>
 </classpath>
