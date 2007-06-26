@@ -772,7 +772,7 @@ else
 			</tr>
 			<tr>
 				<td colspan="3">
-					<h4>Telicity</h4>
+					<h4>Non-punctuality</h4>
 				</td>
 			</tr>
 			<tr>
@@ -783,7 +783,7 @@ else
 						/>
 				</td>
 				<td>
-					This is finished at a temporal endpoint (... for an hour)
+					This must be done as a process reaching an endpoint (... in an hour)
 				</td>
 				<td>
 					BECOME
