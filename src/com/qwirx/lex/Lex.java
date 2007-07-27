@@ -13,7 +13,9 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Arrays;
+import java.util.Hashtable;
 import java.util.Iterator;
+import java.util.Map;
 
 import jemdros.EmdrosEnv;
 import jemdros.eCharsets;
@@ -54,12 +56,31 @@ public class Lex
 		return OntologyDb.getInstance();
 	}
 
+	private static ThreadLocal s_EmdrosDatabaseMap = new ThreadLocal()
+	{
+        protected synchronized Object initialValue()
+        {
+        	return new Hashtable();
+        }
+	};
+
 	public static final EmdrosDatabase getEmdrosDatabase(String user, 
         String host) 
 	throws DatabaseException 
     {
     	loadLibrary();
         
+    	String key = Thread.currentThread().getId() + "@" + user +
+    		"@" + host; 
+    	
+    	Map tlsMap = (Map)s_EmdrosDatabaseMap.get();
+    	
+    	EmdrosDatabase db = (EmdrosDatabase)tlsMap.get(key);
+    	if (db != null)
+    	{
+    		return db;
+    	}
+    	
 		EmdrosEnv env = new EmdrosEnv(eOutputKind.kOKConsole, 
 			eCharsets.kCSISO_8859_1, "localhost", "emdf", "changeme", 
 			"wihebrew");
@@ -85,6 +106,8 @@ public class Lex
         emdrosDb.createFeatureIfMissing("word",  "wordnet_gloss",    "string");
         emdrosDb.createFeatureIfMissing("word",  "wordnet_synset",   "integer");
 		
+        tlsMap.put(key, emdrosDb);
+        
 		return emdrosDb;
 	}
 	
