@@ -129,4 +129,9 @@ public class SqlDatabase implements Database {
 		return new SqlChange(username, database, 
 			(SqlChange.Type)type, table, (String)conditions, conn);
 	}
+	
+	public void close() throws SQLException
+	{
+		conn.close();
+	}
 }
