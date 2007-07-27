@@ -140,3 +140,4 @@
 %>
 
 </body></html>	
+<%@ include file="cleanup.jsp" %>

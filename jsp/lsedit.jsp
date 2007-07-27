@@ -14,7 +14,6 @@
 <%@ page import="com.qwirx.lex.emdros.*" %>
 <%@ page import="com.qwirx.lex.lexicon.*" %>
 <%@ page import="com.qwirx.lex.lexicon.Lexeme.Variable" %>
-<% long startTime = System.currentTimeMillis(); %>
 <html>
 <head>
 <title>Lex: Edit Logical Structure</title>
@@ -1064,7 +1063,3 @@ else
 
 </body></html>	
 <%@ include file="cleanup.jsp" %>
-<% 
-	System.out.println("lsedit.jsp rendered in "+
-		(System.currentTimeMillis()-startTime)+" ms"); 
-%>
