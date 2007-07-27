@@ -1434,3 +1434,5 @@ Verse   <%= session.getAttribute("verseNum") %>,
 Clause  <%= session.getAttribute("clauseId") %>
 </form>
 </body></html>	
+
+<%@ include file="cleanup.jsp" %>

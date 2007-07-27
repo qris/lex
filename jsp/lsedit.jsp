@@ -22,6 +22,7 @@
 <style>
 	h4 { margin-top: 8pt; margin-bottom: 0pt; }
 	div.topmenu a.lsedit_jsp <%@ include file="hilite.inc" %>
+	td { vertical-align: top; }
 </style>
 </head>
 <body>
@@ -723,7 +724,7 @@ else
 						<%= current.isCaused() ? "CHECKED" : "" %>
 						/>
 				</td>
-				<td>
+				<td valign="top">
 					There is a controlling agent (&alpha; CAUSE &beta;)
 				</td>
 				<td>
@@ -1062,6 +1063,7 @@ else
 %>
 
 </body></html>	
+<%@ include file="cleanup.jsp" %>
 <% 
 	System.out.println("lsedit.jsp rendered in "+
 		(System.currentTimeMillis()-startTime)+" ms"); 
