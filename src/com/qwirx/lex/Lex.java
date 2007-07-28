@@ -122,9 +122,12 @@ public class Lex
     	if (isLibraryLoaded)
     		return;
     		
-    	try {
+    	try 
+    	{
     		Class.forName("com.qwirx.lex.Preloader").newInstance();
-		} catch (Throwable t) {
+		}
+    	catch (Throwable t) 
+    	{
 			t.printStackTrace(System.err);
 			throw(new RuntimeException(t));
 		}
