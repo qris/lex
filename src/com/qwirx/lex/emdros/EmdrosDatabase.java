@@ -232,6 +232,11 @@ public class EmdrosDatabase implements Database
         return getMonadSet(access+" INTERSECT {"+min_m+"-"+max_m+"}");
     }
     
+    public SetOfMonads intersect(SetOfMonads set, int min_m, int max_m)
+    {
+    	return SetOfMonads.intersect(set, new SetOfMonads(min_m, max_m));
+    }
+    
 	public Change createChange(Object changeType, String objectType, 
 			Object objectIds) throws DatabaseException
 	{
@@ -317,7 +322,42 @@ public class EmdrosDatabase implements Database
                 "["+objectType+"]");
         }
     }
-    
+
+    public SetOfMonads getVisibleMonads()
+    throws SQLException
+    {
+        PreparedStatement stmt = conn.prepareStatement
+        (
+            "SELECT Monad_First, Monad_Last " +
+            "FROM   user_text_access " +
+            "WHERE  (User_Name = ? OR User_Name = 'anonymous')"
+        );
+        stmt.setString(1, username);
+        
+        SetOfMonads result = new SetOfMonads();
+        
+        ResultSet rs = stmt.executeQuery();
+        boolean haveMonads = false;
+        
+        while (rs.next()) 
+        {
+            haveMonads = true;
+            int first = rs.getInt(1);
+            int last  = rs.getInt(2);
+            result.add(first, last);
+        }
+        
+        stmt.close();
+        rs.close();
+        
+        if (!haveMonads)
+        {
+            return null;
+        }
+        
+        return result;
+    }
+
     public String getVisibleMonadString()
     throws SQLException
     {
