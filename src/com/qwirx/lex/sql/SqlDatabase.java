@@ -102,14 +102,20 @@ public class SqlDatabase implements Database {
     {
 		try 
         {
-			if (rs != null) {
+			if (rs != null)
+			{
 				rs.close();
 				rs = null;
 			}
 			
-			if (stmt != null) {
+			if (stmt != null)
+			{
 				stmt.close();
 				stmt = null;
+
+				long totalTime = System.currentTimeMillis() - startTime;
+		        m_LOG.info(totalTime+" ms to finish  "+query);
+		        query = null;
 			}
 		} 
         catch (SQLException e) 
@@ -119,8 +125,6 @@ public class SqlDatabase implements Database {
 			throw new DatabaseException(e, query);
 		}
         
-        long totalTime = System.currentTimeMillis() - startTime;
-        m_LOG.info(totalTime+" ms to finish  "+query);
 	}
 	
 	public Change createChange(Object type, String table, 
