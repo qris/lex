@@ -37,7 +37,8 @@
 		Table bookTable = emdros.getTable
 		(
 			"SELECT OBJECTS HAVING MONADS IN " + 
-			emdros.getMonadSet(userTextAccess, min_m, max_m) + " [book]"
+			emdros.intersect(userTextAccessSet, min_m, max_m) +
+			" [book]"
 		);
 		
 		StringBuffer id_dList = new StringBuffer();
@@ -126,7 +127,8 @@
 		Table chapterTable = emdros.getTable
 		(
 			"SELECT OBJECTS HAVING MONADS IN " + 
-			emdros.getMonadSet(userTextAccess, min_m, max_m) + " [chapter]"
+			emdros.intersect(userTextAccessSet, min_m, max_m) +
+			" [chapter]"
 		);
 
 		StringBuffer id_dList = new StringBuffer();
@@ -209,7 +211,7 @@
 		Sheaf sheaf = emdros.getSheaf
 		(
 			"SELECT ALL OBJECTS IN " +
-			emdros.getMonadSet(userTextAccess, min_m, max_m) +
+			emdros.intersect(userTextAccessSet, min_m, max_m) +
 			" WHERE [verse "+
 			"        book    = "+selBook+" AND "+
 			"        chapter = "+selChapNum+
@@ -274,7 +276,7 @@
 		Sheaf sheaf = emdros.getSheaf
 		(
 			"SELECT ALL OBJECTS IN " +
-			emdros.getMonadSet(userTextAccess, min_m, max_m) +
+			emdros.intersect(userTextAccessSet, min_m, max_m) +
 			" WHERE [verse "+
 			"       book    = "+selBook+" AND "+
 			"       chapter = "+selChapNum+" AND "+

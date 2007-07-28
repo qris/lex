@@ -50,7 +50,7 @@
 	Sheaf sheaf = emdros.getSheaf
 	(
 		"SELECT ALL OBJECTS IN " +
-		emdros.getMonadSet(userTextAccess, min_m, max_m) +
+		emdros.intersect(userTextAccessSet, min_m, max_m) +
 		" WHERE [clause self = "+clauseId+"]"
 	);
 
