@@ -94,7 +94,7 @@ public class Lex
 		}
 
 		EmdrosDatabase emdrosDb = new EmdrosDatabase(
-				env, user, host, "wihebrew1202", getLogDatabaseHandle());
+				env, user, host, "wihebrew", getLogDatabaseHandle());
 		
         emdrosDb.createObjectTypeIfMissing("note");
         emdrosDb.createFeatureIfMissing("note",  "text",             "string");
