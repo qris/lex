@@ -55,6 +55,19 @@ public class EmdrosDatabase implements Database
 		this.database = database;
 	}
 	
+	public void setLogDatabaseHandle(Connection conn)
+	{
+		try
+		{
+			this.conn.close();
+		}
+		catch (SQLException e)
+		{
+			m_LOG.error("Failed to close old database connection: "+e);
+		}
+		this.conn = conn; 
+	}
+	
 	public void executeDirect(String query) throws DatabaseException 
     {
         long startTime = System.currentTimeMillis();

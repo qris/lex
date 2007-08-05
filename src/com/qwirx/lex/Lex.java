@@ -78,6 +78,7 @@ public class Lex
     	EmdrosDatabase db = (EmdrosDatabase)tlsMap.get(key);
     	if (db != null)
     	{
+    		db.setLogDatabaseHandle(getLogDatabaseHandle());
     		return db;
     	}
     	
