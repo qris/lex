@@ -283,7 +283,9 @@
 			"       verse   = "+selVerseNum+
 			"       GET bart_gloss "+
 			"       [clause "+
-			"        [word GET lexeme]"+
+			"        [word GET lexeme, graphical_preformative, " +
+			"         graphical_root_formation, graphical_lexeme, " +
+			"         graphical_verbal_ending, graphical_pron_suffix]" +
 			"       ]"+
 			"      ]");
 			 
@@ -307,9 +309,14 @@
 				while (word_iter.hasNext()) {
 					MatchedObject word =
 						word_iter.next().const_iterator().next();
-					lexemes += word.getEMdFValue("lexeme").getString();
+						
+					// lexemes += word.getEMdFValue("lexeme").getString();
+					lexemes += HebrewConverter.wordToHtml(word);
+					
 					if (word_iter.hasNext()) 
+					{
 						lexemes += " ";
+					}
 				}
 				
 				int thisClauseId = clause.getID_D();
