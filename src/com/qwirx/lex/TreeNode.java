@@ -334,4 +334,9 @@ public class TreeNode implements List
     {
         return createChild(label, null);
     }
+    
+    public void setLabel(String label)
+    {
+        this.m_label = label;       
+    }
 }
