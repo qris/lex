@@ -16,6 +16,7 @@ import java.util.Map.Entry;
 import com.qwirx.lex.HebrewConverter;
 import com.qwirx.lex.ImmutableMap;
 import com.qwirx.lex.TreeNode;
+import com.qwirx.lex.parser.Rule.Attribute;
 
 public class MorphEdge extends EdgeBase
 {
@@ -25,20 +26,39 @@ public class MorphEdge extends EdgeBase
         new ImmutableMap(new HashMap());
     private int m_Position;
     private MorphEdge m_UnboundOriginal = null;
+    private final boolean m_HasPrev, m_HasNext;
     
     /**
      * Default constructor, creates an instance of the given text as a 
      * "word" object.
-     * @param surface The text of the word
+     * @param symbol   The symbol used to represent this morpheme
+     * @param surface  The surface text of the morpheme
+     * @param position The morpheme's index in the input string
+     * @param hasPrev  The morpheme is not the first in its word
+     * @param hasNext  The morpheme is not the last in its word
      */
-    public MorphEdge(String symbol, String surface, int position) 
+    public MorphEdge(String symbol, String surface, int position,
+        boolean hasPrev, boolean hasNext) 
     {
 		super();
         m_Symbol   = symbol;
 		m_Surface  = surface;
         m_Position = position;
+        m_HasPrev  = hasPrev;
+        m_HasNext  = hasNext;
 	}
-    
+
+    /**
+     * Backwards compatibility constructor. Not a good idea to use it.
+     * @param symbol
+     * @param surface
+     * @param position
+     */
+    public MorphEdge(String symbol, String surface, int position) 
+    {
+        this(symbol, surface, position, false, false);
+    }
+
     public String toString() 
     {
         StringBuffer buf = new StringBuffer();
@@ -84,10 +104,15 @@ public class MorphEdge extends EdgeBase
 	public String partName  (int partNum) { return null; }
 	public String symbol    () { return m_Symbol; }
 	public Map    attributes() { return m_Attribs; }
-    
+    public void addAttribute(Attribute attr)
+    {
+        m_Attribs.put(attr.getName(), attr.getValue(this));
+    }
+   
     public Edge getUnboundCopy()
     {
-        MorphEdge e = new MorphEdge(m_Symbol, m_Surface, m_Position);
+        MorphEdge e = new MorphEdge(m_Symbol, m_Surface, m_Position,
+            m_HasPrev, m_HasNext);
         
         if (m_UnboundOriginal != null)
         {
@@ -166,4 +191,7 @@ public class MorphEdge extends EdgeBase
     {
         return false; // contains a morpheme inside
     }
+    
+    public boolean hasPrev() { return m_HasPrev; }
+    public boolean hasNext() { return m_HasNext; }
 }
