@@ -12,6 +12,7 @@ import java.util.Vector;
 
 import com.qwirx.lex.TreeNode;
 import com.qwirx.lex.parser.EdgeBase.AlreadyBoundException;
+import com.qwirx.lex.parser.Rule.Attribute;
 
 public interface Edge
 {
@@ -19,9 +20,12 @@ public interface Edge
 	void appendWords(Vector buf);
 	Edge[] parts();
 	Edge part(int partNum);
+    Edge part(String name, int index);
+    Edge [] parts(String name);
 	String symbol();
 	String partName(int partNum);
 	Map attributes();
+    void addAttribute(Attribute attr);
 	String attribute(String name);
     boolean isTerminal();
     
