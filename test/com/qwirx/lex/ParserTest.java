@@ -10,18 +10,24 @@ import java.util.Hashtable;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import junit.framework.TestCase;
 
 import com.qwirx.lex.parser.Chart;
 import com.qwirx.lex.parser.Edge;
 import com.qwirx.lex.parser.MorphEdge;
+import com.qwirx.lex.parser.MorphRule;
 import com.qwirx.lex.parser.Parser;
 import com.qwirx.lex.parser.Rule;
 import com.qwirx.lex.parser.RuleEdge;
 import com.qwirx.lex.parser.RulePart;
 import com.qwirx.lex.parser.WordEdge;
 import com.qwirx.lex.parser.EdgeBase.AlreadyBoundException;
+import com.qwirx.lex.parser.Rule.Attribute;
+import com.qwirx.lex.parser.Rule.ConstAttribute;
+import com.qwirx.lex.parser.Rule.CopiedAttribute;
 import com.qwirx.lex.parser.Rule.DuplicateNameException;
 
 /**
@@ -190,7 +196,7 @@ public class ParserTest extends TestCase
         {
             Rule.makeFromString(7, "NP",          
                     "{NP:X.state=absolute} {conjunction} " +
-                    "{NP:X.state=absolute}", new Hashtable(), new Hashtable());
+                    "{NP:X.state=absolute}");
         }
         catch (DuplicateNameException e)
         {
@@ -205,19 +211,12 @@ public class ParserTest extends TestCase
         Map copyStateX = new Hashtable();
         copyStateX.put("state", "X");
 
-        Rule rule = Rule.makeFromString(7, "NP",          
+        Rule rule = Rule.makeFromString2(7, "NP.state=@X",          
                 "{NP:X.state=absolute} {conjunction} " +
-                "{NP:Y.state=absolute}", fixNothing, copyStateX);
+                "{NP:Y.state=absolute}");
 
         assertEquals(7, rule.id());
         assertEquals("NP", rule.symbol());
-        
-        Map fixedAttrs = rule.fixedAttributes();
-        assertEquals(0, fixedAttrs.size());
-        
-        Map copiedAttrs = rule.copiedAttributes();
-        assertEquals(1, copiedAttrs.size());
-        assertEquals("X", copiedAttrs.get("state"));
         
         RulePart[] parts = rule.parts();
         assertEquals(3, parts.length);
@@ -248,25 +247,20 @@ public class ParserTest extends TestCase
 
     public void testRuleFromStringWithPermutation()
     {
-        Map fixNothing = new Hashtable();
-        Map copyStateX = new Hashtable();
-        copyStateX.put("state", "X");
-
-        Rule rule = Rule.makeFromString(7, "NP",          
+        Rule rule = Rule.makeFromString2(7, "NP.state=@X",          
                 "# {NP:X.state=absolute} {conjunction} " +
-                "{NP:Y.state=absolute}", fixNothing, copyStateX);
+                "{NP:Y.state=absolute}");
 
         assertEquals(7, rule.id());
         assertEquals("NP", rule.symbol());
         
         assertTrue(rule.isPermutable());
         
-        Map fixedAttrs = rule.fixedAttributes();
-        assertEquals(0, fixedAttrs.size());
-        
-        Map copiedAttrs = rule.copiedAttributes();
-        assertEquals(1, copiedAttrs.size());
-        assertEquals("X", copiedAttrs.get("state"));
+        List attrs = rule.attributes();
+        assertEquals(1, attrs.size());
+        CopiedAttribute attr = (CopiedAttribute)attrs.get(0);
+        assertEquals("state", attr.getName());
+        assertEquals("X", attr.getSource());
         
         RulePart[] parts = rule.parts();
         assertEquals(3, parts.length);
@@ -378,40 +372,19 @@ public class ParserTest extends TestCase
 
 	public void testConstructParse() throws Exception 
     {
-		Map absolute = new Hashtable();
-		absolute.put("state", "absolute");
-
-		Map construct = new Hashtable();
-		construct.put("state", "construct");
-		
-		Map copyStateX = new Hashtable();
-		copyStateX.put("state", "X");
-
-		Map copyStateY = new Hashtable();
-		copyStateY.put("state", "Y");
-		
-		Map fixNothing  = new Hashtable();
-		Map copyNothing = new Hashtable();
-		
 		Rule[] rules = new Rule[]{
-				Rule.makeFromString(1, "noun",        "TWLDWT/", 
-						construct, copyNothing),
-				Rule.makeFromString(2, "article",     "H"),
-				Rule.makeFromString(3, "noun",        "CMJM/", 
-						absolute, copyNothing),
-				Rule.makeFromString(4, "conjunction", "W"),
-				Rule.makeFromString(5, "noun",        ">RY/", 
-						absolute, copyNothing),
-				Rule.makeFromString(6, "NP",          
-						"{article:X} {noun:Y}", fixNothing, copyStateY),
-				Rule.makeFromString(7, "NP",          
+				Rule.makeFromString2(1, "noun.state=:construct", "TWLDWT/"),
+				Rule.makeFromString2(2, "article",     "H"),
+				Rule.makeFromString2(3, "noun.state=:absolute", "CMJM/"),
+				Rule.makeFromString2(4, "conjunction", "W"),
+				Rule.makeFromString2(5, "noun.state=:absolute", ">RY/"), 
+				Rule.makeFromString2(6, "NP.state=@Y", "{article:X} {noun:Y}"),
+				Rule.makeFromString2(7, "NP.state=@X",          
 						"{NP:X.state=absolute} {conjunction} " +
-						"{NP:Y.state=absolute}", fixNothing, copyStateX),
-				Rule.makeFromString(8, "NP",          
-						"{noun:X}", fixNothing, copyStateX),
-				Rule.makeFromString(9, "NP",
-						"{NP:X.state=construct} {NP:Y.state=absolute}",
-						absolute, copyNothing),
+						"{NP:Y.state=absolute}"),
+				Rule.makeFromString2(8, "NP.state=@X", "{noun:X}"),
+				Rule.makeFromString2(9, "NP.state=:absolute",
+						"{NP:X.state=construct} {NP:Y.state=absolute}")
 		};
         
 		Parser p = new Parser(rules);
@@ -579,13 +552,19 @@ public class ParserTest extends TestCase
         Rule test = Rule.makeFromString(3, "maybe_CATs_maybe_DOGs", "# {CAT}* {DOG}*");
         
         Chart chart = new Chart();
+        
+        /*
         chart.add(new RuleEdge(cat, new Edge[]{
             new WordEdge("cat", 0, cat.part(0))
         }));
         chart.add(new RuleEdge(dog, new Edge[]{
             new WordEdge("dog", 1, dog.part(0))
         }));
-        
+        */
+
+        chart.add(new WordEdge("cat", 0, cat.part(0)));
+        chart.add(new WordEdge("dog", 1, dog.part(0)));
+
         List edges = cat.applyTo(chart, 0);
         assertEquals(1, edges.size());
         chart.add(edges);
@@ -594,8 +573,8 @@ public class ParserTest extends TestCase
         assertEquals(1, edges.size());
         chart.add(edges);
 
-        edges = test.applyTo(chart, 1);
-        assertEquals(1, edges.size());
+        edges = test.applyTo(chart, 3);
+        assertEquals(2, edges.size());
         
         RuleEdge MCMD = (RuleEdge)( edges.get(0) );
         assertEquals("maybe_CATs_maybe_DOGs", MCMD.symbol());
@@ -1185,7 +1164,7 @@ public class ParserTest extends TestCase
     }
 
     Rule dyirbal_CORE = Rule.makeFromString(16, 
-            "CORE", "# {ACTOR} {VERB} {UNDERGOER}");
+            "CORE", "* {ACTOR} {VERB} {UNDERGOER}");
 
     Rule [] dyirbal = new Rule[] {
             Rule.makeFromString(1,  "DET_fu",  "balan"),      // female undergoer
@@ -1291,9 +1270,9 @@ public class ParserTest extends TestCase
                 newRuleAutoBind
                 (
                         dyirbal_CORE,
-                        dyirbal_woman_undergoer,
                         dyirbal_man_actor,
-                        dyirbal_verb_see
+                        dyirbal_verb_see,
+                        dyirbal_woman_undergoer
                 )
         );
     }
@@ -1310,8 +1289,8 @@ public class ParserTest extends TestCase
                 (
                         dyirbal_CORE,
                         dyirbal_man_actor,
-                        dyirbal_woman_undergoer,
-                        dyirbal_verb_see
+                        dyirbal_verb_see,
+                        dyirbal_woman_undergoer
                 )
         );
     }
@@ -1327,9 +1306,9 @@ public class ParserTest extends TestCase
                 newRuleAutoBind
                 (
                         dyirbal_CORE,
-                        dyirbal_man_undergoer,
                         dyirbal_woman_actor,
-                        dyirbal_verb_see
+                        dyirbal_verb_see,
+                        dyirbal_man_undergoer
                 )
         );
     }
@@ -1346,8 +1325,8 @@ public class ParserTest extends TestCase
                 (
                         dyirbal_CORE,
                         dyirbal_woman_actor,
-                        dyirbal_man_undergoer,
-                        dyirbal_verb_see
+                        dyirbal_verb_see,
+                        dyirbal_man_undergoer
                 )
         );
     }
@@ -1381,9 +1360,9 @@ public class ParserTest extends TestCase
                 newRuleAutoBind
                 (
                         dyirbal_CORE,
+                        dyirbal_man_actor,
                         dyirbal_verb_see,
-                        dyirbal_woman_undergoer,
-                        dyirbal_man_actor
+                        dyirbal_woman_undergoer
                 )
         );
     }
@@ -1399,8 +1378,8 @@ public class ParserTest extends TestCase
                 newRuleAutoBind
                 (
                         dyirbal_CORE,
-                        dyirbal_verb_see,
                         dyirbal_man_actor,
+                        dyirbal_verb_see,
                         dyirbal_woman_undergoer
                 )
         );
@@ -1417,9 +1396,9 @@ public class ParserTest extends TestCase
                 newRuleAutoBind
                 (
                         dyirbal_CORE,
-                        dyirbal_woman_undergoer,
+                        dyirbal_man_actor,
                         dyirbal_verb_see,
-                        dyirbal_man_actor
+                        dyirbal_woman_undergoer
                 )
         );
     }
@@ -1670,7 +1649,362 @@ public class ParserTest extends TestCase
             "}}}}}", 
             CLAUSE.toString());
     }
+
+    public void testConstructParse2() throws Exception 
+    {
+        Rule[] rules = new Rule[]{
+                Rule.makeFromString2(1, "noun.state=:construct", "TWLDWT/"),
+                Rule.makeFromString2(2, "article",     "H"),
+                Rule.makeFromString2(3, "noun.state=:absolute",  "CMJM/"),
+                Rule.makeFromString2(4, "conjunction", "W"),
+                Rule.makeFromString2(5, "noun.state=:absolute",  ">RY/"),
+                Rule.makeFromString2(6, "NP.state=@Y", 
+                        "{article:X} {noun:Y}"),
+                Rule.makeFromString2(7, "NP.state=@X",          
+                        "{NP:X.state=absolute} {conjunction} " +
+                        "{NP:Y.state=absolute}"),
+                Rule.makeFromString2(8, "NP.state=@X",          
+                        "{noun:X}"),
+                Rule.makeFromString2(9, "NP.state=:absolute",
+                        "{NP:X.state=construct} {NP:Y.state=absolute}")
+        };
+        
+        Parser p = new Parser(rules);
+        List results = p.parseFor("TWLDWT/ H CMJM/ W H >RY/", "NP");
+        assertEquals(2, results.size());
+        
+        for (int i = 0; i < results.size(); i++) {
+            RuleEdge r = (RuleEdge)(results.get(i));
+            System.out.println("Depth score of result "+i+": "+
+                    r.getDepthScore()); 
+        }
+        
+        Edge NP_all = (Edge)(results.get(0));
+        assertEquals("NP",       NP_all.symbol());
+        assertEquals("absolute", NP_all.attribute("state"));
+        
+        Edge NP_stories = NP_all.part(0);
+        assertEquals("NP",        NP_stories.symbol());
+        assertEquals("construct", NP_stories.attribute("state"));
+        assertEquals("noun",      NP_stories.part(0).symbol());
+        assertEquals("X",         NP_stories.partName(0));
+        
+        Edge NP_heavens_and_earth = NP_all.part(1);
+        assertEquals("NP",       NP_heavens_and_earth.symbol());
+        assertEquals("absolute", NP_heavens_and_earth.attribute("state"));
+        assertEquals("X",        NP_heavens_and_earth.partName(0));
+        
+        Edge NP_heavens = NP_heavens_and_earth.part(0);
+        assertEquals("NP",       NP_heavens.symbol());
+        assertEquals("absolute", NP_heavens.attribute("state"));
+        assertEquals("article",  NP_heavens.part(0).symbol());
+        assertEquals("X",        NP_heavens.partName(0));
+        assertEquals("noun",     NP_heavens.part(1).symbol());
+        assertEquals("Y",        NP_heavens.partName(1));
+
+        Edge CONJ_and = NP_heavens_and_earth.part(1);
+        assertEquals("conjunction", CONJ_and.symbol());
+        
+        assertEquals("Y",   NP_heavens_and_earth.partName(2));
+        Edge NP_earth = NP_heavens_and_earth.part(2);
+        assertEquals("NP",       NP_earth.symbol());
+        assertEquals("absolute", NP_earth.attribute("state"));
+        assertEquals("article",  NP_earth.part(0).symbol());
+        assertEquals("X",        NP_earth.partName(0));
+        assertEquals("noun",     NP_earth.part(1).symbol());
+        assertEquals("Y",        NP_earth.partName(1));
+    }
+
+    public void testMorphologicalRules() throws Exception 
+    {
+        MorphRule [] morph = new MorphRule [] {
+                new MorphRule(1, "ba-la-n",    "balan"),
+                new MorphRule(2, "dugumbil-0", "dugumbil"),
+                new MorphRule(3, "ba-ngu-l",   "bangul"),
+                new MorphRule(4, "yara-ngu",   "yarangu"),
+                new MorphRule(5, "bura-n",     "buran")
+        };
+        
+        Rule [] rules = new Rule [] {
+            Rule.makeFromString2(1, "DEIC", "ba-"),
+            Rule.makeFromString2(2, "DCAS.case=:ABS",  "-la-"),
+            Rule.makeFromString2(3, "DCLS.class=:II",   "-n"),
+            Rule.makeFromString2(4, "NOUN.gloss=:woman,class=:II", "dugumbil-"),
+            Rule.makeFromString2(5, "NCAS.case=:ABS",  "-0"),
+            Rule.makeFromString2(6, "DCAS.case=:ERG",  "-ngu-"),
+            Rule.makeFromString2(7, "NCAS.case=:ERG",  "-ngu"),
+            Rule.makeFromString2(8, "DCLS.class=:I",    "-l"),
+            Rule.makeFromString2(9, "NOUN.gloss=:man,class=:I",  "yara-"),
+            Rule.makeFromString2(10, "VERB.gloss=:see",  "bura-"),
+            Rule.makeFromString2(11, "TNS",  "-n"),
+            Rule.makeFromString2(12, 
+                "NP.class=@dcl,class=@n,case=@dca,case=@nca",
+                "{DEIC} {DCAS:dca} {DCLS:dcl} {NOUN:n} {NCAS:nca}"),
+            Rule.makeFromString2(13, "CORE", 
+                "* {NP.case=ERG} {VERB} {TNS} {NP.case=ABS}"),
+        };
+        
+        Parser p = new Parser(rules, morph);
+        p.setVerbose(true);
+
+        List results = p.parseFor("balan dugumbil bangul yarangu buran", "CORE");
+        assertEquals(1, results.size());
+        
+        Edge core = (Edge)(results.get(0));
+        assertEquals(
+            "{CORE " +
+            "{NP case=ERG,class=I " +
+            "{DEIC {ba \"ba\"}} " +
+            "{DCAS case=ERG {ngu \"ngu\"}}:dca " +
+            "{DCLS class=I {l \"l\"}}:dcl " +
+            "{NOUN class=I,gloss=man {yara \"yara\"}}:n " +
+            "{NCAS case=ERG {ngu \"ngu\"}}:nca" +
+            "} " +
+            "{VERB gloss=see {bura \"bura\"}} " +
+            "{TNS {n \"n\"}} " +
+            "{NP case=ABS,class=II " +
+            "{DEIC {ba \"ba\"}} " +
+            "{DCAS case=ABS {la \"la\"}}:dca " +
+            "{DCLS class=II {n \"n\"}}:dcl " +
+            "{NOUN class=II,gloss=woman {dugumbil \"dugumbil\"}}:n " +
+            "{NCAS case=ABS {0 \"0\"}}:nca}" +
+            "}", core.toString()
+        );
+    }
     
+    public void testUnificationSimple() throws Exception 
+    {
+        Rule[] rules = new Rule[]{
+                Rule.makeFromString2(1, "C.gender=@X,gender=@Y", "{A:X} {B:Y}"),
+                Rule.makeFromString2(2, "A.gender=:M", "a_m"),
+                Rule.makeFromString2(3, "B.gender=:M", "b_m"),
+                Rule.makeFromString2(4, "A.gender=:F", "a_f"),
+                Rule.makeFromString2(5, "B.gender=:F", "b_f"),
+                Rule.makeFromString2(6, "A.gender", "a_u"),
+                Rule.makeFromString2(7, "B.gender", "b_u")
+        };
+        
+        Parser p = new Parser(rules);
+        p.setVerbose(true);
+
+        List results = p.parseFor("a_m b_m", "C");
+        assertEquals(1, results.size());
+        Edge C = (Edge)(results.get(0));
+        assertEquals("C", C.symbol());
+        assertEquals("M", C.attribute("gender"));
+
+        results = p.parseFor("a_f b_f", "C");
+        assertEquals(1, results.size());
+        C = (Edge)(results.get(0));
+        assertEquals("C", C.symbol());
+        assertEquals("F", C.attribute("gender"));
+
+        results = p.parseFor("a_m b_f", "C");
+        assertEquals(0, results.size());
+
+        results = p.parseFor("a_m b_u", "C");
+        assertEquals(1, results.size());
+        C = (Edge)(results.get(0));
+        assertEquals("C", C.symbol());
+        assertEquals("M", C.attribute("gender"));
+        Edge A = C.part(0);
+        assertEquals("A", A.symbol());
+        assertEquals("M", A.attribute("gender"));
+        Edge B = C.part(1);
+        assertEquals("B", B.symbol());
+        assertEquals("M", B.attribute("gender"));
+
+        results = p.parseFor("a_u b_f", "C");
+        assertEquals(1, results.size());
+        C = (Edge)(results.get(0));
+        assertEquals("C", C.symbol());
+        assertEquals("F", C.attribute("gender"));
+        A = C.part(0);
+        assertEquals("A", A.symbol());
+        assertEquals("F", A.attribute("gender"));
+        B = C.part(1);
+        assertEquals("B", B.symbol());
+        assertEquals("F", B.attribute("gender"));
+    }
+
+    private String findGroup(String regex, String input)
+    {
+        Pattern pattern = Pattern.compile(regex);
+        Matcher matcher = pattern.matcher(input);
+        if (!matcher.find())
+        {
+            return null;
+        }
+        return matcher.group(1);
+    }
+    
+    class MultiMatcher
+    {
+        private final String  m_Input;
+        private Matcher m_Matcher = null;
+        public MultiMatcher(String input)
+        {
+            m_Input = input;
+        }
+        public boolean find(String regex)
+        {
+            Pattern pattern = Pattern.compile(regex);
+            m_Matcher = pattern.matcher(m_Input);
+            return m_Matcher.find();
+        }
+        public String group(int index)
+        {
+            return m_Matcher.group(index);
+        }
+    }
+    
+    private void assignArgumentRoles(Edge [] args, String ls)
+    {
+        Edge subject = null, directObject = null;
+        
+        for (int i = 0; i < args.length; i++)
+        {
+            if (args[i].attribute("argtype").equals("S"))
+            {
+                assertNull(subject);
+                subject = args[i];
+            }
+            else if (args[i].attribute("argtype").equals("DO"))
+            {
+                assertNull(directObject);
+                directObject = args[i];
+            }
+        }
+        
+        assertNotNull(subject);
+        // assumed for now, fix later:
+        // assertEquals("1", subject.attribute("psa"));
+        
+        MultiMatcher matcher = new MultiMatcher(ls);
+        Map assignments = new Hashtable();
+        
+        if (matcher.find("do'\\(<(\\w+)>,") ||
+            matcher.find("'\\(<(\\w+)>,<\\w+>\\)") ||
+            matcher.find("'\\(<(\\w+)>\\)"))
+        {
+            subject.addAttribute(new ConstAttribute("arg", matcher.group(1)));
+            assignments.put(matcher.group(1), subject);
+        }
+        
+        if ((matcher.find("'\\(<(\\w+)>\\)") &&
+            assignments.get(matcher.group(1)) == null) ||
+            (matcher.find("'\\(<\\w+>,<(\\w+)>\\)") &&
+            assignments.get(matcher.group(1)) == null) ||
+            (matcher.find("'\\(<(\\w+)>,<\\w+>\\)") &&
+            assignments.get(matcher.group(1)) == null) ||
+            (matcher.find("do'\\(<(\\w+)>,") &&
+            assignments.get(matcher.group(1)) == null))
+        {
+            directObject.addAttribute(new ConstAttribute("arg", 
+                matcher.group(1)));
+            assignments.put(matcher.group(1), directObject);
+        }
+        
+        assertNotNull(subject.attribute("arg"));
+        assertFalse(directObject.attribute("arg") != null && 
+            subject.attribute("arg") == null);
+    }
+    
+    
+    public void testTranslation()
+    {
+        Rule [] english = new Rule [] {
+            Rule.makeFromString2(1,  "N/PROP", "John"),
+            Rule.makeFromString2(2,  "NP", "{N/PROP}"),
+            Rule.makeFromString2(3,  "V.ls=\":do'(<x>, run'(<x>)) " +
+                    "CAUSE BECOME be-at'(<y>,<x>)\"", "ran"),
+            Rule.makeFromString2(4,  "PREP", "to"),
+            Rule.makeFromString2(5,  "DET", "the"),
+            Rule.makeFromString2(6,  "N/COM", "park"),
+            Rule.makeFromString2(7,  "NP", "{DET} {N/COM}"),
+            Rule.makeFromString2(8,  "PP", "{PREP} {NP}"),
+            Rule.makeFromString2(9,  "NUC", "{V}"),
+            Rule.makeFromString2(10, "ARG.argtype", "{NP}"),
+            Rule.makeFromString2(11, "ARG.argtype", "{PP}"),
+            Rule.makeFromString2(12, "CORE", "{ARG.argtype=S} {NUC} " +
+                    "{ARG.argtype=DO}"),
+            Rule.makeFromString2(13, "CLAUSE", "{CORE}")
+        };
+
+        Parser p = new Parser(english);
+        // p.setVerbose(true);
+
+        // VVLP 97, p.152, example 4.12
+        List results = p.parseFor("John ran to the park", "CLAUSE");
+        assertEquals(1, results.size());
+        Edge CLAUSE = (Edge)(results.get(0));
+        assertEquals(
+            "{CLAUSE {CORE " +
+            "{ARG argtype=S {NP {N/PROP \"John\"}}} " +
+            "{NUC {V ls=\"do'(<x>, run'(<x>)) " +
+            "CAUSE BECOME be-at'(<y>,<x>)\" \"ran\"}} " +
+            "{ARG argtype=DO {PP {PREP \"to\"} " +
+            "{NP {DET \"the\"} {N/COM \"park\"}}}}}" +
+            "}",
+            CLAUSE.toString());
+        Edge CORE = CLAUSE.part("CORE", 0);
+        Edge NUC  = CORE  .part("NUC",  0);
+        Edge V    = NUC   .part("V",    0);
+        String ls = V.attribute("ls");
+        assertEquals("do'(<x>, run'(<x>)) CAUSE BECOME be-at'(<y>,<x>)", ls);
+        
+        Edge [] args = CORE.parts("ARG");
+        assertEquals("S",  args[0].attribute("argtype"));
+        assertEquals("DO", args[1].attribute("argtype"));
+        
+        assignArgumentRoles(args, ls);
+        assertEquals("x", args[0].attribute("arg"));
+        assertEquals("y", args[1].attribute("arg"));
+        
+        Rule [] spanish = new Rule [] {
+            Rule.makeFromString2(1,  "N/PROP", "Juan"),
+            Rule.makeFromString2(2,  "NP", "{N/PROP}"),
+            Rule.makeFromString2(3,  "V.ls=\":do'(<x>, run'(<x>)) " +
+                    "CAUSE BECOME be-at'(<y>,<x>)\"", "corro"),
+            Rule.makeFromString2(4,  "PREP", "a"),
+            Rule.makeFromString2(5,  "DET", "el"),
+            Rule.makeFromString2(6,  "N/COM", "parque"),
+            Rule.makeFromString2(7,  "NP", "{DET} {N/COM}"),
+            Rule.makeFromString2(8,  "PP", "{PREP} {NP}"),
+            Rule.makeFromString2(9,  "NUC", "{V}"),
+            Rule.makeFromString2(10, "ARG.argtype", "{NP}"),
+            Rule.makeFromString2(11, "ARG.argtype", "{PP}"),
+            Rule.makeFromString2(12, "CORE", "{ARG.argtype=S} {NUC} " +
+                    "{ARG.argtype=DO}"),
+            Rule.makeFromString2(13, "CLAUSE", "{CORE}")
+        };
+
+        Rule verb = null;
+        
+        for (int i = 0; i < spanish.length; i++)
+        {
+            List attributes = spanish[i].attributes();
+            
+            for (Iterator a = attributes.iterator(); a.hasNext();)
+            {
+                Attribute attr = (Attribute)a.next();
+                if (attr.getName().equals("ls"))
+                {
+                    String value = attr.getValue(null);
+                    if (value.equals(ls))
+                    {
+                        assertNull(verb);
+                        verb = spanish[i];
+                    }
+                }
+            }
+        }
+        
+        assertNotNull(verb);
+        
+        
+    }
+
 	public static void main(String[] args) 
     {
 		junit.textui.TestRunner.run(ParserTest.class);
