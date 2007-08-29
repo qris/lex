@@ -66,7 +66,7 @@ public class RulePart
         
         description = description.substring(1, description.length() - 1);
         
-        String [] symbolAndConditions = description.split("\\.");
+        String [] symbolAndConditions = description.split("\\.", 2);
         Map conditions = new Hashtable();
         
         if (symbolAndConditions.length == 2) 
@@ -79,26 +79,28 @@ public class RulePart
                 String [] nameAndValue = 
                     conditionStrings[j].split("=");
                 
-                if (nameAndValue.length != 2) {
+                if (nameAndValue.length == 1)
+                {
+                    // valid attribute but value unspecified, 
+                    // to be filled in later
+                    conditions.put(nameAndValue[0], null);
+                }
+                else if (nameAndValue.length == 2) 
+                {
+                }
+                else
+                {
                     throw new IllegalArgumentException
                     (
                             "Invalid condition: "+
                             conditionStrings[j]
                     );
                 }
-                
                 conditions.put(nameAndValue[0], nameAndValue[1]);
             }
             
             description = symbolAndConditions[0];
         } 
-        else if (symbolAndConditions.length != 1) 
-        {
-            throw new IllegalArgumentException
-            (
-                    "Invalid symbol format: "+description
-            );
-        }
         
         String [] symbolAndName = description.split(":");
         String name = null;
@@ -127,26 +129,57 @@ public class RulePart
     public boolean canSkip()   { return m_canSkip; }
     public Map conditions()    { return new Hashtable(conditions); }
     
-    public boolean matches(Edge instance)
+    public boolean matches(Edge edge)
     {
         if (terminal()) 
         {
             String literalToMatch = symbol();
-            
-            if (! (instance instanceof WordEdge)) 
+
+            if (edge instanceof MorphEdge)
+            {
+                MorphEdge me = (MorphEdge)edge;
+                
+                if (literalToMatch.startsWith("-") == me.hasPrev())
+                {
+                    if (literalToMatch.startsWith("-"))
+                    {
+                        literalToMatch = literalToMatch.substring(1);
+                    }
+                }
+                else
+                {
+                    // cannot match
+                    return false;
+                }
+                
+                if (literalToMatch.endsWith("-") == me.hasNext())
+                {
+                    if (literalToMatch.endsWith("-"))
+                    {
+                        literalToMatch = literalToMatch.substring(0, 
+                            literalToMatch.length() - 1);
+                    }
+                }
+                else
+                {
+                    // cannot match
+                    return false;
+                }
+            }
+            else if (! (edge instanceof WordEdge)) 
             {
                 m_log.debug
                 (
-                        "wanted "+literalToMatch+" but found "+instance
+                        "wanted "+literalToMatch+" but found "+edge
                 );
                 return false;
             }
             
-            if (! literalToMatch.equals(instance.toString())) 
+            if (! literalToMatch.equals(edge.symbol())) 
             {
                 m_log.debug
                 (
-                        "wanted "+literalToMatch+" but found "+instance
+                        "wanted "+literalToMatch+" but found "+edge
                 );
                 return false;
             }
@@ -154,13 +187,13 @@ public class RulePart
         else 
         {
             String symbolToMatch = symbol(); 
-            String symbolOnStackName = instance.symbol();
+            String symbolOnStackName = edge.symbol();
             
-            if (instance instanceof WordEdge) 
+            if (edge instanceof WordEdge) 
             {
                 m_log.debug
                 (
-                        "wanted "+symbolToMatch+" but found "+instance
+                        "wanted "+symbolToMatch+" but found "+edge
                 );
                 return false;
             }
@@ -174,10 +207,45 @@ public class RulePart
                 return false;
             }
         }
+        
+        Map attributes = edge.attributes();
+        
+        for (Iterator i = conditions.keySet().iterator(); i.hasNext();)
+        {
+            String name  = (String)( i.next() );
+            String expectedValue = (String)( conditions.get(name) );
+            
+            if (!attributes.containsKey(name))
+            {
+                m_log.debug("Missing attribute "+name+" in "+edge);
+                return false;
+            }
+            
+            String actualValue = (String)attributes.get(name);
+            
+            if (actualValue == null)
+            {
+                // this is acceptable, will unify later
+            }
+            else if (! actualValue.equals(expectedValue))
+            {
+                m_log.debug("Wrong value for attribute "+name+" in "+edge+
+                    ": expected '" + expectedValue +"' but found '" +
+                    actualValue + "'");
+                return false;
+            }
+        }
 
         return true;
     }
     
+    /**
+     * For use in unit tests only. Tests that a rule part matches a set
+     * of instances, for example if it's a repeating rule then it
+     * can repeat and match over all of them.
+     * @param instances The list of instances to match.
+     * @return true if this part matches all of them, false if not.
+     */
     public boolean matches (Edge [] instances)
     {
         if (instances.length == 0 && !m_canSkip)   return false;
