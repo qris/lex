@@ -13,6 +13,7 @@ import java.util.Vector;
 
 import com.qwirx.lex.ImmutableMap;
 import com.qwirx.lex.TreeNode;
+import com.qwirx.lex.parser.Rule.Attribute;
 
 public class WordEdge extends EdgeBase
 {
@@ -98,6 +99,10 @@ public class WordEdge extends EdgeBase
 	public String partName  (int partNum) { return null; }
 	public String symbol    () { return surface; }
 	public Map    attributes() { return attribs; }
+    public void addAttribute(Attribute attr)
+    {
+        attribs.put(attr.getName(), attr.getValue(this));
+    }
     
     public Edge getUnboundCopy()
     {
