@@ -1,5 +1,7 @@
 package com.qwirx.lex;
 
+import jemdros.MatchedObject;
+
 
 /*
  * Based on:
@@ -411,5 +413,20 @@ public class HebrewConverter
         }
         
         return output.toString();
+    }
+    
+    public static String wordToHtml(MatchedObject word)
+    {
+        String out = toHtml(toTranslit(
+            word.getEMdFValue("graphical_preformative").getString()));
+        out += toHtml(toTranslit(
+            word.getEMdFValue("graphical_root_formation").getString()));
+        out += toHtml(toTranslit(
+            word.getEMdFValue("graphical_lexeme").getString()));
+        out += toHtml(toTranslit(
+            word.getEMdFValue("graphical_verbal_ending").getString()));
+        out += toHtml(toTranslit(
+            word.getEMdFValue("graphical_pron_suffix").getString()));
+        return out;
     }
 }
