@@ -229,7 +229,7 @@
 								if (!lastMorpheme) translit += "-";
 								TreeNode node = m_root.createChild(translit);
 
-								node = node.createChild(raw);
+								// node = node.createChild(raw);
 								node.createChild(desc);
 								
 								m_morphs.add(new MorphEdge(morphNode, 
@@ -255,10 +255,10 @@
 					}
 				}
 			}
-		
-			%><p>Hebrew text: <span class="hebrew"><%= 
-				HebrewConverter.toHtml(hebrewText.toString())
-			%></span></p><%
+			
+			root.setLabel("<span class=\"hebrew\">" +
+				HebrewConverter.toHtml(hebrewText.toString()) + 
+				"</span>");
 	
 			%><%= root.toHtml(rend) %><%
 		}
@@ -437,8 +437,7 @@
 					boolean canWriteToWord = emdros.canWriteTo(word);
 					
 					if (type.equals("word")) {
-						String lexeme = 
-							word.getEMdFValue("lexeme").getString();
+						String lexeme = HebrewConverter.wordToHtml(word);
 						String part_of_speech = (String)
 							parts_of_speech.get(word.getEMdFValue("phrase_dependent_part_of_speech")
 								.toString());
