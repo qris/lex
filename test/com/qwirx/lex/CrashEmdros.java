@@ -11,7 +11,6 @@ import jemdros.MatchedObject;
 import jemdros.Sheaf;
 import jemdros.SheafConstIterator;
 import jemdros.Straw;
-import jemdros.TableRow;
 import jemdros.eCharsets;
 import jemdros.eOutputKind;
 import junit.framework.TestCase;
