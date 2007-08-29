@@ -23,6 +23,7 @@ import com.qwirx.lex.sql.SqlDatabase;
 public class Parser 
 {
 	private Rule [] rules;
+    private MorphRule [] m_Morph;
 	
 	public Parser(SqlDatabase db) throws DatabaseException, SQLException 
     {
@@ -52,9 +53,15 @@ public class Parser
 		this.rules = (Rule[])( rules.toArray(new Rule[0]) );
 	}
 	
-	public Parser(Rule[] rules) 
+    public Parser(Rule[] rules, MorphRule[] morphs) 
     {
-		this.rules = rules;
+        this.rules   = rules;
+        this.m_Morph = morphs;
+    }
+    
+ 	public Parser(Rule[] rules) 
+    {
+		this(rules, new MorphRule [0]);
 	}
     
     private boolean m_Verbose = false;
@@ -107,9 +114,26 @@ public class Parser
         List edges = new ArrayList();
         String[] words = input.split(" ");
         
+        int position = 0;
+        
         for (int i = 0; i < words.length; i++) 
         {
-            edges.add(new WordEdge(words[i], i));
+            List morphEdges = null;
+            
+            for (int m = 0; m < m_Morph.length && morphEdges == null; m++)
+            {
+                MorphRule mr = m_Morph[m];
+                morphEdges = mr.match(words[i], position);
+            }
+            
+            if (morphEdges == null)
+            {
+                morphEdges = new ArrayList();
+                morphEdges.add(new WordEdge(words[i], position));
+            }
+            
+            edges.addAll(morphEdges);
+            position += morphEdges.size();
         }
         
         return parseFor(edges, goal);
