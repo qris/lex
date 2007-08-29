@@ -7,7 +7,7 @@
 package com.qwirx.lex.parser;
 
 import java.util.ArrayList;
-import java.util.Hashtable;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -15,13 +15,14 @@ import java.util.Vector;
 import java.util.Map.Entry;
 
 import com.qwirx.lex.TreeNode;
+import com.qwirx.lex.parser.Rule.Attribute;
+import com.qwirx.lex.parser.Rule.CopiedAttribute;
 
 public class RuleEdge extends EdgeBase implements Cloneable
 {
     private RuleEdge m_UnboundOriginal = null;
 	private final Edge [] parts;
 	private final Rule    rule;
-	private Map attribs = new Hashtable();
 	
 	public Rule   rule()   { return rule; }
 	public String symbol() { return rule.symbol(); }
@@ -105,36 +106,74 @@ public class RuleEdge extends EdgeBase implements Cloneable
                 throw new RuntimeException(e);
             }
         }
-
-		findAttributes();
 	}
     
 	public String toString() 
     {
 		StringBuffer buf = new StringBuffer();
-		appendString(buf);
+		appendString(buf, true);
 		return buf.toString();
 	}
+
+    public String toStringWithoutAttributes() 
+    {
+        StringBuffer buf = new StringBuffer();
+        appendString(buf, false);
+        return buf.toString();
+    }
     
-	public void appendString(StringBuffer buf) 
+    public void appendString(StringBuffer buf) 
+    {
+        appendString(buf, true);
+    }
+
+	public void appendString(StringBuffer buf, boolean withAttributes) 
     {
 		buf.append("{");
 		buf.append(rule().symbol());
-		buf.append(" ");
-		
-		Map attribs = attributes();
-		for (Iterator i = attribs.entrySet().iterator(); i.hasNext(); ) 
+        buf.append(" ");
+        
+        if (withAttributes)
         {
-			Entry e = (Entry)( i.next() );
-			buf.append(e.getKey());
-			buf.append('=');
-			buf.append(e.getValue());
-			if (i.hasNext())
-				buf.append(',');
-			else
-				buf.append(' ');
-		}
-		
+    		Map attribs = null;
+            
+            try 
+            {
+                attribs = attributes();
+    
+                for (Iterator i = attribs.entrySet().iterator(); i.hasNext(); ) 
+                {
+                    Entry e = (Entry)( i.next() );
+                    buf.append(e.getKey());
+                    buf.append('=');
+                    
+                    if (e.getValue() == null)
+                    {
+                        buf.append("unknown");
+                    }
+                    else if (e.getValue().toString().contains(","))
+                    {
+                        buf.append('"');
+                        buf.append(e.getValue());
+                        buf.append('"');
+                    }
+                    else
+                    {
+                        buf.append(e.getValue());
+                    }
+                    
+                    if (i.hasNext())
+                        buf.append(',');
+                    else
+                        buf.append(' ');
+                }
+            }
+            catch (UnificationException e)
+            {
+                buf.append("(failed to unify: "+e+") ");
+            }
+        }
+        
 		for (int i = 0; i < parts.length; i++) 
         {
 			parts[i].appendString(buf);
@@ -238,78 +277,115 @@ public class RuleEdge extends EdgeBase implements Cloneable
         }
 		return rule().parts()[partNum].name();
 	}
-	
-    public Map attributes() { return attribs; }
-	private void findAttributes() 
+
+    abstract static class UnificationException extends IllegalStateException
     {
-		attribs = new Hashtable();
+    }
+
+    class CannotUnifyException extends UnificationException
+    {
+        private final String m_Attrib, m_OldValue, m_NewValue;
+        
+        public CannotUnifyException(String attrib, String oldValue,
+            String newValue) 
+        { 
+            m_Attrib = attrib;
+            m_OldValue = oldValue;
+            m_NewValue = newValue;
+        }
+        
+        public String toString()
+        {
+            return "Unable to unify "+m_OldValue+" and "+m_NewValue+
+                " for attribute "+m_Attrib;
+        }
+    }
+
+    public static class MissingPartException extends UnificationException
+    {
+        private final CopiedAttribute m_Attrib;
+        
+        public MissingPartException(CopiedAttribute attrib) 
+        {
+            m_Attrib = attrib;
+        }
+        
+        public String toString()
+        {
+            return "Missing rule part/variable " + m_Attrib.getSource();
+        }
+    }
+
+    public static class MissingAttributeException extends UnificationException
+    {
+        private final Attribute m_Attrib;
+        
+        public MissingAttributeException(Attribute attrib) 
+        {
+            m_Attrib = attrib;
+        }
+        
+        public String toString()
+        {
+            return "Missing attribute " + m_Attrib;
+        }
+    }
+    
+    private List m_EdgeAttributes = new ArrayList();
+    
+    public void addAttribute(Attribute attr)
+    {
+        m_EdgeAttributes.add(attr);
+    }
+    
+    private void mergeAttributeInto(Attribute in, Map out)
+    {
+        String name = in.getName();
+        String oldValue = (String)out.get(name);
+        String newValue = in.getValue(this);
+        
+        if (out.containsKey(name) && oldValue != null && 
+            ! oldValue.equals(newValue))
+        {
+            throw new CannotUnifyException(name, oldValue, newValue);
+        }
+        
+        if (! in.exists(this)) 
+        {
+            throw new IllegalStateException(
+                    in.toString()+
+                    " does not exist to copy into " +
+                    this.toStringWithoutAttributes());
+        }
+        
+        if (oldValue != null && ! oldValue.equals(newValue)) 
+        {
+            throw new CannotUnifyException(name, oldValue, newValue);
+        }
+        
+        if (oldValue == null) 
+        {
+            out.put(name, newValue);
+        }
+    }
+
+	public Map attributes() 
+    {
+		Map attribs = new HashMap();
 		
-		for (Iterator i = rule().copiedAttributes().entrySet().iterator();
-			i.hasNext(); )
+		for (Iterator i = rule().attributes().iterator(); i.hasNext(); )
 		{
-			Entry e = (Entry)( i.next() );
-			Object name = e.getKey();
-			RulePart[] ruleParts = rule().parts();
-			
-			for (int p = 0; p < ruleParts.length; p++) 
-			{
-				String partName = ruleParts[p].name();
-				
-				if (partName == null)
-					continue;
-				
-				if (! partName.equals(e.getValue()))
-					continue;
-				
-				Edge partInstance = parts[p];
-                
-				Object value = partInstance.attributes().get(name);
-                
-				if (value == null) 
-                {
-					throw new IllegalStateException(
-							partInstance.toString()+
-							" has no attribute named "+
-							name+" to copy into "+this);
-				}
-                
-				Object oldValue = attribs.get(name);
-                
-				if (oldValue != null && ! oldValue.equals(value)) 
-                {
-					throw new IllegalStateException(
-							"Unable to unify "+oldValue+" and "+value+
-							" for attribute "+name+" of "+this);
-				}
-                
-				if (oldValue == null) 
-                {
-					attribs.put(name, value);
-				}
-			}
+            Attribute attr = (Attribute)(i.next());
+            mergeAttributeInto(attr, attribs);
 		}
 
-		for (Iterator i = rule().fixedAttributes().entrySet().iterator();
-			i.hasNext(); ) 
+        for (Iterator i = m_EdgeAttributes.iterator(); i.hasNext(); )
         {
-			Entry e = (Entry)( i.next() );
-			
-            Object name     = e.getKey();
-			Object value    = e.getValue();
-			Object oldValue = attribs.get(name);
-			
-            if (oldValue != null && ! oldValue.equals(value)) 
-            {
-				throw new IllegalStateException(
-						"Unable to unify "+oldValue+" and "+value+
-						" for attribute "+name+" of "+this);
-			}
-            
-			if (oldValue == null) 
-            {
-				attribs.put(name, value);
-			}
-		}
+            Attribute attr = (Attribute)(i.next());
+            mergeAttributeInto(attr, attribs);
+        }
+
+        return attribs;
 	}
     
 	public int getDepthScore() 
@@ -341,6 +417,12 @@ public class RuleEdge extends EdgeBase implements Cloneable
         else
         {
             e.m_UnboundOriginal = this;
+        }
+        
+        for (Iterator i = m_EdgeAttributes.iterator(); i.hasNext();)
+        {
+            Attribute attr = (Attribute)i.next();
+            e.addAttribute(attr);
         }
 
         return e;
