@@ -7,44 +7,143 @@
 package com.qwirx.lex.parser;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.Hashtable;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.Stack;
 import java.util.Vector;
 
 import com.qwirx.lex.parser.EdgeBase.AlreadyBoundException;
+import com.qwirx.lex.parser.RuleEdge.CannotUnifyException;
+import com.qwirx.lex.parser.RuleEdge.MissingAttributeException;
+import com.qwirx.lex.parser.RuleEdge.MissingPartException;
 
 public class Rule 
 {
 	private final int         id;
 	private final String      left;
 	private final RulePart [] right;
-	private final Map         fixedAttrs, copyAttrs;
+	private final List        m_Attributes;
 	private final boolean     m_isPermutable;
     private final boolean     m_isSearching;
     private final List []     m_PartBindingLists; 
     private final boolean []  m_PartsFinished;
     private       boolean []  m_PositionsUsed;
     
+    public static abstract class Attribute
+    {
+        private final String m_Name;
+        public Attribute(String name)
+        {
+            this.m_Name = name;
+        }
+        public String getName() { return m_Name; }
+        public abstract String getValue(Edge edge);
+        public boolean exists(Edge edge) { return true; }
+    }
+    
+    public static class EmptyAttribute extends Attribute
+    {
+        public EmptyAttribute(String name)
+        {
+            super(name);
+        }
+        public String getValue(Edge edge) { return null; }
+        public String toString() { return getName() + " (undefined)"; }
+    }
+    
+    public static class ConstAttribute extends Attribute
+    {
+        private final String m_Value;
+        public ConstAttribute(String name, String value)
+        {
+            super(name);
+            m_Value = value;
+        }
+        public String getValue(Edge edge) { return m_Value; }
+        public String toString() { return getName() + "=:" + m_Value; }
+    }
+    
+    public class CopiedAttribute extends Attribute
+    {
+        private final String m_Source;
+        public CopiedAttribute(String name, String source)
+        {
+            super(name);
+            m_Source = source;
+        }
+        public String getSource() { return m_Source; } 
+        public boolean exists(Edge edge)
+        {
+            String name = getName();
+            
+            for (int p = 0; p < right.length; p++) 
+            {
+                String partName = right[p].name();
+                
+                if (partName == null)
+                    continue;
+                
+                if (! partName.equals(m_Source))
+                    continue;
+                
+                Edge partEdge = edge.parts()[p];
+                return partEdge.attributes().containsKey(name);
+            }
+            
+            return false;
+        }
+        
+        public String getValue(Edge edge)
+        {
+            String name = getName();
+
+            for (int p = 0; p < right.length; p++) 
+            {
+                String partName = right[p].name();
+                
+                if (partName == null)
+                    continue;
+                
+                if (! partName.equals(m_Source))
+                    continue;
+                
+                Edge partEdge = edge.parts()[p];
+                
+                String value = (String)partEdge.attributes().get(name);
+                
+                if (value == null) 
+                {
+                    throw new MissingAttributeException(this);
+                }
+                
+                return value;
+            }
+            
+            throw new MissingPartException(this);
+        }
+        
+        public String toString() { return getName() + "=@" + m_Source; }
+    }
+    
 	public Rule
     (
             int id, String left, RulePart [] right, 
-			Map fixedAttrs, Map copyAttrs, boolean isPermutable, 
-            boolean isSearching
+			boolean isPermutable, boolean isSearching
     ) 
     {
 		this.id = id;
 		this.left = left;
 		this.right = right;
-		this.fixedAttrs = fixedAttrs;
-		this.copyAttrs  = copyAttrs;
         
         m_isPermutable = isPermutable;
         m_isSearching  = isSearching;
         m_PartBindingLists = new List [right.length];
         m_PartsFinished = new boolean [right.length];
+        m_Attributes = new ArrayList();
         
         for (int i = 0; i < right.length; i++)
         {
@@ -53,15 +152,7 @@ public class Rule
         }
 	}
 
-	public Rule(int id, String left, RulePart [] right, boolean isPermutable,
-            boolean isSearching) 
-    {
-		this(id, left, right, new Hashtable(), new Hashtable(),
-                isPermutable, isSearching);
-	}
-
-	public static Rule makeFromString(int id, String left, 
-			String right, Map fixedAttrs, Map copyAttrs) 
+	public static Rule makeFromString(int id, String left, String right) 
 	throws IllegalArgumentException 
     {
         Map names = new Hashtable();
@@ -113,18 +204,160 @@ public class Rule
                 names.put(name, part);
             }
 		}
-		return new Rule(id, left, rightParts, fixedAttrs, copyAttrs, 
-                isPermutable, isSearching);
+		return new Rule(id, left, rightParts, isPermutable, isSearching);
 	}
 
-	public static Rule makeFromString(int id, String left, 
-			String right) 
-	throws IllegalArgumentException 
+    public static Rule makeFromString2(int id, String left, 
+        String right) 
+    throws IllegalArgumentException 
     {
-		return makeFromString(id, left, right, new Hashtable(),
-				new Hashtable());
-	}
-	
+        String [] symbolAndConditions = left.split("\\.", 2);
+        String conditionString = null;
+        
+        if (symbolAndConditions.length == 2) 
+        {
+            conditionString = symbolAndConditions[1];
+            left = symbolAndConditions[0];
+        } 
+        
+        Rule rule = makeFromString(id, left, right);
+        
+        Set namedParts = new HashSet();
+        
+        for (int i = 0; i < rule.right.length; i++)
+        {
+            RulePart part = rule.right[i];
+            if (part.name() != null)
+            {
+                namedParts.add(part.name());
+            }
+        }
+
+        if (conditionString != null)
+        {
+            List conditions = new ArrayList(); 
+            boolean inQuotes = false;
+            boolean inEscape = false;
+            StringBuffer buf = new StringBuffer();
+            
+            for (int i = 0; i < conditionString.length(); i++)
+            {
+                char c = conditionString.charAt(i);
+                if (c == '\\')
+                {
+                    inEscape = true;
+                }
+                else if (inEscape)
+                {
+                    buf.append(c);
+                    inEscape = false;
+                }
+                else if (c == '"')
+                {
+                    inQuotes = !inQuotes;
+                }
+                else if (inQuotes)
+                {
+                    buf.append(c);
+                }
+                else if (c == ',')
+                {
+                    conditions.add(buf.toString());
+                    buf.setLength(0);
+                }
+                else
+                {
+                    buf.append(c);
+                }
+            }
+            
+            if (buf.length() == 0)
+            {
+                throw new IllegalArgumentException
+                (
+                    "Invalid condition string (ends with a comma): " +
+                    conditionString
+                );
+            }
+            
+            if (inQuotes || inEscape)
+            {
+                throw new IllegalArgumentException
+                (
+                    "Invalid condition (ends in quotes or escaped): " +
+                    conditionString
+                );
+            }
+            
+            conditions.add(buf.toString());
+            
+            /*
+            String [] conditionStrings = 
+                symbolAndConditions[1].split(",");
+            
+            for (int j = 0; j < conditionStrings.length; j++) 
+            {
+                String [] nameAndValue = 
+                    conditionStrings[j].split("=");
+            */
+                
+            for (Iterator i = conditions.iterator(); i.hasNext();) 
+            {
+                String condition = (String)( i.next() );
+                String [] nameAndValue = condition.split("=");
+                
+                if (nameAndValue.length == 1)
+                {
+                    // valid attribute but value unspecified, 
+                    // to be filled in later
+                    String name  = nameAndValue[0];
+                    rule.m_Attributes.add(new EmptyAttribute(name));
+                }
+                else if (nameAndValue.length == 2) 
+                {
+                    String name  = nameAndValue[0];
+                    String value = nameAndValue[1];
+                    
+                    if (value.startsWith(":"))
+                    {
+                        rule.m_Attributes.add(new ConstAttribute(name,
+                            value.substring(1)));
+                    }
+                    else if (value.startsWith("@"))
+                    {
+                        String varName = value.substring(1);
+                        
+                        if (! namedParts.contains(varName))
+                        {
+                            throw new UnknownNameException(varName);
+                        }
+                        
+                        rule.m_Attributes.add(rule.new CopiedAttribute(name,
+                            varName));
+                    }
+                    else
+                    {
+                        throw new IllegalArgumentException
+                        (
+                            "Invalid condition (value must start with : or @)" +
+                            ": " + condition
+                        );
+                    }
+                }
+                else
+                {
+                    throw new IllegalArgumentException
+                    (
+                        "Invalid condition (= may only be used once): " +
+                        condition
+                    );
+                }
+            }
+        }
+        
+        return rule;
+    }
+
 	public int    id()     { return id;   }
 	public String symbol() { return left; }
 	public RulePart[] parts() {
@@ -132,6 +365,11 @@ public class Rule
 		System.arraycopy(right, 0, result, 0, right.length);
 		return result;
 	}
+    public List attributes()
+    {
+        return new ArrayList(m_Attributes);
+    }
+    
     public RulePart part(int i) { return right[i]; }
     public RulePart part(String name)
     {
@@ -144,12 +382,6 @@ public class Rule
         }
         return null;
     }
-	public Map fixedAttributes() {
-		return new Hashtable(fixedAttrs);
-	}
-	public Map copiedAttributes() {
-		return new Hashtable(copyAttrs);
-	}
     public boolean isPermutable() { return m_isPermutable; }
 	
 	public String toString() {
@@ -259,8 +491,9 @@ public class Rule
     /** 
      * Public entry point for parsing.
      * @param chart A chart containing existing edges to apply to
-     * @param endPos The right-hand side of the chart, where this rule is
-     * required to match this time (it may match elsewhere as well) 
+     * @param requiredEdgeIndex The position where this rule is required
+     * to match in order to produce a unique result (it may match
+     * elsewhere as well) 
      * @return A list of new Edges to be added to the Chart
      */
     public List applyTo(Chart chart, int requiredEdgeIndex)
@@ -300,8 +533,19 @@ public class Rule
         
         if (m_isSearching || m_isPermutable)
         {
-            // any part can match one or more edges
+            // Try continuing the parse with any part that matches
+            // this edge. Not sure what to do about optional parts
+            // yet (how/where to skip them).
             
+            for (int i = 0; i < right.length; i++)
+            {
+                RulePart part = right[i];
+                
+                if (part.matches(required))
+                {
+                    bindAndContinueParse(i, requiredEdgeIndex, newEdges);
+                }
+            }
         }
         else
         {
@@ -507,6 +751,20 @@ public class Rule
                     throw new AssertionError(e);
                 }
                 contained[position++] = unbound;
+                
+                Map conditions = right[i].conditions();
+                Map attributes = unbound.attributes();
+                
+                for (Iterator c = conditions.keySet().iterator(); c.hasNext();)
+                {
+                    String name  = (String)c.next();
+                    String value = (String)(conditions.get(name));
+                    if (attributes.get(name) == null)
+                    {
+                        unbound.addAttribute(new ConstAttribute(name, value));
+                        attributes = unbound.attributes();
+                    }
+                }
             }
         }
         
@@ -516,7 +774,17 @@ public class Rule
         }
         
         Edge newEdge = new RuleEdge(this, contained);
-        newEdges.add(newEdge);       
+        
+        try
+        {
+            // check that unification works
+            newEdge.attributes();
+            newEdges.add(newEdge);
+        }
+        catch (CannotUnifyException e)
+        {
+            // do nothing, don't add the node
+        }
     }
 
     private void continueParseWithThisPart(int partIndex, boolean hasMatched,
@@ -562,7 +830,27 @@ public class Rule
             Edge edge = m_CurrentChart.get(i);
             
             // check that it's in the right place
-            if (edge.getRightPosition() != leftPos - 1)
+            if (m_isSearching)
+            {
+                // Don't match an edge which is to the right of any
+                // existing matched edge for this rule part, to avoid
+                // duplicate permutation matches.
+                
+                boolean isDuplicate = false;
+                
+                for (int j = 0; j < m_PartBindingLists[partIndex].size(); j++)
+                {
+                    Edge other = (Edge)m_PartBindingLists[partIndex].get(j);
+                    if (other.getLeftPosition() < edge.getLeftPosition())
+                    {
+                        isDuplicate = true;
+                        break;
+                    }
+                }
+                
+                if (isDuplicate) continue;
+            }
+            else if (edge.getRightPosition() != leftPos - 1)
             {
                 continue;
             }
@@ -608,6 +896,7 @@ public class Rule
         
         boolean canSkip = part.canSkip();
         
+        /*
         if (canSkip && m_isPermutable)
         {
             for (int i = 0; i < m_PositionsUsed.length; i++)
@@ -619,6 +908,7 @@ public class Rule
                 }
             }
         }
+        */
 
         // stop now if this part is not optional and has not matched yet
         if (!canSkip && !hasMatched)
@@ -990,6 +1280,19 @@ public class Rule
             m_name      = name;
             m_attempted = attempted;
             m_previous  = previous;
+        }
+    }
+
+    public static class UnknownNameException extends IllegalArgumentException
+    {
+        static final long serialVersionUID = 1;
+        private String m_name;
+        
+        public UnknownNameException(String name)
+        {
+            super("Attempted to create a rule using a variable which " +
+                "is not defined on the right-hand side: " + name);
+            m_name = name;
         }
     }
 }
