@@ -6,19 +6,59 @@
  */
 package com.qwirx.lex.parser;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public abstract class EdgeBase implements Edge 
 {
 	public Edge part(int partNum) 
     {
 		return this.parts()[partNum];
 	}
+    public Edge part(String name, int index)
+    {
+        for (int i = 0; i < parts().length; i++)
+        {
+            Edge e = parts()[i];
+            if (e.symbol().equals(name))
+            {
+                if (index == 0)
+                {
+                    return e;
+                }
+                else
+                {
+                    index--;
+                }
+            }
+        }
+        
+        return null;
+    }
+    public Edge [] parts(String name)
+    {
+        List results = new ArrayList();
+        
+        for (int i = 0; i < parts().length; i++)
+        {
+            Edge e = parts()[i];
+            if (e.symbol().equals(name))
+            {
+                results.add(e);
+            }
+        }
+        
+        Edge [] edges = new Edge[results.size()];
+        results.toArray(edges);
+        return edges;
+    }
 	public String attribute(String name) 
     { 
 		return (String)( attributes().get(name) ); 
 	}
     
 	RuleEdge m_container;
-    RulePart     m_location;
+    RulePart m_location;
     
     public void bindTo(RuleEdge container, RulePart location)
     throws AlreadyBoundException
