@@ -430,13 +430,15 @@
 				);
 				
 				SheafConstIterator words = phrase.getSheaf().const_iterator();
-				while (words.hasNext()) {
+				while (words.hasNext())
+				{
 					MatchedObject word =
 						words.next().const_iterator().next();
 					column++;
 					boolean canWriteToWord = emdros.canWriteTo(word);
 					
-					if (type.equals("word")) {
+					if (type.equals("word"))
+					{
 						String lexeme = HebrewConverter.wordToHtml(word);
 						String part_of_speech = (String)
 							parts_of_speech.get(word.getEMdFValue("phrase_dependent_part_of_speech")
@@ -526,7 +528,9 @@
 								wordnetGloss.equals(""))
 							{
 								OntologyDb.OntologyEntry entry = 
-									ontology.getWordByLexeme(lexeme);
+									ontology.getWordByLexeme(
+										word.getEMdFValue("lexeme")
+										.getString());
 								if (entry != null)
 								{
 									wordnetGloss  = entry.m_EnglishGloss;
@@ -1140,7 +1144,11 @@
 			
 			%>
 			Selected lexicon entry logical structure:
-			<%= structure.equals("") ? "none" : structure %>
+			<%=
+				structure.equals("") ? "none" : structure
+						.replaceAll("<", "&lt;")
+						.replaceAll(">", "&gt;")
+			%>
 			<%
 		}
 		else if (selLsIdString != null && selLsIdString.equals("add"))
@@ -1253,18 +1261,22 @@
 		<p>Linked logical structure:
 		<%
 
-		for (Enumeration e = variables.keys(); e.hasMoreElements(); ) {
+		for (Enumeration e = variables.keys(); e.hasMoreElements();) 
+		{
 			String variable = (String)( e.nextElement() );
 			MatchedObject value = (MatchedObject)
 				( variables.get(variable) );
 			String value_text = "";
 			SheafConstIterator sci = value.getSheaf().const_iterator();
 			
-			while (sci.hasNext()) {
+			while (sci.hasNext())
+			{
 				MatchedObject word = sci.next().const_iterator().next();
-				value_text += word.getEMdFValue("lexeme").getString();
+				value_text += HebrewConverter.wordToHtml(word);
 				if (sci.hasNext())
+				{
 					value_text += " ";
+				}
 			}
 			
 			structure = structure.replaceAll
@@ -1277,7 +1289,8 @@
 
 		String currentStruct = clause.getEMdFValue("logical_structure")
 			.getString();
-		if (! currentStruct.equals(structure) ) {
+		if (! currentStruct.equals(structure))
+		{
 			Change ch = emdros.createChange(EmdrosChange.UPDATE,
 				"clause", new int[]{selClauseId});
 			ch.setString("logical_structure", structure);
