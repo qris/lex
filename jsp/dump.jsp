@@ -26,8 +26,13 @@
 <%@ include file="auth.jsp" %>
 
 <%@ include file="navclause.jsp" %>
-	
+
 <%
+	if (username.equals("anonymous"))
+	{
+		%>Sorry, you must log in to access this feature.<%
+		return;
+	}
 
 	class MonadRange 
 	{
