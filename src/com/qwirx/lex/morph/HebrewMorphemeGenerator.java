@@ -7,7 +7,7 @@ import jemdros.MatchedObject;
 
 import org.xml.sax.SAXException;
 
-import com.qwirx.lex.DatabaseException;
+import com.qwirx.db.DatabaseException;
 import com.qwirx.lex.Lex;
 import com.qwirx.lex.emdros.EmdrosDatabase;
 import com.qwirx.lex.ontology.OntologyDb;

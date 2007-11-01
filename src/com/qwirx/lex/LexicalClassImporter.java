@@ -15,8 +15,10 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
-import com.qwirx.lex.sql.SqlChange;
-import com.qwirx.lex.sql.SqlDatabase;
+import com.qwirx.db.Change;
+import com.qwirx.db.DatabaseException;
+import com.qwirx.db.sql.SqlChange;
+import com.qwirx.db.sql.SqlDatabase;
 
 
 /**

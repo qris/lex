@@ -28,9 +28,9 @@ import jemdros.TableRow;
 
 import org.apache.log4j.Logger;
 
-import com.qwirx.lex.Change;
-import com.qwirx.lex.Database;
-import com.qwirx.lex.DatabaseException;
+import com.qwirx.db.Change;
+import com.qwirx.db.Database;
+import com.qwirx.db.DatabaseException;
 
 /**
  * @author chris

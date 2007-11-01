@@ -4,7 +4,7 @@
  * TODO To change the template for this generated file go to
  * Window - Preferences - Java - Code Style - Code Templates
  */
-package com.qwirx.lex.sql;
+package com.qwirx.db.sql;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -13,9 +13,9 @@ import java.sql.SQLException;
 
 import org.apache.log4j.Logger;
 
-import com.qwirx.lex.Change;
-import com.qwirx.lex.Database;
-import com.qwirx.lex.DatabaseException;
+import com.qwirx.db.Change;
+import com.qwirx.db.Database;
+import com.qwirx.db.DatabaseException;
 
 /**
  * @author chris

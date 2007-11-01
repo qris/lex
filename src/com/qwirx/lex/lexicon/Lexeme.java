@@ -13,10 +13,10 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.Vector;
 
-import com.qwirx.lex.Change;
-import com.qwirx.lex.DatabaseException;
-import com.qwirx.lex.sql.SqlChange;
-import com.qwirx.lex.sql.SqlDatabase;
+import com.qwirx.db.Change;
+import com.qwirx.db.DatabaseException;
+import com.qwirx.db.sql.SqlChange;
+import com.qwirx.db.sql.SqlDatabase;
 
 public class Lexeme implements Comparable 
 {

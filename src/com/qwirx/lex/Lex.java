@@ -24,9 +24,10 @@ import jemdros.eOutputKind;
 import org.apache.log4j.Logger;
 import org.xml.sax.SAXException;
 
+import com.qwirx.db.DatabaseException;
+import com.qwirx.db.sql.SqlDatabase;
 import com.qwirx.lex.emdros.EmdrosDatabase;
 import com.qwirx.lex.ontology.OntologyDb;
-import com.qwirx.lex.sql.SqlDatabase;
 
 /**
  * @author chris

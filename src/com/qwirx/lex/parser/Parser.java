@@ -11,8 +11,8 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.qwirx.lex.DatabaseException;
-import com.qwirx.lex.sql.SqlDatabase;
+import com.qwirx.db.DatabaseException;
+import com.qwirx.db.sql.SqlDatabase;
 
 /**
  * @author chris

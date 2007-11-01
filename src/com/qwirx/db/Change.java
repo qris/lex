@@ -3,7 +3,8 @@
  *
  * Represents and logs changes to database objects, Emdros or SQL.
  */
-package com.qwirx.lex;
+package com.qwirx.db;
+
 
 public interface Change 
 {

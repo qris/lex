@@ -4,11 +4,12 @@
  * TODO To change the template for this generated file go to
  * Window - Preferences - Java - Code Style - Code Templates
  */
-package com.qwirx.lex;
+package com.qwirx.db;
 
 import java.util.Hashtable;
 import java.util.Iterator;
 import java.util.Map;
+
 
 /**
  * @author chris

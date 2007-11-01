@@ -25,8 +25,8 @@ import junit.framework.ComparisonFailure;
 
 import org.apache.log4j.Logger;
 
-import com.qwirx.lex.Change;
-import com.qwirx.lex.DatabaseException;
+import com.qwirx.db.Change;
+import com.qwirx.db.DatabaseException;
 
 /**
  * @author chris
