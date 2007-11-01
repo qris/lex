@@ -143,9 +143,12 @@ public class Lex
 //			System.load("/home/chris/project/emdros/root/lib/emdros/libjemdros.so");
 //		}
 //
-		try {
+		try
+		{
 			Class.forName("com.mysql.jdbc.Driver").newInstance();
-		} catch (Exception e) {
+		}
+		catch (Exception e)
+		{
 			System.err.println(e);
 			return;
 		}
