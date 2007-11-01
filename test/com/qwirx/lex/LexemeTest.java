@@ -18,13 +18,14 @@ import junit.framework.TestCase;
 import com.meterware.httpunit.WebConversation;
 import com.meterware.httpunit.WebForm;
 import com.meterware.httpunit.WebResponse;
+import com.qwirx.db.DatabaseException;
+import com.qwirx.db.sql.SqlDatabase;
 import com.qwirx.lex.emdros.EmdrosChange;
 import com.qwirx.lex.emdros.EmdrosDatabase;
 import com.qwirx.lex.emdros.EmdrosChange.MonadSetEntry;
 import com.qwirx.lex.lexicon.Lexeme;
 import com.qwirx.lex.lexicon.ThematicRelation;
 import com.qwirx.lex.lexicon.Lexeme.Variable;
-import com.qwirx.lex.sql.SqlDatabase;
 
 public final class LexemeTest extends TestCase
 {

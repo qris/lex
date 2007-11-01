@@ -15,8 +15,12 @@ import java.util.Iterator;
 
 import junit.framework.TestCase;
 
-import com.qwirx.lex.sql.SqlChange;
-import com.qwirx.lex.sql.SqlDatabase;
+import com.qwirx.db.Change;
+import com.qwirx.db.ChangedRow;
+import com.qwirx.db.ChangedValue;
+import com.qwirx.db.DatabaseException;
+import com.qwirx.db.sql.SqlChange;
+import com.qwirx.db.sql.SqlDatabase;
 
 /**
  * @author chris

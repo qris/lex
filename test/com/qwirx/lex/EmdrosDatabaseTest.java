@@ -16,9 +16,14 @@ import jemdros.TableRow;
 import jemdros.TableRowIterator;
 import junit.framework.TestCase;
 
+import com.qwirx.db.Change;
+import com.qwirx.db.ChangedRow;
+import com.qwirx.db.ChangedValue;
+import com.qwirx.db.ChangedValueString;
+import com.qwirx.db.DatabaseException;
+import com.qwirx.db.sql.SqlDatabase;
 import com.qwirx.lex.emdros.EmdrosChange;
 import com.qwirx.lex.emdros.EmdrosDatabase;
-import com.qwirx.lex.sql.SqlDatabase;
 
 /**
  * @author chris
