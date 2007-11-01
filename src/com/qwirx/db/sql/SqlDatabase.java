@@ -23,7 +23,8 @@ import com.qwirx.db.DatabaseException;
  * TODO To change the template for this generated type comment go to
  * Window - Preferences - Java - Code Style - Code Templates
  */
-public class SqlDatabase implements Database {
+public class SqlDatabase implements Database
+{
 	private Connection conn;
 	private PreparedStatement stmt;
 	private ResultSet rs;
@@ -31,11 +32,54 @@ public class SqlDatabase implements Database {
 	private long startTime;
     private static final Logger m_LOG = Logger.getLogger(SqlDatabase.class);
     
-	public SqlDatabase(Connection conn, String username, String database) 
+	public SqlDatabase(Connection conn, String username, String database)
+	throws DatabaseException
     {
 		this.conn = conn;
 		this.username = username;
 		this.database = database;
+		
+		try
+		{
+			new DbTable("change_log",
+				new DbColumn[]{
+					new DbColumn("ID",         "INT(11)", false, 
+							true, true),
+					new DbColumn("User",       "VARCHAR(20)", false),
+					new DbColumn("Date_Time",  "DATETIME",    false),
+					new DbColumn("DB_Type",    "ENUM('Emdros','SQL')", 
+							false),
+					new DbColumn("DB_Name",    "VARCHAR(40)", false),
+					new DbColumn("Table_Name", "VARCHAR(40)", false),
+					new DbColumn("Cmd_Type",  
+							"ENUM('INSERT','UPDATE','DELETE')",	false),
+				}
+			).check(conn);
+
+			new DbTable("changed_rows",
+				new DbColumn[]{
+					new DbColumn("ID",        "INT(11)", false, 
+							true, true),
+					new DbColumn("Log_ID",    "INT(11)", false),
+					new DbColumn("Unique_ID", "INT(11)", false),
+				}
+			).check(conn);
+
+			new DbTable("changed_values",
+				new DbColumn[]{
+					new DbColumn("ID",        "INT(11)", false, 
+							true, true),
+					new DbColumn("Row_ID",    "INT(11)", false),
+					new DbColumn("Col_Name",  "VARCHAR(40)", false),
+					new DbColumn("Old_Value", "MEDIUMTEXT", true),
+					new DbColumn("New_Value", "MEDIUMTEXT", true),
+				}
+			).check(conn);
+		}
+		catch (SQLException e)
+		{
+			throw new DatabaseException(e, "Error checking table structures");
+		}
 	}
 	
 	public void executeDirect(String sql) throws DatabaseException 
