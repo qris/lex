@@ -13,13 +13,11 @@ import java.util.Iterator;
 
 import org.apache.log4j.Logger;
 
-import com.qwirx.lex.Lex;
-
 public class DbTable 
 {
 	String name;
 	DbColumn [] columns;
-    private static final Logger m_LOG = Logger.getLogger(Lex.class);
+    private static final Logger m_LOG = Logger.getLogger(DbTable.class);
 
 	public DbTable(String name, DbColumn [] columns) 
     {
