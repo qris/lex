@@ -1,0 +1,176 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+/****************************************************
+**  Edit For Each Project
+**
+**  You should expect to have to edit the following
+**  section for each project.
+****************************************************/
+-->
+
+<!--Project. Configuration that affects the project as a whole, project name etc.-->
+
+<project basedir="." default="jar" name="com.qwirx.lex">
+
+    <property name="package" value="com.qwirx"/>
+
+<!--Compile. Location of source files, destination of compiled files, files to include in compilation etc.-->
+    <property name="build.directory" value="jsp/WEB-INF/classes"/>
+    <property name="source.directory" value="src"/>
+    <property name="test.source.directory" value="test"/>
+    <property name="lib.directory" value="jsp/WEB-INF/lib/"/>
+    <property name="build.compiler" value="modern"/>
+<!--Allow shell environment variables to be called with the "env." prefix -->	
+	<property environment="env"/>
+	
+    <path id="classpath">
+        <fileset dir="${lib.directory}">
+            <include name="**/*.jar"/>
+        </fileset>
+    </path>
+
+	<!--Distribution. Where the distributable results of the build are placed.-->
+    <property name="distribution.directory" value="dist"/>
+
+	<!--Jar. Name of the jar file produced by the build process -->
+    <!--name and location of the jar file to build-->
+    <property name="jar.directory" value="${distribution.directory}"/>
+    <property name="jar.name" value="com.qwirx.db.jar"/>
+    <property name="jar.basedirectory" value="${build.directory}"/>
+	
+    <!--exclude all unit test files from the jar file-->
+    <!-- <property name="jar.excludes" value="**/test/**"/> -->
+
+<!--Resources. The location of other resources other than source code-->
+    <property name="jsp.directory" value="jsp"/>    
+
+<!--These are to put in the released Jar's manifest. -->
+    <property name="release.version" value="${RELEASE_VERSION}"/>
+
+<!--
+/****************************************************
+**  Restricted Edit
+**
+**  You shouldn't have to edit anything below. 
+****************************************************/ -->
+
+
+
+<!--
+/*****************************************************
+**  Initialise
+******************************************************/-->
+    <target name="init">
+        <tstamp/>
+    </target>
+	
+<!--
+/*****************************************************
+**  Compile: Delete the build directory, recreate it and compile all the source code
+******************************************************/-->
+    <target name="compile" depends="init" unless="build.compiled">
+        <delete dir="${build.directory}"/>
+        <mkdir dir="${build.directory}"/>
+		<antcall target="javac"/>
+        <copy todir="${build.directory}">
+            <fileset dir="${source.directory}">
+                <include name="**/*.xsl"/>
+                <include name="**/*.html"/>
+            	<include name="**/*.js"/>
+            </fileset>
+        </copy>
+		<property name="build.compiled" value="true"/>
+    </target>
+	
+	<target name="javac">
+		<javac debug="on" optimize="off"
+        	destdir="${build.directory}"
+			includes="com/qwirx/db/**/*.java">
+        	<src path="${source.directory}" />
+			<classpath refid="classpath"/>
+        </javac>
+	</target>
+	
+<!--
+/*****************************************************
+**  Compile Tests: Compile all the source code in test dir
+******************************************************/-->
+    <target name="compile-tests" depends="compile">
+        <javac deprecation="on" debug="on" optimize="off" destdir="${build.directory}" srcdir="${test.source.directory}">
+            <classpath refid="classpath"/>
+        </javac>
+        <copy todir="${build.directory}">
+            <fileset dir="${test.source.directory}">
+                <include name="*.properties"/>
+                <include name="**/*.properties"/>
+            </fileset>
+        </copy>
+    </target>
+
+<!--
+/*****************************************************
+**  Compile Tests: Compile all the source code in test dir
+**    Assume that compile has already happened, to save us
+**    compiling the main stuff twice.  But have check aswell
+******************************************************/-->
+    <target name="compile-tests-after-war">
+		<fail message="Compile has not happened" unless="build.compiled"/>
+        <javac deprecation="on" debug="on" optimize="off" destdir="${build.directory}" srcdir="${test.source.directory}">
+            <classpath refid="classpath"/>
+        </javac>
+        <copy todir="${build.directory}">
+            <fileset dir="${test.source.directory}">
+                <include name="*.properties"/>
+                <include name="**/*.properties"/>
+            </fileset>
+        </copy>
+    </target>
+
+<!--
+/*****************************************************
+**  Build Jar file
+******************************************************/
+-->
+    <target name="jar" depends="compile">
+        <mkdir dir="${jar.directory}"/>
+        <jar jarfile="${jar.directory}/${jar.name}" basedir="${jar.basedirectory}">
+		  <manifest>
+		    <section name="org/aidworld">
+		      <attribute name="Implementation-Title" value="loband"/>
+		      <attribute name="Implementation-Version" value="${release.version}, ${TODAY}"/> 
+		      <attribute name="Implementation-Vendor" value="aidworld"/>
+		    </section>
+		  </manifest>
+        </jar>
+    </target>
+
+<!--
+/*****************************************************
+**  Build .War file
+******************************************************/-->
+    <target name="war" depends="jar">
+        <exec executable="${etc.directory}/updateport.sh" os="Linux" />
+        <mkdir dir="${war.directory}"/>
+        <war warfile="${war.directory}/${war.filename}" webxml="${war.webxml}">
+            <classes dir="${build.directory}">
+                <include name="*.*"/>
+                <exclude name="web.xml"/>
+            </classes>
+            <classes dir="${properties.directory}">
+                <include name="*.properties"/>
+            </classes>
+            <lib dir="${lib.directory}">
+                <include name="*.jar"/>
+                <include name="*.zip"/>
+                <exclude name="servlet.jar"/>
+                <exclude name="xercesImpl.jar"/>
+            </lib>
+            <lib dir="${jar.directory}">
+                <include name="*.jar"/>
+            </lib>
+            <fileset dir="${jsp.directory}">
+            	<exclude name="WEB-INF/web.xml"/>
+        	</fileset>
+        </war>
+    </target>
+</project>
