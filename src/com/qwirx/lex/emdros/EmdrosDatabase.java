@@ -83,19 +83,19 @@ public class EmdrosDatabase implements Database
         }
         catch (TableException e)
         {
-            throw new DatabaseException(e, query);
+            throw new DatabaseException("Failed to execute query", e, query);
         }
         catch (BadMonadsException e)
         {
-            throw new DatabaseException(e, query);
+            throw new DatabaseException("Failed to execute query", e, query);
         }
         catch (EMdFDBDBError e)
         {
-            throw new DatabaseException(e, query);
+            throw new DatabaseException("Failed to execute query", e, query);
         }
         catch (EmdrosException e)
         {
-            throw new DatabaseException(e, query);
+            throw new DatabaseException("Failed to execute query", e, query);
         }
 	
 		if (!bDBResult) {
@@ -150,7 +150,8 @@ public class EmdrosDatabase implements Database
         }
         catch (TableException e)
         {
-            throw new DatabaseException(e, "SELECT MIN_M");
+            throw new DatabaseException("Failed to get MIN_M", e, 
+                "SELECT MIN_M");
         }
 	}
 
@@ -167,7 +168,8 @@ public class EmdrosDatabase implements Database
         }
         catch (TableException e)
         {
-            throw new DatabaseException(e, "SELECT MAX_M");
+            throw new DatabaseException("Failed to get MAX_M", e, 
+                "SELECT MAX_M");
         }
 	}
 	
@@ -197,8 +199,8 @@ public class EmdrosDatabase implements Database
         }
         catch (TableException e)
         {
-            throw new DatabaseException(e, 
-                "SELECT ENUMERATION CONSTANTS FROM "+type);
+            throw new DatabaseException("Failed to get enumeration constants", 
+                e, "SELECT ENUMERATION CONSTANTS FROM "+type);
         }
         
 		return result;
@@ -231,7 +233,8 @@ public class EmdrosDatabase implements Database
         }
         catch (TableException e)
         {
-            throw new DatabaseException(e, "MONAD SET CALCULATION "+query);
+            throw new DatabaseException("Failed to calculate monad set ",
+                e, "MONAD SET CALCULATION "+query);
         }
         
         result.append("}");
@@ -296,7 +299,8 @@ public class EmdrosDatabase implements Database
         }
         catch (TableException e)
         {
-            throw new DatabaseException(e, "SELECT FEATURES FROM ["+objectType+"]");
+            throw new DatabaseException("Failed to get features", 
+                e, "SELECT FEATURES FROM ["+objectType+"]");
         }
 
 		executeDirect("UPDATE OBJECT TYPE "+
@@ -326,7 +330,8 @@ public class EmdrosDatabase implements Database
         }
         catch (TableException e)
         {
-            throw new DatabaseException(e, "SELECT OBJECT TYPES");
+            throw new DatabaseException("Failed to get the list of " +
+            		"object types", e, "SELECT OBJECT TYPES");
         }
         
         if (!haveType)
@@ -457,7 +462,8 @@ public class EmdrosDatabase implements Database
         }
         catch (TableException e)
         {
-            throw new DatabaseException(e, query);
+            throw new DatabaseException("Failed to get monads from object", 
+                e, query);
         }
         
         return canWriteTo(monads);
@@ -482,7 +488,8 @@ public class EmdrosDatabase implements Database
         }
         catch (SQLException e)
         {
-            throw new DatabaseException(e, query);
+            throw new DatabaseException("Failed to find database access " +
+            		"permissions", e, query);
         }
         
         int first = 0;
@@ -503,15 +510,20 @@ public class EmdrosDatabase implements Database
         }
         catch (SQLException e)
         {
-            throw new DatabaseException(e, "constructing monad set "+
-                first+"-"+last);
+            throw new DatabaseException("Failed to construct monad set " +
+                first + "-" + last, e);
         }
         catch (BadMonadsException e)
         {
-            throw new DatabaseException(e, "constructing monad set "+
-                first+"-"+last);
+            throw new DatabaseException("Failed to construct monad set " +
+                first + "-" + last, e);
         }
         
         return monads.isEmpty();
+    }
+    
+    public void delete()
+    {
+        env.delete();
     }
 }
