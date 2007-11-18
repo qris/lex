@@ -17,7 +17,6 @@ import junit.framework.TestCase;
 
 import com.qwirx.db.sql.SqlChange;
 import com.qwirx.db.sql.SqlDatabase;
-import com.qwirx.lex.Lex;
 
 /**
  * @author chris
@@ -70,7 +69,8 @@ public class SqlDatabaseTest extends TestCase {
 				"t_txt mediumtext," + 
 				// "t_flt decimal(10,2)," + // not supported by JDBC?
 				"t_dat date, "+
-				"t_dtm datetime"+
+				"t_dtm datetime, "+
+                "t_dat2 DATE NOT NULL"+
 				")");
 	}		
 
@@ -105,8 +105,26 @@ public class SqlDatabaseTest extends TestCase {
 			assertEquals(ChangedValue.class, n.getClass());
 			ChangedValue cv = (ChangedValue)n;
 			String colName  = cv.getName();
-			String curValue = rs.getString(colName);
-			String expValue = cv.getNewValue();
+			String curValue = null;
+            
+			try
+            {
+                curValue = rs.getString(colName);
+            }
+            catch (SQLException e)
+            {
+                if (e.getMessage().equals("Value '0000-00-00' " +
+                        "can not be represented as java.sql.Date"))
+                {
+                    // do nothing
+                }
+                else
+                {
+                    throw e;
+                }
+            }
+
+            String expValue = cv.getNewValue();
 			assertEquals("Column has wrong value", expValue, curValue);
 		}
 
@@ -178,6 +196,8 @@ public class SqlDatabaseTest extends TestCase {
 		// xa.setString("t_flt", "3.14159"); // will be truncated
 		ch.setString("t_dat", "1979-01-07"); // happy birthday
 		ch.setString("t_dtm", "1979-01-07 06:35:00");
+        ch.setString("t_dat2", "0000-00-00"); // crashes some versions
+        // of mysql jdbc when getting column values
 		ch.execute();
 		getChangeTypeAndId(ch.getId());
 	}
