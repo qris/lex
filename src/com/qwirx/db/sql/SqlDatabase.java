@@ -10,6 +10,8 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.apache.log4j.Logger;
 
@@ -78,7 +80,7 @@ public class SqlDatabase implements Database
 		}
 		catch (SQLException e)
 		{
-			throw new DatabaseException(e, "Error checking table structures");
+			throw new DatabaseException("Error checking table structures", e);
 		}
 	}
 	
@@ -96,7 +98,8 @@ public class SqlDatabase implements Database
         catch (SQLException e) 
         {
             m_LOG.error(sql, e);
-			throw new DatabaseException(e, sql);
+			throw new DatabaseException("Failed to execute direct query", 
+			    e, sql);
 		}
 	}
 
@@ -117,7 +120,7 @@ public class SqlDatabase implements Database
 		} 
         catch (SQLException e) 
         {
-			throw new DatabaseException(e, sql);
+			throw new DatabaseException("Failed to prepare query", e, sql);
 		}
 		
 		return stmt;
@@ -138,7 +141,8 @@ public class SqlDatabase implements Database
         {
 			try { stmt.close(); } catch (Exception e2) { /* ignore */ }
             m_LOG.error(query, e);
-			throw new DatabaseException(e, query);
+			throw new DatabaseException("Failed to execute SELECT statement",
+			    e, query);
 		}
 	}
 	
@@ -166,7 +170,7 @@ public class SqlDatabase implements Database
         {
 			try { stmt.close(); } catch (Exception e2) { /* ignore */ }
             m_LOG.error(query, e);
-			throw new DatabaseException(e, query);
+			throw new DatabaseException("Failed to finish query", e, query);
 		}
         
 	}
@@ -181,5 +185,42 @@ public class SqlDatabase implements Database
 	public void close() throws SQLException
 	{
 		conn.close();
+	}
+	
+    public int getSingleInteger(String query)
+    throws DatabaseException, SQLException
+    {
+        prepareSelect(query);
+        
+        ResultSet rs = select();
+        rs.next();
+        int value = rs.getInt(1);
+        finish();
+        
+        return value;
+    }
+
+    public List getTableAsList(String query)
+	throws DatabaseException, SQLException
+	{
+	    List results = new ArrayList();
+	    prepareSelect(query);
+	    
+	    ResultSet rs = select();
+	    int cols = rs.getMetaData().getColumnCount();
+	    
+	    while (rs.next())
+	    {
+	        String [] result = new String [cols];
+	        for (int i = 0; i < cols; i++)
+	        {
+	            result[i] = rs.getString(i+1);
+	        }
+	        results.add(result);
+	    }
+	    
+	    finish();
+	    
+	    return results;
 	}
 }
