@@ -11,6 +11,7 @@ import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.util.Hashtable;
 import java.util.Map;
+import java.util.Stack;
 
 import jemdros.EmdrosEnv;
 import jemdros.eCharsets;
@@ -61,54 +62,102 @@ public class Lex
         	return new Hashtable();
         }
 	};
+    
+    static class EmdrosDatabasePool
+    {
+        private Stack m_Pool = new Stack();
+        private String m_User, m_Host; 
+        
+        public EmdrosDatabasePool(String user, String host)
+        {
+            m_User = user;
+            m_Host = host;
+        }
+        
+        public synchronized EmdrosDatabase get()
+        throws DatabaseException
+        {
+            if (m_Pool.size() == 0)
+            {
+                return create();
+            }
+            
+            return (EmdrosDatabase)m_Pool.pop();
+        }
+        
+        public synchronized void put(EmdrosDatabase db)
+        {
+            if (m_Pool.size() > 0)
+            {
+                db.delete();
+            }
+            else
+            {
+                m_Pool.push(db);
+            }
+        }
+        
+        public EmdrosDatabase create()
+        throws DatabaseException
+        {
+            loadLibrary();
+            
+            EmdrosEnv env = new EmdrosEnv(eOutputKind.kOKConsole, 
+                eCharsets.kCSISO_8859_1, "localhost", "emdf", "changeme", 
+                "wihebrew");
+
+            if (!env.connectionOk()) 
+            {
+                showDatabaseError(env);
+                throw new IllegalStateException("Not connected to database "+
+                        "("+env.getDBError()+")");
+            }
+
+            EmdrosDatabase emdrosDb = new EmdrosDatabase(
+                    env, m_User, m_Host, "wihebrew", getLogDatabaseHandle());
+            
+            emdrosDb.createObjectTypeIfMissing("note");
+            emdrosDb.createFeatureIfMissing("note",  "text",             "string");
+            emdrosDb.createFeatureIfMissing("clause","logical_struct_id","integer");
+            emdrosDb.createFeatureIfMissing("phrase","argument_name",    "string");
+            emdrosDb.createFeatureIfMissing("phrase","type_id",          "integer");
+            emdrosDb.createFeatureIfMissing("phrase","macrorole_number", "integer default -1");
+            emdrosDb.createFeatureIfMissing("clause","logical_structure","string");
+            emdrosDb.createFeatureIfMissing("verse", "bart_gloss",       "string");
+            emdrosDb.createFeatureIfMissing("word",  "wordnet_gloss",    "string");
+            emdrosDb.createFeatureIfMissing("word",  "wordnet_synset",   "integer");
+            
+            return emdrosDb;
+        }
+    }
+    
+    private static Map m_EmdrosPools = new Hashtable();
+    private static Map m_Ledger = new Hashtable();
 
 	public static final EmdrosDatabase getEmdrosDatabase(String user, 
         String host) 
 	throws DatabaseException 
     {
-    	loadLibrary();
+        String key = user + "@" + host;
         
-    	String key = Thread.currentThread().getId() + "@" + user +
-    		"@" + host; 
-    	
-    	Map tlsMap = (Map)s_EmdrosDatabaseMap.get();
-    	
-    	EmdrosDatabase db = (EmdrosDatabase)tlsMap.get(key);
-    	if (db != null)
-    	{
-    		db.setLogDatabaseHandle(getLogDatabaseHandle());
-    		return db;
-    	}
-    	
-		EmdrosEnv env = new EmdrosEnv(eOutputKind.kOKConsole, 
-			eCharsets.kCSISO_8859_1, "localhost", "emdf", "changeme", 
-			"wihebrew");
-
-		if (!env.connectionOk()) 
+        EmdrosDatabasePool pool = (EmdrosDatabasePool)m_EmdrosPools.get(key);
+        
+        if (pool == null)
         {
-			showDatabaseError(env);
-			throw new IllegalStateException("Not connected to database "+
-                    "("+env.getDBError()+")");
-		}
-
-		EmdrosDatabase emdrosDb = new EmdrosDatabase(
-				env, user, host, "wihebrew", getLogDatabaseHandle());
-		
-        emdrosDb.createObjectTypeIfMissing("note");
-        emdrosDb.createFeatureIfMissing("note",  "text",             "string");
-		emdrosDb.createFeatureIfMissing("clause","logical_struct_id","integer");
-		emdrosDb.createFeatureIfMissing("phrase","argument_name",    "string");
-		emdrosDb.createFeatureIfMissing("phrase","type_id",          "integer");
-        emdrosDb.createFeatureIfMissing("phrase","macrorole_number", "integer default -1");
-		emdrosDb.createFeatureIfMissing("clause","logical_structure","string");
-		emdrosDb.createFeatureIfMissing("verse", "bart_gloss",       "string");
-        emdrosDb.createFeatureIfMissing("word",  "wordnet_gloss",    "string");
-        emdrosDb.createFeatureIfMissing("word",  "wordnet_synset",   "integer");
-		
-        tlsMap.put(key, emdrosDb);
+            pool = new EmdrosDatabasePool(user, host);
+            m_EmdrosPools.put(key, pool);
+        }
         
-		return emdrosDb;
+        EmdrosDatabase db = pool.get();
+        m_Ledger.put(db, pool);
+        return db;
 	}
+    
+    public static final void putEmdrosDatabase(EmdrosDatabase db)
+    {
+        EmdrosDatabasePool pool = (EmdrosDatabasePool)m_Ledger.get(db);
+        pool.put(db);
+    }
 	
 	private static final Connection getLogDatabaseHandle()
 	throws DatabaseException {
@@ -265,12 +314,14 @@ public class Lex
 			System.out.println("SQLException: " + ex.getMessage());
 			System.out.println("SQLState: "     + ex.getSQLState());
 			System.out.println("VendorError: "  + ex.getErrorCode());
-			throw new DatabaseException(ex, "Connecting to "+dsn);
+			throw new DatabaseException("Failed to connect to database: " + 
+			    dsn, ex);
     	}
 		catch (IllegalStateException ex)
 		{
     		System.err.println(ex);
-    		throw new DatabaseException(ex, "Connecting to "+dsn);
+    		throw new DatabaseException("Failed to connect to database: " + 
+    		    dsn, ex);
     	}
 
 		return dbconn;
