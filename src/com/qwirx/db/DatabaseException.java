@@ -24,15 +24,22 @@ public class DatabaseException extends Exception
         this.original = original;
     }
 
+    public DatabaseException(String message, Exception original) 
+    {
+        this(message, original, null);
+    }
+
     public DatabaseException(String message, String query) 
     {
         this(message, null, query);
 	}
 	
-	public DatabaseException(Exception original, String query) 
+    /*
+    public DatabaseException(Exception original, String query) 
     {
         this(null, original, query);
 	}
+	*/
 	
 	public String toString() 
     {
