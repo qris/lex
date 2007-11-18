@@ -514,12 +514,14 @@ public final class EmdrosChange implements Change
         catch (SQLException e) 
         {
             m_log.error(sb.toString(), e);
-			throw new DatabaseException(e, sb.toString());
+			throw new DatabaseException("Failed to insert new values into " +
+			    "change tracking tables", e, sb.toString());
 		}
         catch (TableException e) 
         {
             m_log.error(sb.toString(), e);
-            throw new DatabaseException(e, sb.toString());
+            throw new DatabaseException("Failed to execute query or to " +
+            		"get old or new values", e, sb.toString());
         }        
 	}
 	
