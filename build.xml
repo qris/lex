@@ -15,7 +15,7 @@
     <property name="package" value="com.qwirx"/>
 
 <!--Compile. Location of source files, destination of compiled files, files to include in compilation etc.-->
-    <property name="build.directory" value="jsp/WEB-INF/classes"/>
+    <property name="build.directory" value="tmp"/>
     <property name="source.directory" value="src"/>
     <property name="test.source.directory" value="test"/>
     <property name="lib.directory" value="jsp/WEB-INF/lib/"/>
@@ -71,7 +71,10 @@
     <target name="compile" depends="init" unless="build.compiled">
         <delete dir="${build.directory}"/>
         <mkdir dir="${build.directory}"/>
-		<antcall target="javac"/>
+		<javac classpathref="classpath" 
+			srcdir="${source.directory}/com/qwirx/db" 
+			destdir="${build.directory}"
+			source="1.3" target="1.3" debug="yes" />
         <copy todir="${build.directory}">
             <fileset dir="${source.directory}">
                 <include name="**/*.xsl"/>
@@ -149,7 +152,6 @@
 **  Build .War file
 ******************************************************/-->
     <target name="war" depends="jar">
-        <exec executable="${etc.directory}/updateport.sh" os="Linux" />
         <mkdir dir="${war.directory}"/>
         <war warfile="${war.directory}/${war.filename}" webxml="${war.webxml}">
             <classes dir="${build.directory}">
