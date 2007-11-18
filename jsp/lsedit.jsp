@@ -1061,5 +1061,4 @@ else
 } // end if (lsId <= 0)
 %>
 
-</body></html>	
-<%@ include file="cleanup.jsp" %>
+<%@ include file="footer.jsp" %>

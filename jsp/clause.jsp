@@ -1445,6 +1445,5 @@ Chapter <%= session.getAttribute("chapterNum") %>,
 Verse   <%= session.getAttribute("verseNum") %>,
 Clause  <%= session.getAttribute("clauseId") %>
 </form>
-</body></html>	
 
-<%@ include file="cleanup.jsp" %>
+<%@ include file="footer.jsp" %>

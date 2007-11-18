@@ -12,4 +12,4 @@
 
 <p>You should really start at the <a href="clause.jsp">text browser</a>.</p>
 
-</body></html>	
+<%@ include file="footer.jsp" %>

@@ -1,6 +1,4 @@
-<%@ page import="com.qwirx.lex.*" %>
-<%@ page import="com.qwirx.lex.emdros.*" %>
-<%@ page import="com.qwirx.lex.sql.*" %>
+
 <%@ page import="jemdros.SetOfMonads" %>
 <%	
 	SetOfMonads userTextAccessSet = emdros.getVisibleMonads();

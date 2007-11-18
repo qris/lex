@@ -771,5 +771,4 @@
 	
 %>
 
-</body></html>	
-<%@ include file="cleanup.jsp" %>
+<%@ include file="footer.jsp" %>

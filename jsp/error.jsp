@@ -32,5 +32,5 @@ to the author by sending an email to Chris Wilson at
 <pre>
 <%= sw.toString() %>
 </pre>
-</body>
-</html>
+
+<%@ include file="footer.jsp" %>

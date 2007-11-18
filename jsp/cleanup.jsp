@@ -1,4 +1,9 @@
 <%
-	sql.finish();
-	sql.close();
+	}
+	finally
+	{
+		sql.finish();
+		sql.close();
+		Lex.putEmdrosDatabase(emdros);
+	}
 %>
