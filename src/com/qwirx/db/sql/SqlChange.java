@@ -174,7 +174,7 @@ public final class SqlChange implements Change {
   			while (rs.next())
   			{
   			    int uniqueId = rs.getInt("ID");
-  			    changedRowIds.add(Integer.valueOf(uniqueId));
+  			    changedRowIds.add(new Integer(uniqueId));
 
   			    int logRowEntryId;
 
