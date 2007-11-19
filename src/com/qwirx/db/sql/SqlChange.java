@@ -12,8 +12,10 @@ import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Types;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 
 import org.apache.log4j.Logger;
@@ -49,7 +51,8 @@ public final class SqlChange implements Change {
 		this.conn       = conn;
 	}
 
-	final static class Type {
+	final static class Type
+	{
 		private String name;
 		private Type(String name) { this.name = name; }
 		public String toString() { return this.name; }
@@ -148,7 +151,7 @@ public final class SqlChange implements Change {
                 "capturing old values of rows.", e);
 		}
 		
-		String destColName = storeAsNewValue ? "New_Value" :  "Old_Value";
+		String destColName = storeAsNewValue ? "New_Value" : "Old_Value";
 
 		try
 		{
@@ -166,10 +169,12 @@ public final class SqlChange implements Change {
 	        }
 
 	        PreparedStatement cvs = prepareAndLogError(query);
+	        List changedRowIds = new ArrayList();
 		
   			while (rs.next())
   			{
   			    int uniqueId = rs.getInt("ID");
+  			    changedRowIds.add(Integer.valueOf(uniqueId));
 
   			    int logRowEntryId;
 
@@ -189,6 +194,7 @@ public final class SqlChange implements Change {
 
   			        // FIXME date 0000-00-00 in a MySQL database causes
   			        // an exception when we call getString() on it
+  			        
   			        try
   			        {
   			            curValue = rs.getString(i);
@@ -198,7 +204,7 @@ public final class SqlChange implements Change {
   			            if (e.getMessage().equals("Value '0000-00-00' " +
   			                "can not be represented as java.sql.Date"))
   			            {
-  			                // do nothing
+  			                curValue = "0000-00-00";
   			            }
   			            else
   			            {
@@ -223,6 +229,24 @@ public final class SqlChange implements Change {
   			cvs.close();
   			rs.close();
   			stmt.close();
+  			
+  			// an UPDATE may change the found set, but we want to record
+  			// the changes to all rows that were found by the UPDATE
+  			// (and the preceding SELECT), so we have to change the
+  			// conditions to ensure that we find the same rows again.
+  			
+  			StringBuffer newConditions = new StringBuffer();
+  			
+  			for (Iterator i = changedRowIds.iterator(); i.hasNext();)
+  			{
+  			    newConditions.append("ID = " + i.next());
+  			    if (i.hasNext())
+  			    {
+  			        newConditions.append(" OR ");
+  			    }
+  			}
+  			
+  			this.conditions = newConditions.toString();
         }
         catch (SQLException e)
         {
@@ -264,8 +288,10 @@ public final class SqlChange implements Change {
 	throws DatabaseException
 	{
 		if (type != UPDATE && type != DELETE)
+		{
 			throw new AssertionError("this method can only be used "+
 					"when the command type is UPDATE or DELETE");
+		}
 		
 		captureValues(true, false);
 	}
