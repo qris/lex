@@ -426,6 +426,38 @@ public class SqlDatabaseTest extends TestCase
 	    checkCurrentValues("SELECT * FROM logtest", cr);
 	    checkAndRemoveChanges(rowLogId, cr);
 	}
+	
+	public void testMysqlConnectorJIsBroken() throws Exception
+	{
+        Class.forName("com.mysql.jdbc.Driver").newInstance();
+        String dsn = "jdbc:mysql://localhost:3306/test?" +
+        		"zeroDateTimeBehaviour=convertToNull&noDatetimeStringSync=true";
+        Connection conn = DriverManager.getConnection(dsn, "test", "");
+        
+        try
+        {
+            PreparedStatement stmt = conn.prepareStatement(
+                "CREATE TABLE temp (ID int4 not null auto_increment primary key, " +
+                "tm date not null)");
+            stmt.execute();
+            stmt = conn.prepareStatement("INSERT INTO temp " +
+            		"SET tm = \"0000-00-00\"");
+            stmt.execute();
+            stmt = conn.prepareStatement("SELECT tm FROM temp");
+            ResultSet rs = stmt.executeQuery();
+            assertTrue(rs.next());
+            assertEquals("0000-00-00", rs.getString(1));
+            rs.close();
+            stmt.close();
+        }
+        finally
+        {
+            PreparedStatement stmt = conn.prepareStatement("DROP TABLE temp");
+            stmt.execute();
+        }
+        
+        conn.close();
+	}
 
 	public static void main(String[] args) {
 		junit.textui.TestRunner.run(SqlDatabaseTest.class);
