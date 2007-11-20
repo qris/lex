@@ -223,4 +223,55 @@ public class SqlDatabase implements Database
 	    
 	    return results;
 	}
+    
+    /**
+     * Ugly hack replacement for ResultSet.getString() because
+     * getString() doesn't work for 0000-00-00 values, and 
+     * noDatetimeStringSync=true returns empty string instead of
+     * 0000-00-00 contrary to the docs. 
+     * @param columnName
+     * @return
+     * @throws SQLException
+     */
+    public String getString(String columnName) throws SQLException
+    {
+        // FIXME date 0000-00-00 in a MySQL database causes
+        // an exception when we call getString() on it
+        
+        try
+        {
+            return rs.getString(columnName);
+        }
+        catch (SQLException e)
+        {
+            if (e.getMessage().equals("Value '0000-00-00' " +
+                "can not be represented as java.sql.Date"))
+            {
+                return "0000-00-00";
+            }
+           
+            throw e;
+        }
+    }
+
+    public String getString(int columnNum) throws SQLException
+    {
+        // FIXME date 0000-00-00 in a MySQL database causes
+        // an exception when we call getString() on it
+        
+        try
+        {
+            return rs.getString(columnNum);
+        }
+        catch (SQLException e)
+        {
+            if (e.getMessage().equals("Value '0000-00-00' " +
+                "can not be represented as java.sql.Date"))
+            {
+                return "0000-00-00";
+            }
+           
+            throw e;
+        }
+    }
 }
