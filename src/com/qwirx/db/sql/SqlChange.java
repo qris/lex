@@ -37,6 +37,7 @@ public final class SqlChange implements Change {
 	private int    id;
 	private int    insertedRowId = -1;
     private static final Logger m_LOG = Logger.getLogger(SqlChange.class);
+    private String m_PrimaryKeyField = "ID";
 	
 	public SqlChange(String username, String database, 
 			Type type, String table, String conditions,
@@ -134,9 +135,17 @@ public final class SqlChange implements Change {
 		}
 		catch (SQLException e)
 		{
-		    throw new DatabaseException("Failed to capture old values " +
-		    		"of rows. You may have an error in your conditions: " +
-		    		conditions, e);
+		    if (storeAsNewValue)
+		    {
+	            throw new DatabaseException("Failed to capture new values " +
+                    "of rows. You may not have an ID column in the table.", e);
+		    }
+		    else
+		    {
+    		    throw new DatabaseException("Failed to capture old values " +
+    		    		"of rows. You may have an error in your conditions: " +
+    		    		conditions, e);
+		    }
 		}
 
 		ResultSetMetaData md = null;
@@ -173,7 +182,7 @@ public final class SqlChange implements Change {
 		
   			while (rs.next())
   			{
-  			    int uniqueId = rs.getInt("ID");
+  			    int uniqueId = rs.getInt(m_PrimaryKeyField);
   			    changedRowIds.add(new Integer(uniqueId));
 
   			    int logRowEntryId;
@@ -239,7 +248,7 @@ public final class SqlChange implements Change {
   			
   			for (Iterator i = changedRowIds.iterator(); i.hasNext();)
   			{
-  			    newConditions.append("ID = " + i.next());
+  			    newConditions.append(m_PrimaryKeyField + " = " + i.next());
   			    if (i.hasNext())
   			    {
   			        newConditions.append(" OR ");
@@ -323,7 +332,7 @@ public final class SqlChange implements Change {
 		        		"of the last inserted row", e);
 		    }
 		    
-			conditions = "ID = " + insertedRowId;
+			conditions = m_PrimaryKeyField + " = " + insertedRowId;
 
 			captureValues(true, true);
 		}
