@@ -11,6 +11,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 
 import org.apache.log4j.Logger;
@@ -223,7 +224,52 @@ public class SqlDatabase implements Database
 	    
 	    return results;
 	}
+
+    /**
+     * Returns the first column of the results of a query as an array of Strings.
+     * @param query the SQL query whose results will be returned in the List
+     * @return a List of Strings from the first columns of the results.
+     * @throws DatabaseException
+     * @throws SQLException
+     */
+    public String [] getColumnAsArray(String query)
+    throws DatabaseException, SQLException
+    {
+        List list = getColumnAsList(query);
+        String [] array = new String [list.size()];
+        
+        int index = 0;
+        for (Iterator it = list.iterator(); it.hasNext();)
+        {
+            array[index++] = (String)it.next();
+        }
+        
+        return array;
+    }
     
+    /**
+     * Returns the first column of the results of a query as a List of Strings.
+     * @param query the SQL query whose results will be returned in the List
+     * @return a List of Strings from the first columns of the results.
+     * @throws DatabaseException
+     * @throws SQLException
+     */
+    public List getColumnAsList(String query)
+    throws DatabaseException, SQLException
+    {
+        List results = new ArrayList();
+        prepareSelect(query);
+        ResultSet rs = select();
+        
+        while (rs.next())
+        {
+            results.add(rs.getString(1));
+        }
+        
+        finish();
+        return results;
+    }
+
     /**
      * Ugly hack replacement for ResultSet.getString() because
      * getString() doesn't work for 0000-00-00 values, and 
