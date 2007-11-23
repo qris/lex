@@ -26,6 +26,7 @@ import junit.framework.ComparisonFailure;
 import org.apache.log4j.Logger;
 
 import com.qwirx.db.Change;
+import com.qwirx.db.ChangeType;
 import com.qwirx.db.DatabaseException;
 
 /**
@@ -79,7 +80,7 @@ public final class EmdrosChange implements Change
 		this.featureIsConstant = new Hashtable();
 	}
 
-	final static class Type 
+	final static class Type implements ChangeType
     {
 		private String name;
 		private Type(String name) { this.name = name; }
@@ -91,6 +92,8 @@ public final class EmdrosChange implements Change
 		UPDATE = new Type("UPDATE"),
 		DELETE = new Type("DELETE");
     
+	public ChangeType getType() { return changeType; }
+	
     public void setMonads(Set source)
     {
         if (objectIdsToGetMonadsFrom != null)

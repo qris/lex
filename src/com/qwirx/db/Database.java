@@ -16,6 +16,6 @@ package com.qwirx.db;
 public interface Database 
 {
 	void executeDirect(String query) throws DatabaseException;
-	Change createChange(Object type, String table, 
+	Change createChange(ChangeType type, String table, 
 			Object conditions) throws DatabaseException;
 }

@@ -17,6 +17,7 @@ import java.util.List;
 import org.apache.log4j.Logger;
 
 import com.qwirx.db.Change;
+import com.qwirx.db.ChangeType;
 import com.qwirx.db.Database;
 import com.qwirx.db.DatabaseException;
 
@@ -176,7 +177,7 @@ public class SqlDatabase implements Database
         
 	}
 	
-	public Change createChange(Object type, String table, 
+	public Change createChange(ChangeType type, String table, 
 			Object conditions)
 	{
 		return new SqlChange(username, database, 

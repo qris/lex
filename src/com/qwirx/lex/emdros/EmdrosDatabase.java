@@ -29,6 +29,7 @@ import jemdros.TableRow;
 import org.apache.log4j.Logger;
 
 import com.qwirx.db.Change;
+import com.qwirx.db.ChangeType;
 import com.qwirx.db.Database;
 import com.qwirx.db.DatabaseException;
 
@@ -253,7 +254,7 @@ public class EmdrosDatabase implements Database
     	return SetOfMonads.intersect(set, new SetOfMonads(min_m, max_m));
     }
     
-	public Change createChange(Object changeType, String objectType, 
+	public Change createChange(ChangeType changeType, String objectType, 
 			Object objectIds) throws DatabaseException
 	{
         int [] id_ds = (int [])objectIds;

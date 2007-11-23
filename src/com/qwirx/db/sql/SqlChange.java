@@ -21,6 +21,7 @@ import java.util.Map;
 import org.apache.log4j.Logger;
 
 import com.qwirx.db.Change;
+import com.qwirx.db.ChangeType;
 import com.qwirx.db.DatabaseException;
 
 /**
@@ -52,7 +53,7 @@ public final class SqlChange implements Change {
 		this.conn       = conn;
 	}
 
-	final static class Type
+	final static class Type implements ChangeType
 	{
 		private String name;
 		private Type(String name) { this.name = name; }
@@ -70,6 +71,8 @@ public final class SqlChange implements Change {
 		INSERT = new Type("INSERT"),
 		UPDATE = new Type("UPDATE"),
 		DELETE = new Type("DELETE");
+	
+	public ChangeType getType() { return type; }
 	
 	private int insertRowChangeLog(int originalRowId) 
 	throws SQLException
