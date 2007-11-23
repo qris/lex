@@ -11,8 +11,10 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.log4j.Logger;
 
@@ -58,7 +60,7 @@ public class SqlDatabase implements Database
 					new DbColumn("Cmd_Type",  
 							"ENUM('INSERT','UPDATE','DELETE')",	false),
 				}
-			).check(conn);
+			).check(conn, true);
 
 			new DbTable("changed_rows",
 				new DbColumn[]{
@@ -67,7 +69,7 @@ public class SqlDatabase implements Database
 					new DbColumn("Log_ID",    "INT(11)", false),
 					new DbColumn("Unique_ID", "INT(11)", false),
 				}
-			).check(conn);
+			).check(conn, true);
 
 			new DbTable("changed_values",
 				new DbColumn[]{
@@ -78,7 +80,7 @@ public class SqlDatabase implements Database
 					new DbColumn("Old_Value", "MEDIUMTEXT", true),
 					new DbColumn("New_Value", "MEDIUMTEXT", true),
 				}
-			).check(conn);
+			).check(conn, true);
 		}
 		catch (SQLException e)
 		{
@@ -251,7 +253,7 @@ public class SqlDatabase implements Database
     /**
      * Returns the first column of the results of a query as a List of Strings.
      * @param query the SQL query whose results will be returned in the List
-     * @return a List of Strings from the first columns of the results.
+     * @return a List of Strings from the first column of the results.
      * @throws DatabaseException
      * @throws SQLException
      */
@@ -271,6 +273,75 @@ public class SqlDatabase implements Database
         return results;
     }
 
+    /**
+     * Returns a map from the first to the second columns of the results
+     * of a query as a Map of Strings to Strings.
+     * @param query the SQL query whose results will be returned in the Map
+     * @return a Map of Strings to Strings from the first two columns of the
+     * results.
+     * @throws DatabaseException
+     * @throws SQLException
+     */
+    public Map fetchMap(String query)
+    throws DatabaseException, SQLException
+    {
+        Map results = new HashMap();
+        prepareSelect(query);
+        ResultSet rs = select();
+        
+        while (rs.next())
+        {
+            results.put(rs.getString(1), rs.getString(2));
+        }
+        
+        finish();
+        return results;
+    }
+    
+    /**
+     * Returns a map from the first to the second columns of the results
+     * of a query, grouped by the first column, as a Map of Strings to String[]s.
+     * @param query the SQL query whose results will be returned in the Map
+     * @return a Map of Strings to String[]s from the first two columns of the
+     * results.
+     * @throws DatabaseException
+     * @throws SQLException
+     */
+    public Map fetchGroupMap(String query)
+    throws DatabaseException, SQLException
+    {
+        Map results = new HashMap();
+        prepareSelect(query);
+        ResultSet rs = select();
+        
+        while (rs.next())
+        {
+            String key = rs.getString(1);
+            String value = rs.getString(2);
+            
+            List list = (List)results.get(key);
+            if (list == null)
+            {
+                list = new ArrayList();
+                results.put(key, list);
+            }
+            
+            list.add(value);
+        }
+        
+        finish();
+        
+        for (Iterator i = results.keySet().iterator(); i.hasNext();)
+        {
+            String key = (String)i.next(); 
+            List list = (List)results.get(key);
+            String [] array = new String [list.size()];
+            array = (String[])list.toArray(array);
+            results.put(key, array);
+        }
+        
+        return results;
+    }
     /**
      * Ugly hack replacement for ResultSet.getString() because
      * getString() doesn't work for 0000-00-00 values, and 
@@ -320,5 +391,18 @@ public class SqlDatabase implements Database
            
             throw e;
         }
+    }
+    
+    public String getStringNotNull(String colName, String defaultValue)
+    throws SQLException
+    {
+        String value = getString(colName);
+        
+        if (value == null)
+        {
+            value = defaultValue;
+        }
+        
+        return value;
     }
 }

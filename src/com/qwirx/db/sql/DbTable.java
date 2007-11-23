@@ -31,8 +31,7 @@ public class DbTable
 		try { stmt.close(); } catch (Exception e) { /* ignore */ }
     }
 
-
-    public void check(Connection conn) 
+    public void check(Connection conn, boolean addMissingColumns) 
     throws SQLException, IllegalStateException 
     {
 		Statement stmt = null;
@@ -67,7 +66,7 @@ public class DbTable
 						
 						DbColumn expectedCol = (DbColumn)(tci.next());
 						String expectedColName = expectedCol.name;
-						if (!expectedColName.equals(currentColumnName))
+						if (!expectedColName.equalsIgnoreCase(currentColumnName))
 							throw new IllegalStateException
 								("Table "+name+
 								" column "+currentColumnName+
@@ -117,14 +116,29 @@ public class DbTable
 								" allow NULL ("+actualNull+")");
 					}
 					
-					while (tci.hasNext()) 
-					{
-						DbColumn missing = (DbColumn)(tci.next());
-                        sql = "ALTER TABLE "+name+" ADD COLUMN "+
-                        missing.getSpec();
-						stmt = conn.prepareStatement(sql);
-						((PreparedStatement)stmt).executeUpdate();
-					}
+                    if (!tci.hasNext())
+                    {
+                        return;
+                    }
+                    
+                    if (addMissingColumns)
+                    {
+                        while (tci.hasNext()) 
+                        {
+                            DbColumn missing = (DbColumn)(tci.next());
+                            sql = "ALTER TABLE "+name+" ADD COLUMN "+
+                            missing.getSpec();
+                            stmt = conn.prepareStatement(sql);
+                            ((PreparedStatement)stmt).executeUpdate();
+                        }
+                    }
+                    else
+                    {
+                        DbColumn missing = (DbColumn)(tci.next());
+                        throw new IllegalStateException
+                            ("Table "+name+" missing column "+missing.name+
+                            " " + missing.getSpec());
+                    }
 					
 					return;
 				}

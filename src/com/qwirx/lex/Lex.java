@@ -228,7 +228,7 @@ public class Lex
 					new DbColumn("Name",         "VARCHAR(40)", false),
 					new DbColumn("Supertype_ID", "INT(11)",     false),
 				}
-			).check(dbconn);
+			).check(dbconn, true);
 			
 			new DbTable("lexicon_entries",
 				new DbColumn[]{
@@ -273,7 +273,7 @@ public class Lex
                     new DbColumn("Result_Predicate",   "VARCHAR(40)", true),
                     new DbColumn("Result_Predicate_Arg",   "VARCHAR(1)", true),
 				}
-			).check(dbconn);
+			).check(dbconn, true);
 
 			new DbTable("lexical_rules",
 				new DbColumn[]{
@@ -282,7 +282,7 @@ public class Lex
 					new DbColumn("Symbol",    "VARCHAR(40)", true),
 					new DbColumn("Structure", "VARCHAR(80)", true),
 				}
-			).check(dbconn);
+			).check(dbconn, true);
 
 			new DbTable("lexicon_variables",
 				new DbColumn[]{
@@ -292,7 +292,7 @@ public class Lex
 					new DbColumn("Name",  "VARCHAR(20)", false),
 					new DbColumn("Value", "VARCHAR(40)", false),
 				}
-			).check(dbconn);
+			).check(dbconn, true);
 
             new DbTable
             (
@@ -307,7 +307,7 @@ public class Lex
                     new DbColumn("Monad_Last",   "INT(11)", false),
                     new DbColumn("Write_Access", "ENUM('0','1')", false),
                 }
-            ).check(dbconn);
+            ).check(dbconn, true);
 		}
 		catch (SQLException ex)
 		{
