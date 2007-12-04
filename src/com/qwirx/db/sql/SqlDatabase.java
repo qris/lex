@@ -192,13 +192,36 @@ public class SqlDatabase implements Database
 	}
 	
     public int getSingleInteger(String query)
-    throws DatabaseException, SQLException
+    throws DatabaseException
     {
         prepareSelect(query);
         
         ResultSet rs = select();
-        rs.next();
-        int value = rs.getInt(1);
+        
+        try
+        {
+        	if (!rs.next())
+        	{
+        		throw new DatabaseException("No results", query);
+        	}
+        }
+        catch (SQLException e)
+        {
+        	throw new DatabaseException("No results", e);
+        }
+        
+        int value;
+        
+        try
+        {
+        	value = rs.getInt(1);
+        }
+        catch (SQLException e)
+        {
+        	throw new DatabaseException("Failed to get value of " +
+        			"column 1 as integer", e);
+        }
+        
         finish();
         
         return value;
