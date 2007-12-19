@@ -12,6 +12,9 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import junit.framework.TestCase;
 
@@ -21,17 +24,17 @@ import com.qwirx.db.sql.SqlDatabase;
 /**
  * @author chris
  *
- * TODO To change the template for this generated type comment go to
- * Window - Preferences - Java - Code Style - Code Templates
+ * Tests the SqlDatabase and SqlChange classes, specifically change tracking.
  */
 public class SqlDatabaseTest extends TestCase
 {
 	private SqlDatabase db;
+    private static final String dsn = 
+    	"jdbc:mysql://dev.aidworld.org:3306/test?user=test";
 	
     public void testDatabasePreparedStatements() throws Exception
     {
         Class.forName("com.mysql.jdbc.Driver").newInstance();
-        String dsn = "jdbc:mysql://localhost:3306/test?user=test";
         // + "&useServerPrepStmts=false";
         Connection conn = DriverManager.getConnection(dsn);
 
@@ -51,7 +54,6 @@ public class SqlDatabaseTest extends TestCase
 	InstantiationException, ClassNotFoundException
 	{
 		Class.forName("com.mysql.jdbc.Driver").newInstance();
-		String dsn = "jdbc:mysql://localhost:3306/test?user=test";
     	Connection conn = DriverManager.getConnection(dsn);
 		db = new SqlDatabase(conn, "test", "test");
 	}
@@ -87,7 +89,7 @@ public class SqlDatabaseTest extends TestCase
 	private String changeType = null;
 	private int    logRecordId;
 	
-	public void getChangeTypeAndId(int xaId) 
+	private void getChangeTypeAndId(int xaId) 
 	throws DatabaseException, SQLException
 	{
 		PreparedStatement stmt = db.prepareSelect(
@@ -100,7 +102,7 @@ public class SqlDatabaseTest extends TestCase
 		db.finish();
 	}
 	
-	public void checkCurrentValues(String query, ChangedRow cr) 
+	private void assertCurrentValues(String query, ChangedRow cr) 
 	throws DatabaseException, SQLException
 	{
 		db.prepareSelect(query);
@@ -140,9 +142,11 @@ public class SqlDatabaseTest extends TestCase
 		db.finish();
 	}
 	
-	public void checkAndRemoveChanges(int rowLogId, ChangedRow cr) 
+	private void assertChangeLogUpdated(int rowLogId, ChangedRow cr) 
 	throws DatabaseException, SQLException
 	{
+		List changedValues = cr.getValues();
+		
 		db.prepareSelect(
 				"SELECT ID, Col_Name, Old_Value, " +
 				"New_Value FROM changed_values WHERE Row_ID = " + rowLogId);
@@ -189,20 +193,16 @@ public class SqlDatabaseTest extends TestCase
 			
 			rs.getString(3);
 			
-			cr.remove(colName);
+			changedValues.remove(cv);
 		}
+		
 		db.finish();
 
-		Iterator i = cr.iterator();
-		if (i.hasNext())
-		{
-			ChangedValue cv = (ChangedValue)( i.next() );
-			assertTrue("Expected column change log not found: "+ 
-					cv.getName(), false);
-		}
+		assertEquals("Expected column change logs not found: " + 
+				changedValues.toString(), 0, changedValues.size());
 	}
 	
-	private int insertTestRecord() throws DatabaseException, SQLException
+	private SqlChange insertTestRecord() throws DatabaseException, SQLException
 	{
 		SqlChange ch = (SqlChange)db.createChange(SqlChange.INSERT, 
 				"logtest", null);
@@ -215,13 +215,42 @@ public class SqlDatabaseTest extends TestCase
         ch.setString("t_dat2", "0000-00-00"); // crashes some versions
         // of mysql jdbc when getting column values
 		ch.execute();
-		getChangeTypeAndId(ch.getId());
-		return ch.getInsertedRowId();
+		getChangeTypeAndId(ch.getId().intValue());
+		return ch;
+	}
+	
+	private void assertEquals(ChangedRow rowA, ChangedRow rowB)
+	{
+		List fieldsA = rowA.getColumns();
+		
+		for (Iterator i = rowB.getColumns().iterator(); i.hasNext();)
+		{
+			String colName = (String)i.next();
+			String valA = rowA.get(colName).getOldValue();
+			String valB = rowB.get(colName).getOldValue();
+			if (valA != null && valB == null)
+			{
+				assertEquals(colName, valA, "null");
+			}
+			assertEquals(colName, valA, valB);
+
+			valA = rowA.get(colName).getNewValue();
+			valB = rowB.get(colName).getNewValue();
+			if (valA != null && valB == null)
+			{
+				assertEquals(colName, valA, "null");
+			}
+			assertEquals(colName, valA, valB);
+			
+			fieldsA.remove(colName);
+		}
+		
+		assertEquals(fieldsA.toString(), 0, fieldsA.size());
 	}
 	
 	public void testInsert() throws Exception 
 	{
-		insertTestRecord();
+		SqlChange insert = insertTestRecord();
 		assertEquals("INSERT", changeType);
 		
 		PreparedStatement stmt = db.prepareSelect(
@@ -238,35 +267,65 @@ public class SqlDatabaseTest extends TestCase
 		}
 		db.finish();
 		
-		ChangedRow cr = new ChangedRow();
-		cr.put(new ChangedValue("ID",     null, "1"));
-		cr.put(new ChangedValue("t_int",  null, "1234"));
-		cr.put(new ChangedValue("t_str",  null, "Hello World"));
-		cr.put(new ChangedValue("t_txt",  null, "A somewhat longer string"));
-        cr.put(new ChangedValue("t_flt",  null, "3.14"));
-		cr.put(new ChangedValue("t_dat",  null, "1979-01-07")); // happy birthday
-		cr.put(new ChangedValue("t_dtm",  null, "1979-01-07 06:35:00.0"));
-        cr.put(new ChangedValue("t_dat2", null, "0000-00-00"));
+		ChangedRow expectedRowChange = new ChangedRow(new ChangedValue[]{
+			new ChangedValue("ID",     null, "1"),
+			new ChangedValue("t_int",  null, "1234"),
+			new ChangedValue("t_str",  null, "Hello World"),
+			new ChangedValue("t_txt",  null, "A somewhat longer string"),
+	        new ChangedValue("t_flt",  null, "3.14"),
+			new ChangedValue("t_dat",  null, "1979-01-07"), // happy birthday
+			new ChangedValue("t_dtm",  null, "1979-01-07 06:35:00.0"),
+	        new ChangedValue("t_dat2", null, "0000-00-00"),
+		});
 		
-		checkCurrentValues("SELECT * FROM logtest", cr);
-		checkAndRemoveChanges(rowLogId, cr);
+		assertCurrentValues("SELECT * FROM logtest", expectedRowChange);
+		assertChangeLogUpdated(rowLogId, expectedRowChange);
+		
+		List rows = insert.getChangedRows();
+		assertEquals(1, rows.size());
+		expectedRowChange = (ChangedRow)rows.get(0);
+		assertChangeLogUpdated(rowLogId, expectedRowChange);
+		
+		SqlChange delete = insert.reverse();
+		assertEquals(SqlChange.DELETE, delete.getType());
+		assertEquals("ID = 1", delete.getConditions());
+		delete.execute();
+		rows = delete.getChangedRows();
+		assertEquals(1, rows.size());
+		ChangedRow actualReverseRowChange = (ChangedRow)rows.get(0);
+		
+		ChangedRow expectedReverseRowChange = new ChangedRow(
+				new ChangedValue[]{
+			new ChangedValue("ID",     "1", null),
+			new ChangedValue("t_int",  "1234", null),
+			new ChangedValue("t_str",  "Hello World", null),
+			new ChangedValue("t_txt",  "A somewhat longer string", null),
+	        new ChangedValue("t_flt",  "3.14", null),
+			new ChangedValue("t_dat",  "1979-01-07", null), // happy birthday
+			new ChangedValue("t_dtm",  "1979-01-07 06:35:00.0", null),
+	        new ChangedValue("t_dat2", "0000-00-00", null),
+		});
+		assertEquals(expectedReverseRowChange, expectedRowChange.reverse());
+        assertEquals(expectedReverseRowChange, actualReverseRowChange);
+        assertEquals(0, db.getSingleInteger("SELECT COUNT(1) FROM logtest"));
 	}
 	
 	public void testUpdate() throws Exception
 	{
-		int testId = insertTestRecord();
+		SqlChange testInsert = insertTestRecord();
+		int testId = testInsert.getInsertedRowId();
 
-		Change ch = db.createChange(SqlChange.UPDATE, 
+		Change testUpdate = db.createChange(SqlChange.UPDATE, 
 				"logtest", "t_int = 1234");
-		ch.setInt   ("t_int", 23456);
-		ch.setString("t_str", "Hello Again");
-		ch.setString("t_txt", "Another longer string");
-		ch.setString("t_flt", "2.81718"); // will be truncated
-		ch.setString("t_dat", "1980-10-15"); // happy birthday
-		ch.setString("t_dtm", "1980-10-15 12:34:56.0");
-		ch.execute();
+		testUpdate.setInt   ("t_int", 23456);
+		testUpdate.setString("t_str", "Hello Again");
+		testUpdate.setString("t_txt", "Another longer string");
+		testUpdate.setString("t_flt", "2.81718"); // will be truncated
+		testUpdate.setString("t_dat", "1980-10-15"); // happy birthday
+		testUpdate.setString("t_dtm", "1980-10-15 12:34:56.0");
+		testUpdate.execute();
 		
-		getChangeTypeAndId(ch.getId());
+		getChangeTypeAndId(testUpdate.getId().intValue());
 		assertEquals("UPDATE", changeType);
 
 		PreparedStatement stmt = db.prepareSelect(
@@ -292,24 +351,24 @@ public class SqlDatabaseTest extends TestCase
 		assertFalse("too many rows added to changed_rows table", rs.next());
 		db.finish();
 
-		ChangedRow cr = new ChangedRow();
-		cr.put(new ChangedValue("t_int", 
+		ChangedRow expectedRowChange = new ChangedRow();
+		expectedRowChange.put(new ChangedValue("t_int", 
 				"1234",                     
 				"23456"));
-		cr.put(new ChangedValue("t_str", 
+		expectedRowChange.put(new ChangedValue("t_str", 
 				"Hello World",
 				"Hello Again"));
-		cr.put(new ChangedValue("t_txt", 
+		expectedRowChange.put(new ChangedValue("t_txt", 
 				"A somewhat longer string",
 				"Another longer string"));
-        cr.put(new ChangedValue("t_flt", "3.14", "2.82"));
-		cr.put(new ChangedValue("t_dat", 
+        expectedRowChange.put(new ChangedValue("t_flt", "3.14", "2.82"));
+		expectedRowChange.put(new ChangedValue("t_dat", 
 				"1979-01-07", "1980-10-15"));
-		cr.put(new ChangedValue("t_dtm", 
+		expectedRowChange.put(new ChangedValue("t_dtm", 
 				"1979-01-07 06:35:00.0", "1980-10-15 12:34:56.0"));
 
-		checkCurrentValues("SELECT * FROM logtest", cr);
-		checkAndRemoveChanges(rowLogId, cr);
+		assertCurrentValues("SELECT * FROM logtest", expectedRowChange);
+		assertChangeLogUpdated(rowLogId, expectedRowChange);
 	}
 
 	public void testDelete() throws Exception
@@ -320,7 +379,7 @@ public class SqlDatabaseTest extends TestCase
 				"logtest", null);
 		ch.execute();
 		
-		getChangeTypeAndId(ch.getId());
+		getChangeTypeAndId(ch.getId().intValue());
 		assertEquals("DELETE", changeType);
 
 		PreparedStatement stmt = db.prepareSelect(
@@ -364,7 +423,7 @@ public class SqlDatabaseTest extends TestCase
 		assertFalse("Row not deleted as expected", rs.next());
 		db.finish();
 		
-		checkAndRemoveChanges(rowLogId, cr);
+		assertChangeLogUpdated(rowLogId, cr);
 	}
 
 	public void testUpdateWhichChangesFoundSet() throws Exception
@@ -381,7 +440,7 @@ public class SqlDatabaseTest extends TestCase
 	    ch.setString("t_dtm", "1980-10-15 12:34:56.0");
 	    ch.execute();
 
-	    getChangeTypeAndId(ch.getId());
+	    getChangeTypeAndId(ch.getId().intValue());
 	    assertEquals("UPDATE", changeType);
 
 	    PreparedStatement stmt = db.prepareSelect(
@@ -423,16 +482,17 @@ public class SqlDatabaseTest extends TestCase
 	    cr.put(new ChangedValue("t_dtm", 
 	        "1979-01-07 06:35:00.0", "1980-10-15 12:34:56.0"));
 
-	    checkCurrentValues("SELECT * FROM logtest", cr);
-	    checkAndRemoveChanges(rowLogId, cr);
+	    assertCurrentValues("SELECT * FROM logtest", cr);
+	    assertChangeLogUpdated(rowLogId, cr);
 	}
 	
 	public void testMysqlConnectorJIsBroken() throws Exception
 	{
         Class.forName("com.mysql.jdbc.Driver").newInstance();
-        String dsn = "jdbc:mysql://localhost:3306/test?" +
-        		"zeroDateTimeBehaviour=convertToNull&noDatetimeStringSync=true";
-        Connection conn = DriverManager.getConnection(dsn, "test", "");
+        		
+        Connection conn = DriverManager.getConnection(dsn + 
+    		"zeroDateTimeBehaviour=convertToNull" +
+    		"&noDatetimeStringSync=true", "test", "");
         
         try
         {
