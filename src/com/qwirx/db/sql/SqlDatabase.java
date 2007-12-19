@@ -228,27 +228,35 @@ public class SqlDatabase implements Database
     }
 
     public List getTableAsList(String query)
-	throws DatabaseException, SQLException
+	throws DatabaseException
 	{
-	    List results = new ArrayList();
-	    prepareSelect(query);
-	    
-	    ResultSet rs = select();
-	    int cols = rs.getMetaData().getColumnCount();
-	    
-	    while (rs.next())
-	    {
-	        String [] result = new String [cols];
-	        for (int i = 0; i < cols; i++)
-	        {
-	            result[i] = rs.getString(i+1);
-	        }
-	        results.add(result);
-	    }
-	    
-	    finish();
-	    
-	    return results;
+    	try
+    	{
+		    List results = new ArrayList();
+		    prepareSelect(query);
+		    
+		    ResultSet rs = select();
+		    int cols = rs.getMetaData().getColumnCount();
+		    
+		    while (rs.next())
+		    {
+		        String [] result = new String [cols];
+		        for (int i = 0; i < cols; i++)
+		        {
+		            result[i] = rs.getString(i+1);
+		        }
+		        results.add(result);
+		    }
+		    
+		    finish();
+		    
+		    return results;
+    	}
+    	catch (SQLException e)
+    	{
+    		throw new DatabaseException("Failed to get database table " +
+    				"as List", e, query);
+    	}
 	}
 
     /**
