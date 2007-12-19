@@ -22,20 +22,25 @@ import org.apache.log4j.Logger;
 
 import com.qwirx.db.Change;
 import com.qwirx.db.ChangeType;
+import com.qwirx.db.ChangedRow;
+import com.qwirx.db.ChangedValue;
 import com.qwirx.db.DatabaseException;
 
 /**
+ * Represents (models) a change to one or more rows of a single table.
+ * The change is created by SqlDatabase.createChange, which fixes the
+ * change type (INSERT, UPDATE or DELETE) table name and conditions.
+ * The SqlChange object is updated with column values to change,
+ * and then execute()d. 
  * @author chris
- *
- * TODO To change the template for this generated type comment go to
- * Window - Preferences - Java - Code Style - Code Templates
  */
-public final class SqlChange implements Change {
+public final class SqlChange implements Change
+{
 	private Type   type;
 	private Map    fields;
 	private String username, database, table, conditions;
 	private Connection conn;
-	private int    id;
+	private Integer id;
 	private int    insertedRowId = -1;
     private static final Logger m_LOG = Logger.getLogger(SqlChange.class);
     private String m_PrimaryKeyField = "ID";
@@ -80,7 +85,7 @@ public final class SqlChange implements Change {
 		PreparedStatement stmt = prepareAndLogError(
 				"INSERT INTO changed_rows SET Log_ID = ?, " +
 				"Unique_ID = ?");
-		stmt.setInt(1, this.id);
+		stmt.setInt(1, this.id.intValue());
 		stmt.setInt(2, originalRowId);
 		stmt.executeUpdate();
 		stmt.close();
@@ -102,7 +107,7 @@ public final class SqlChange implements Change {
 		PreparedStatement stmt = prepareAndLogError(
 				"SELECT ID FROM changed_rows WHERE Log_ID = ? AND " +
 				"Unique_ID = ?");
-		stmt.setInt(1, this.id);
+		stmt.setInt(1, this.id.intValue());
 		stmt.setInt(2, originalRowId);
 		ResultSet rs = executeQueryAndLogError(stmt);
 		rs.next();
@@ -411,7 +416,7 @@ public final class SqlChange implements Change {
 			stmt = prepareAndLogError("SELECT LAST_INSERT_ID()");
 			ResultSet rs = executeQueryAndLogError(stmt);
 			rs.next();
-			this.id = rs.getInt(1);
+			this.id = new Integer(rs.getInt(1));
 			rs.close();
 			stmt.close();
 			
@@ -482,11 +487,20 @@ public final class SqlChange implements Change {
         // fields.put(column, new Constant(value));
 	}
 
-	public int getId()
+	/**
+	 * Returns the ID of the change_log record that represents this change.
+	 */
+	public Integer getId()
 	{
 		return this.id;
 	}
 	
+	/**
+	 * Returns the unique ID (normally the ID column) of the row inserted
+	 * using a SQL INSERT command. Normally this ID is auto-numbered and
+	 * cannot be known until after the INSERT is completed. 
+	 * @return
+	 */
 	public int getInsertedRowId()
 	{
 		if (type != INSERT)
@@ -495,5 +509,88 @@ public final class SqlChange implements Change {
 				"Only INSERT changes have an inserted ID");
 		}
 		return insertedRowId;
+	}
+	
+	/**
+	 * Returns the conditions with which this SqlChange was created,
+	 * or after an INSERT or UPDATE is executed, the conditions which
+	 * match the changed rows.  
+	 */
+	public Object getConditions()
+	{
+		return conditions;
+	}
+	
+	/**
+	 * Returns a List of ChangedRow objects, one per row changed in the
+	 * destination table, which describes the changes made. Can only be
+	 * called after execute().
+	 * @return
+	 */
+	public List getChangedRows() throws DatabaseException
+	{
+		String query =
+			"SELECT Unique_ID, Row_ID, Col_Name, Old_Value, " +
+			"       New_Value " +
+			"FROM   changed_rows " +
+			"STRAIGHT_JOIN changed_values " +
+			"  ON   changed_values.Row_ID = changed_rows.ID " +
+			"WHERE  changed_rows.Log_ID = " + id;
+		
+		try
+		{
+			PreparedStatement stmt = conn.prepareStatement(query);
+			ResultSet rs = stmt.executeQuery();
+			
+			int oldRowId = -1;
+			ChangedRow cr = null;
+			List results = new ArrayList();
+			
+			while (rs.next())
+			{
+				int rowId = rs.getInt("Row_ID");
+				
+				if (rowId != oldRowId)
+				{
+					cr = new ChangedRow();
+					results.add(cr);
+					oldRowId = rowId;
+				}
+				
+				String colName = rs.getString("Col_Name");
+				String oldValue = rs.getString("Old_Value");
+				String newValue = rs.getString("New_Value");
+				
+				cr.put(new ChangedValue(colName, oldValue, newValue));
+			}
+			
+			return results;
+		}
+		catch (SQLException e)
+		{
+			throw new DatabaseException("Failed to get the list of " +
+					"changed rows", e, query);
+		}
+	}
+	
+	/**
+	 * Returns a new SqlChange which, if executed, would undo the
+	 * changes made by this one. If the same SqlChange is executed
+	 * multiple times, then the reverse change will undo only the
+	 * last one.
+	 * @return the reverse SqlChange
+	 * @throws UnsupportedOperationException if the change cannot be
+	 * reversed (because the code hasn't been written yet)
+	 */
+	public SqlChange reverse()
+	{
+		if (type == SqlChange.INSERT)
+		{
+			return new SqlChange(username, database, SqlChange.DELETE,
+					table, conditions, conn);
+		}
+		
+		throw new UnsupportedOperationException(type + 
+				" cannot be reversed yet");	
 	}
 }
