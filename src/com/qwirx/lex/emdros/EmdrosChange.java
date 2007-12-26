@@ -57,7 +57,7 @@ public final class EmdrosChange implements Change
 	private Map    features, featureIsConstant;
 	private String username, database, objectType;
 	private EmdrosDatabase emdros;
-	private int    id;
+	private Integer id;
 	private int [] objectIds;
 	private Connection logDb;
     private Set    objectIdsToGetMonadsFrom = null;
@@ -155,7 +155,7 @@ public final class EmdrosChange implements Change
 		PreparedStatement stmt = prepareAndLogError(
 				"INSERT INTO changed_rows SET Log_ID = ?, " +
 				"Unique_ID = ?");
-		stmt.setInt(1, this.id);
+		stmt.setInt(1, this.id.intValue());
 		stmt.setInt(2, changedID_D);
 		stmt.executeUpdate();
 		stmt.close();
@@ -177,7 +177,7 @@ public final class EmdrosChange implements Change
 		PreparedStatement stmt = prepareAndLogError(
 				"SELECT ID FROM changed_rows WHERE Log_ID = ? AND " +
 				"Unique_ID = ?");
-		stmt.setInt(1, this.id);
+		stmt.setInt(1, this.id.intValue());
 		stmt.setInt(2, changedID_D);
 		ResultSet rs = executeQueryAndLogError(stmt);
 		rs.next();
@@ -382,7 +382,7 @@ public final class EmdrosChange implements Change
 			stmt = prepareAndLogError("SELECT LAST_INSERT_ID()");
 			ResultSet rs = executeQueryAndLogError(stmt);
 			rs.next();
-			this.id = rs.getInt(1);
+			this.id = new Integer(rs.getInt(1));
 			rs.close();
 			stmt.close();
 			
@@ -546,7 +546,7 @@ public final class EmdrosChange implements Change
 		featureIsConstant.put(feature, Boolean.TRUE);
 	}
 
-	public int getId() 
+	public Integer getId() 
     {
 		return this.id;
 	}
