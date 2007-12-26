@@ -235,7 +235,7 @@ public class EmdrosDatabaseTest extends TestCase
 				ch.setConstant(cv.getName(), cv.getNewValue());
 		}
 		ch.execute();
-		return ch.getId();
+		return ch.getId().intValue();
 	}
 	
 	private int getFirstChangedRowLogId(int logId) 
