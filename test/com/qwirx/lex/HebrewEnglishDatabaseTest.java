@@ -1,10 +1,9 @@
 package com.qwirx.lex;
 
-import java.io.InputStream;
+import java.util.List;
 
 import junit.framework.TestCase;
 
-import com.qwirx.csv.CommaSeparatedValueParser;
 import com.qwirx.lex.hebrew.HebrewEnglishDatabase;
 
 public class HebrewEnglishDatabaseTest extends TestCase
@@ -130,6 +129,13 @@ public class HebrewEnglishDatabaseTest extends TestCase
         assertEquals("a green plant", entry.getMeaning());
         assertEquals("{<b>a green plant</b> }", entry.getFullMeaning());
         assertEquals("fruit.", entry.getTranslationInAV());
+        
+        List<HebrewEnglishDatabase.Entry> matches = dict.getMatches(">B");
+        assertEquals(4, matches.size());
+        assertEquals(matches.toString(), 1, matches.get(0).getStrongsNum());
+        assertEquals(matches.toString(), 2, matches.get(1).getStrongsNum());
+        assertEquals(matches.toString(), 3, matches.get(2).getStrongsNum());
+        assertEquals(matches.toString(), 4, matches.get(3).getStrongsNum());
 
         for (int i = 1; i < 8675; i++)
         {

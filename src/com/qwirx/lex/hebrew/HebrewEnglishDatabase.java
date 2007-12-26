@@ -2,7 +2,9 @@ package com.qwirx.lex.hebrew;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import com.qwirx.csv.CommaSeparatedValueParser;
@@ -52,10 +54,60 @@ public class HebrewEnglishDatabase
         public String getMeaning() { return m_Meaning; }
         public String getFullMeaning() { return m_FullMeaning; }
         public String getTranslationInAV() { return m_TranslationInAV; }
+        public String getAmsterdamString()
+        {
+            String in = m_CALUnpointedAscii;
+            StringBuffer out = new StringBuffer();
+            for (int i = 0; i < in.length(); i++)
+            {
+                char c = in.charAt(i);
+                switch (c)
+                {
+                case ')': out.append('>'); break;
+                case 'b': out.append('B'); break;
+                case 'g': out.append('G'); break;
+                case 'd': out.append('D'); break;
+                case 'h': out.append('H'); break;
+                case 'w': out.append('W'); break;
+                case 'v': out.append('W'); break; // bug in data?
+                case 'z': out.append('Z'); break;
+                case 'x': out.append('X'); break;
+                case 'T': out.append('V'); break;
+                case 'f': out.append('V'); break; // bug in data?
+                case 'y': out.append('J'); break;
+                case 'k': out.append('K'); break;
+                case 'l': out.append('L'); break;
+                case 'm': out.append('M'); break;
+                case 'M': out.append('M'); break; // bug in data?
+                case 'n': out.append('N'); break;
+                case 's': out.append('S'); break;
+                case '(': out.append('<'); break;
+                case 'p': out.append('P'); break;
+                case 'c': out.append('Y'); break;
+                case 'q': out.append('Q'); break;
+                case 'r': out.append('R'); break;
+                case '&': out.append('F'); break;
+                case '$': out.append('C'); break;
+                case 't': out.append('T'); break;
+                case '@': out.append(' '); break;
+                case ' ': out.append(' '); break;
+                default:
+                    throw new IllegalArgumentException("No translation for " +
+                        c + " to Amsterdam");
+                }
+            }
+            return out.toString();
+        }
+        public String toString()
+        {
+            return "<@" + m_StrongsNum + ">";
+        }
     }
     
     private Map<Integer, Entry> m_StrongsNumToEntryMap = 
         new HashMap<Integer, Entry>();
+    private Map<String, List<Entry>> m_AmsterdamToEntryMap = 
+        new HashMap<String, List<Entry>>();
     
     private HebrewEnglishDatabase() throws IOException
     {
@@ -72,12 +124,26 @@ public class HebrewEnglishDatabase
         {
             Entry entry = new Entry(parse[i]);
             m_StrongsNumToEntryMap.put(entry.getStrongsNum(), entry);
+            
+            String amsterdam = entry.getAmsterdamString();
+            List<Entry> matches = m_AmsterdamToEntryMap.get(amsterdam);
+            if (matches == null)
+            {
+                matches = new ArrayList<Entry>();
+                m_AmsterdamToEntryMap.put(amsterdam, matches);
+            }
+            matches.add(entry);
         }
     }
     
     public Entry get(int strongsNum)
     {
         return m_StrongsNumToEntryMap.get(strongsNum);
+    }
+    
+    public List<Entry> getMatches(String amsterdam)
+    {
+        return m_AmsterdamToEntryMap.get(amsterdam);
     }
     
     private static HebrewEnglishDatabase m_Instance = null;
