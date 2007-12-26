@@ -13,8 +13,6 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
 
 import junit.framework.TestCase;
 
@@ -30,7 +28,7 @@ public class SqlDatabaseTest extends TestCase
 {
 	private SqlDatabase db;
     private static final String dsn = 
-    	"jdbc:mysql://dev.aidworld.org:3306/test?user=test";
+    	"jdbc:mysql://localhost:3306/test?user=test";
 	
     public void testDatabasePreparedStatements() throws Exception
     {
@@ -486,13 +484,13 @@ public class SqlDatabaseTest extends TestCase
 	    assertChangeLogUpdated(rowLogId, cr);
 	}
 	
-	public void testMysqlConnectorJIsBroken() throws Exception
+	public void testConnectorCannotReadZeroDateAsString() throws Exception
 	{
         Class.forName("com.mysql.jdbc.Driver").newInstance();
-        		
         Connection conn = DriverManager.getConnection(dsn + 
     		"zeroDateTimeBehaviour=convertToNull" +
     		"&noDatetimeStringSync=true", "test", "");
+        boolean threwException = false;
         
         try
         {
@@ -510,11 +508,21 @@ public class SqlDatabaseTest extends TestCase
             rs.close();
             stmt.close();
         }
+        catch (SQLException e)
+        {
+            if (e.getMessage().equals("Value '0000-00-00' " +
+                "can not be represented as java.sql.Date"))
+            {
+                threwException = true;
+            }
+        }
         finally
         {
             PreparedStatement stmt = conn.prepareStatement("DROP TABLE temp");
             stmt.execute();
         }
+        
+        assertFalse(threwException);
         
         conn.close();
 	}
