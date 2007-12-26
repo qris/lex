@@ -4,6 +4,10 @@
 	{
 		sql.finish();
 		sql.close();
-		Lex.putEmdrosDatabase(emdros);
+		
+		if (emdros != null)
+		{
+			Lex.putEmdrosDatabase(emdros);
+		}
 	}
 %>

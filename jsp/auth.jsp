@@ -1,4 +1,3 @@
-
 <%@ page import="jemdros.SetOfMonads" %>
 <%	
 	SetOfMonads userTextAccessSet = emdros.getVisibleMonads();

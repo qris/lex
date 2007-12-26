@@ -1,6 +1,7 @@
 <%@ page import="java.net.URLEncoder" %>
 <%@ page import="com.qwirx.lex.*" %>
 <%@ page import="com.qwirx.lex.emdros.*" %>
+<%@ page import="com.qwirx.db.*" %>
 <%@ page import="com.qwirx.db.sql.*" %>
 <h1>Lex <font style="font-size: medium">by 
 	<a href="http://www.qwirx.com">Chris Wilson</a></font></h1>
@@ -21,11 +22,12 @@
 		{
 			username = "anonymous";
 		}
+
 		String hostname = request.getRemoteAddr();
-		
 		String userhost = username + "@" + hostname;
-		SqlDatabase    sql     = Lex.getSqlDatabase   (userhost);
-		EmdrosDatabase emdros;
+
+		SqlDatabase    sql    = Lex.getSqlDatabase(userhost);
+		EmdrosDatabase emdros = null;
 		
 		try
 		{
