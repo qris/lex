@@ -367,7 +367,6 @@
 			argNamesHash.put(arg, Boolean.TRUE);
 		}
 		
-		DataType [] types = DataType.getAll();
 		Hashtable variables = new Hashtable();
 		
 		%>
