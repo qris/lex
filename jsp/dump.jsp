@@ -9,7 +9,7 @@
 <%@ page import="java.util.Iterator" %>
 <%@ page import="jemdros.*" %>
 <%@ page import="com.qwirx.lex.*" %>
-<%@ page import="com.qwirx.lex.sql.*" %>
+<%@ page import="com.qwirx.db.sql.*" %>
 <%@ page import="com.qwirx.lex.emdros.*" %>
 <html>
 <head>
