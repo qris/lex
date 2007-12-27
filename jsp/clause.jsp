@@ -1310,7 +1310,7 @@
 
 		String currentStruct = clause.getEMdFValue("logical_structure")
 			.getString();
-		if (! currentStruct.equals(structure))
+		if (! currentStruct.equals(structure) && emdros.canWriteTo(clause))
 		{
 			Change ch = emdros.createChange(EmdrosChange.UPDATE,
 				"clause", new int[]{selClauseId});
