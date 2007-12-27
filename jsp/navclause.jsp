@@ -200,10 +200,12 @@
 			selVerseNum = sessionVerseNum.intValue();
 	}
 	
-	try { 
+	try
+	{ 
 		int newVerseNum = Integer.parseInt(request.getParameter("verse")); 
 		selVerseNum = newVerseNum;
-	} catch (Exception e) { /* ignore it and use default chapter */ }
+	}
+	catch (Exception e) { /* ignore it and use default chapter */ }
 	
 	{
 		boolean foundVerse = false;
@@ -244,7 +246,9 @@
 		}
 		
 		if (foundVerse)
+		{
 			session.setAttribute("verseNum", new Integer(selVerseNum));
+		}
 	}
 
 %>
