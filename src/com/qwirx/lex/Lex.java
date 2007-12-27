@@ -5,7 +5,9 @@
  */
 package com.qwirx.lex;
 
+import java.io.File;
 import java.io.IOException;
+import java.net.URL;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
@@ -18,6 +20,7 @@ import jemdros.eCharsets;
 import jemdros.eOutputKind;
 
 import org.apache.log4j.Logger;
+import org.crosswire.jsword.book.sword.SwordBookPath;
 import org.xml.sax.SAXException;
 
 import com.qwirx.db.DatabaseException;
@@ -43,7 +46,7 @@ public class Lex
 	}
 	
 	public static final SqlDatabase getSqlDatabase(String user) 
-	throws DatabaseException 
+	throws Exception 
     {
 		loadLibrary();
 		return new SqlDatabase(getSqlConnection(), user, "lex");
@@ -55,17 +58,9 @@ public class Lex
 		return OntologyDb.getInstance();
 	}
 
-	private static ThreadLocal s_EmdrosDatabaseMap = new ThreadLocal()
-	{
-        protected synchronized Object initialValue()
-        {
-        	return new Hashtable();
-        }
-	};
-    
     static class EmdrosDatabasePool
     {
-        private Stack m_Pool = new Stack();
+        private Stack<EmdrosDatabase> m_Pool = new Stack<EmdrosDatabase>();
         private String m_User, m_Host; 
         
         public EmdrosDatabasePool(String user, String host)
@@ -75,14 +70,14 @@ public class Lex
         }
         
         public synchronized EmdrosDatabase get()
-        throws DatabaseException
+        throws Exception
         {
             if (m_Pool.size() == 0)
             {
                 return create();
             }
             
-            return (EmdrosDatabase)m_Pool.pop();
+            return m_Pool.pop();
         }
         
         public synchronized void put(EmdrosDatabase db)
@@ -98,7 +93,7 @@ public class Lex
         }
         
         public EmdrosDatabase create()
-        throws DatabaseException
+        throws Exception
         {
             loadLibrary();
             
@@ -131,16 +126,18 @@ public class Lex
         }
     }
     
-    private static Map m_EmdrosPools = new Hashtable();
-    private static Map m_Ledger = new Hashtable();
+    private static Map<String, EmdrosDatabasePool> m_EmdrosPools = 
+        new Hashtable<String, EmdrosDatabasePool>();
+    private static Map<EmdrosDatabase, EmdrosDatabasePool> m_Ledger = 
+        new Hashtable<EmdrosDatabase, EmdrosDatabasePool>();
 
 	public static final EmdrosDatabase getEmdrosDatabase(String user, 
         String host) 
-	throws DatabaseException 
+	throws Exception 
     {
         String key = user + "@" + host;
         
-        EmdrosDatabasePool pool = (EmdrosDatabasePool)m_EmdrosPools.get(key);
+        EmdrosDatabasePool pool = m_EmdrosPools.get(key);
         
         if (pool == null)
         {
@@ -155,7 +152,7 @@ public class Lex
     
     public static final void putEmdrosDatabase(EmdrosDatabase db)
     {
-        EmdrosDatabasePool pool = (EmdrosDatabasePool)m_Ledger.get(db);
+        EmdrosDatabasePool pool = m_Ledger.get(db);
         pool.put(db);
     }
 	
@@ -166,19 +163,12 @@ public class Lex
 
 	private static boolean isLibraryLoaded = false;
 
-    public static void loadLibrary() {
+    public static void loadLibrary() throws Exception 
+    {
     	if (isLibraryLoaded)
     		return;
     		
-    	try 
-    	{
-    		Class.forName("com.qwirx.lex.Preloader").newInstance();
-		}
-    	catch (Throwable t) 
-    	{
-			t.printStackTrace(System.err);
-			throw(new RuntimeException(t));
-		}
+		Class.forName("com.qwirx.lex.Preloader").newInstance();
     	
 		// Get OS name
 //		String osName = System.getProperty("os.name");
@@ -192,16 +182,14 @@ public class Lex
 //			System.load("/home/chris/project/emdros/root/lib/emdros/libjemdros.so");
 //		}
 //
-		try
-		{
-			Class.forName("com.mysql.jdbc.Driver").newInstance();
-		}
-		catch (Exception e)
-		{
-			System.err.println(e);
-			return;
-		}
-		
+		Class.forName("com.mysql.jdbc.Driver").newInstance();
+
+        URL url = Lex.class.getResource("/com/qwirx/crosswire/kjv");
+        assert(url != null);
+        File[] files = new File[1];
+        files[0] = new File(url.getPath());
+        SwordBookPath.setAugmentPath(files);
+
 		isLibraryLoaded = true;		
     }
     

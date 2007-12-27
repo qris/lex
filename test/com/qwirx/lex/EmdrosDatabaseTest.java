@@ -36,7 +36,7 @@ public class EmdrosDatabaseTest extends TestCase
 	private final SqlDatabase    logDb;
 	private final EmdrosDatabase emdros;
 	
-	public EmdrosDatabaseTest() throws DatabaseException 
+	public EmdrosDatabaseTest() throws Exception 
     {
 		logDb  = Lex.getSqlDatabase("test");
 		emdros = Lex.getEmdrosDatabase("test", "localhost");

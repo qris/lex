@@ -34,7 +34,7 @@ public final class LexemeTest extends TestCase
     
     private List addedLexemes = new Vector(), addedObjects = new Vector();
     
-    public LexemeTest(String name) throws DatabaseException
+    public LexemeTest(String name) throws Exception
     {
         super(name);
         sql    = Lex.getSqlDatabase   ("test");

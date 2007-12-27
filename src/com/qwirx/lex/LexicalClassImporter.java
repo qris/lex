@@ -29,8 +29,8 @@ import com.qwirx.db.sql.SqlDatabase;
  */
 public class LexicalClassImporter {
 
-	public static void main(String[] args) throws IOException, DatabaseException,
-	SQLException {
+	public static void main(String[] args) throws Exception
+    {
 		SqlDatabase db = Lex.getSqlDatabase("chris");
 		
 		if (args.length != 1) {
