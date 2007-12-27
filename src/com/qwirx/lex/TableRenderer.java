@@ -38,10 +38,5 @@ public class TableRenderer
         return "    <td"+colspan+rowspan+classString+">" + 
             contents + "</td>\n";
     }    
-
-    private void assert(boolean condition) throws AssertionError
-    {
-    	if (!condition) throw new AssertionError();
-    }
 }
 
