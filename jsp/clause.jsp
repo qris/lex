@@ -6,6 +6,8 @@
 <%@ page import="com.qwirx.lex.wordnet.*" %>
 <%@ page import="com.qwirx.lex.parser.*" %>
 <%@ page import="com.qwirx.lex.morph.*" %>
+<%@ page import="com.qwirx.crosswire.kjv.KJV" %>
+<%@ page import="org.crosswire.jsword.book.*" %>
 <%@ page import="net.didion.jwnl.data.POS" %>
 <%@ page import="net.didion.jwnl.data.Synset" %>
 <html>
@@ -58,27 +60,33 @@
 
 <%@ include file="header.jsp" %>
 <%@ include file="auth.jsp" %>
-
 <%
+
 	Wordnet wordnet = Wordnet.getInstance();
-%>
 
-<%@ include file="navclause.jsp" %>
+%><%@ include file="navclause.jsp" %><%
 
-<%
 	if (verse != null && verse.getEMdFValue("bart_gloss") != null)
 	{
-%>
-<p>
-	Gloss for this verse:
-	<em><%= verse.getEMdFValue("bart_gloss").getString() %></em>
-</p>
-<%
+		%><p>BART Gloss for this verse:	<em><%=
+			verse.getEMdFValue("bart_gloss").getString()
+		%></em></p><%
 	}
-%>
-
-<%
-
+		
+	BookData swordVerse = null;
+	try
+	{
+		swordVerse = KJV.getVerse(emdros, selBook, selChapNum,
+			selVerseNum);
+		%><p>KJV Gloss for this verse: <em><%= 
+			OSISUtil.getCanonicalText(swordVerse.getOsisFragment())
+		%></em></p><%
+	}
+	catch (Exception e)
+	{
+		%><p>KJV Gloss for this verse: <em>not found</em></p><%
+	}		
+		
 	Map phrase_functions = emdros.getEnumerationConstants
 		("phrase_function_e",false);
 
@@ -129,7 +137,8 @@
 		"                    graphical_verbal_ending, " +
 		"                    graphical_root_formation, " +
 		"                    graphical_nominal_ending, " +
-		"                    person, number, gender, state " +
+		"                    person, number, gender, state, " +
+		"                    surface_consonants " +
 		"          ]"+
 		"        ]"+
 		"      ]"
@@ -722,6 +731,19 @@
 								glossCell.html += 
 										" [<a href=\"clause.jsp?swns=" + wid +
 										"\">change</a>]";
+							}
+						}
+						
+						// Hebrew-English Dictionary lookup
+						if (swordVerse != null)
+						{
+							Cell dictCell = new Cell();
+							cell.subcells.add(dictCell);
+							dictCell.html = KJV.getStrongGloss(swordVerse,
+								word.getEMdFValue("lexeme").getString());
+							if (dictCell.html == null)
+							{
+								dictCell.html = "";
 							}
 						}
 					}
