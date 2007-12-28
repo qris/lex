@@ -80,40 +80,60 @@ public final class SqlChange implements Change
 	public ChangeType getType() { return type; }
 	
 	private int insertRowChangeLog(int originalRowId) 
-	throws SQLException
+	throws DatabaseException
 	{
-		PreparedStatement stmt = prepareAndLogError(
-				"INSERT INTO changed_rows SET Log_ID = ?, " +
-				"Unique_ID = ?");
-		stmt.setInt(1, this.id.intValue());
-		stmt.setInt(2, originalRowId);
-		stmt.executeUpdate();
-		stmt.close();
-
-		stmt = prepareAndLogError(
-			"SELECT LAST_INSERT_ID()");
-		ResultSet rs = executeQueryAndLogError(stmt);
-		rs.next();
-		int logRowEntryId = rs.getInt(1);
-		rs.close();
-		stmt.close();
+        int logRowEntryId;
+        
+        try
+        {
+    		PreparedStatement stmt = prepareAndLogError(
+    				"INSERT INTO changed_rows SET Log_ID = ?, " +
+    				"Unique_ID = ?");
+    		stmt.setInt(1, this.id.intValue());
+    		stmt.setInt(2, originalRowId);
+    		stmt.executeUpdate();
+    		stmt.close();
+    
+    		stmt = prepareAndLogError(
+    			"SELECT LAST_INSERT_ID()");
+    		ResultSet rs = executeQueryAndLogError(stmt);
+    		rs.next();
+    		logRowEntryId = rs.getInt(1);
+    		rs.close();
+    		stmt.close();
+        }
+        catch (Exception e)
+        {
+            throw new DatabaseException("Failed to create changed_rows",
+                e);
+        }
 
 		return logRowEntryId;
 	}			
 
 	private int findRowChangeLog(int originalRowId) 
-	throws SQLException
+	throws DatabaseException
 	{
-		PreparedStatement stmt = prepareAndLogError(
-				"SELECT ID FROM changed_rows WHERE Log_ID = ? AND " +
-				"Unique_ID = ?");
-		stmt.setInt(1, this.id.intValue());
-		stmt.setInt(2, originalRowId);
-		ResultSet rs = executeQueryAndLogError(stmt);
-		rs.next();
-		int logRowEntryId = rs.getInt(1);
-		rs.close();
-		stmt.close();
+        int logRowEntryId;
+
+        try
+        {
+            PreparedStatement stmt = prepareAndLogError(
+                "SELECT ID FROM changed_rows WHERE Log_ID = ? AND " +
+                "Unique_ID = ?");
+    		stmt.setInt(1, this.id.intValue());
+    		stmt.setInt(2, originalRowId);
+    		ResultSet rs = executeQueryAndLogError(stmt);
+    		rs.next();
+    		logRowEntryId = rs.getInt(1);
+    		rs.close();
+    		stmt.close();
+        }
+        catch (SQLException e)
+        {
+            throw new DatabaseException("Failed to find changed_rows entry",
+                e);
+        }
 
 		return logRowEntryId;
 	}			
@@ -274,7 +294,7 @@ public final class SqlChange implements Change
 	}
 	
 	private PreparedStatement prepareAndLogError(String query) 
-	throws SQLException
+	throws DatabaseException
 	{
 		try
 		{
@@ -282,8 +302,7 @@ public final class SqlChange implements Change
 		}
 		catch (SQLException e)
 		{
-			System.err.println("Error preparing query ("+query+"): "+e);
-			throw(e);
+			throw new DatabaseException("Failed to prepare query", e, query);
 		}
 	}
 	
@@ -398,42 +417,68 @@ public final class SqlChange implements Change
             sb.append(" WHERE ").append(conditions);
         }
 		
+        boolean oldAutoCommit;
+        
+        try
+        {
+            oldAutoCommit = conn.getAutoCommit();
+            conn.setAutoCommit(false);
+        }
+        catch (SQLException e) 
+        {
+            throw new DatabaseException("Failed to enable transactions", e);
+        }
+    
+        String tempQuery = "INSERT INTO change_log " +
+            "SET User = ?, Date_Time = NOW(), DB_Type = 'SQL', " +
+            "    DB_Name = ?, Table_Name = ?, Cmd_Type = ?"; 
+        
 		try
 		{
-			boolean oldAutoCommit = conn.getAutoCommit();
-			conn.setAutoCommit(false);
-			
-			PreparedStatement stmt = prepareAndLogError(
-					"INSERT INTO change_log SET User = ?, Date_Time = NOW(), "+
-					"DB_Type = 'SQL', DB_Name = ?, Table_Name = ?, Cmd_Type = ?");
+            PreparedStatement stmt = prepareAndLogError(tempQuery);
 			stmt.setString(1, username);
 			stmt.setString(2, database);
 			stmt.setString(3, table);
 			stmt.setString(4, type.toString());
 			stmt.executeUpdate();
 			stmt.close();
-			
-			stmt = prepareAndLogError("SELECT LAST_INSERT_ID()");
+        }
+        catch (SQLException e) 
+        {
+            throw new DatabaseException("Failed to create change_log entry", 
+                e, tempQuery);
+        }
+
+        try
+        {
+            PreparedStatement stmt = prepareAndLogError("SELECT LAST_INSERT_ID()");
 			ResultSet rs = executeQueryAndLogError(stmt);
 			rs.next();
 			this.id = new Integer(rs.getInt(1));
 			rs.close();
 			stmt.close();
-			
-			if (type == UPDATE || type == DELETE)
-			{
-				captureOldValues();
-			}
-			
-			stmt = prepareAndLogError(sb.toString());
-			
-			if (type == INSERT || type == UPDATE)
-			{
-				int i = 0;
-				for (Iterator keys = fields.keySet().iterator(); keys.hasNext(); ) 
+        }
+        catch (SQLException e) 
+        {
+            throw new DatabaseException("Failed to get last insert ID", e);
+        }
+
+		if (type == UPDATE || type == DELETE)
+		{
+			captureOldValues();
+		}
+		
+        try
+        {
+    		PreparedStatement stmt = prepareAndLogError(sb.toString());
+    			
+    		if (type == INSERT || type == UPDATE)
+    		{
+    			int i = 0;
+    			for (Iterator keys = fields.keySet().iterator(); keys.hasNext(); ) 
                 {
-					String key = (String)( keys.next() );
-					Object value = fields.get(key);
+    				String key = (String)( keys.next() );
+    				Object value = fields.get(key);
                     
                     if (value instanceof String)
                     {
@@ -443,30 +488,35 @@ public final class SqlChange implements Change
                     {
                         stmt.setNull(++i, Types.VARCHAR);
                     }
-				}
-			}
-			
-			stmt.executeUpdate();
-			// System.out.println(stmt.toString());
-			stmt.close();
-			
-			if (type == INSERT || type == UPDATE) {
-				captureNewValues();
-			}
-			
-			conn.commit();
-			conn.setAutoCommit(oldAutoCommit);
-		} 
+    			}
+    		}
+    		
+    		stmt.executeUpdate();
+    		// System.out.println(stmt.toString());
+    		stmt.close();
+        }
         catch (SQLException e) 
         {
-            m_LOG.error(sb.toString(), e);
-            DatabaseException de = new DatabaseException("Failed to execute " +
+            throw new DatabaseException("Failed to execute " +
                 "the requested operation. Please check your field names " +
                 "and values", e, sb.toString());
-            de.setStackTrace(e.getStackTrace());
-			throw de;
+        }
+
+		if (type == INSERT || type == UPDATE) {
+			captureNewValues();
 		}
-        
+		
+        try
+        {
+    		conn.commit();
+    		conn.setAutoCommit(oldAutoCommit);
+        }
+        catch (SQLException e) 
+        {
+            throw new DatabaseException("Failed to restore transaction state", 
+                e);
+        }
+
         long totalTime = System.currentTimeMillis() - startTime;
         m_LOG.info(totalTime+" ms to track "+sb.toString());
 	}

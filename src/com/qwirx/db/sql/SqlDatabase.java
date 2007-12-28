@@ -51,7 +51,7 @@ public class SqlDatabase implements Database
 				new DbColumn[]{
 					new DbColumn("ID",         "INT(11)", false, 
 							true, true),
-					new DbColumn("User",       "VARCHAR(20)", false),
+					new DbColumn("User",       "VARCHAR(40)", false),
 					new DbColumn("Date_Time",  "DATETIME",    false),
 					new DbColumn("DB_Type",    "ENUM('Emdros','SQL')", 
 							false),
