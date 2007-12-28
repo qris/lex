@@ -30,7 +30,11 @@
             "WHERE " +
             "[verse GET book, chapter, verse " +
 			" [clause self = " + clauseIdString + " " +
-            "  [word GET text, graphical_word, lexeme]"+
+            "  [word GET phrase_dependent_part_of_speech, person, gender, " +
+            "            number, state, wordnet_gloss, lexeme, tense, " +
+            "            graphical_preformative, graphical_root_formation, " +
+            "            graphical_lexeme, graphical_verbal_ending, " +
+            "            graphical_nominal_ending, graphical_pron_suffix]" +
             " ]"+
             "]"
         );
@@ -62,7 +66,8 @@
 		response.setContentType("text/x-gen; charset=UTF-8");
 		response.setHeader("Content-disposition", 
 			"attachment; filename=export.gen");
-		response.getWriter().print(GenExporter.export(clause, verseData));
+		response.getWriter().print(
+			new GenExporter(emdros).export(clause, verseData));
 	}
 	finally
 	{

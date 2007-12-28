@@ -3,6 +3,7 @@ package com.qwirx.lex.morph;
 import java.io.IOException;
 import java.util.Map;
 
+import jemdros.EMdFValue;
 import jemdros.MatchedObject;
 
 import org.xml.sax.SAXException;
@@ -14,17 +15,13 @@ import com.qwirx.lex.ontology.OntologyDb;
 
 public class HebrewMorphemeGenerator
 {
-    private MorphemeHandler m_Handler;
     private static Map m_Persons, m_Genders, m_Numbers, m_States, 
         m_PartsOfSpeech, m_Tenses;
     private OntologyDb m_Ontology;
     
-    public HebrewMorphemeGenerator(EmdrosDatabase emdros, 
-        MorphemeHandler handler)
+    public HebrewMorphemeGenerator(EmdrosDatabase emdros)
     throws DatabaseException, IOException, SAXException
     {
-        m_Handler = handler;
-        
         if (m_Persons == null)
         {
             m_Persons = emdros.getEnumerationConstants("person_e", false);
@@ -70,16 +67,16 @@ public class HebrewMorphemeGenerator
         }
     }
     
-    public void parse(MatchedObject word)
+    public void parse(MatchedObject word, MorphemeHandler handler)
     {
         if (!word.getObjectTypeName().equals("word"))
         {
-            throw new AssertionError("Can only parse words");
+            throw new IllegalArgumentException("Can only parse words");
         }
         
-        String psp = (String)( m_PartsOfSpeech.get(
-            word.getEMdFValue("phrase_dependent_part_of_speech").toString()) 
-        );
+        EMdFValue pspValue = word.getEMdFValue("phrase_dependent_part_of_speech");
+        String pspCode = pspValue.toString();
+        String psp = (String)m_PartsOfSpeech.get(pspCode); 
         
         String person = (String)m_Persons.get(
             word.getEMdFValue("person").toString());
@@ -122,21 +119,19 @@ public class HebrewMorphemeGenerator
         if (psp.equals("verb"))
         {
             String tenseNum = word.getEMdFValue("tense").toString();
-            m_Handler.convert("graphical_preformative", false,
+            handler.convert("graphical_preformative", false,
                 (String)m_Tenses.get(tenseNum), "V/TNS");
             
             // String stemNum = word.getEMdFValue("verbal_stem").toString();
-            m_Handler.convert("graphical_root_formation", false,
+            handler.convert("graphical_root_formation", false,
                 "(stem)", "V/STM");
             
-            m_Handler.convert("graphical_lexeme", false, 
-                gloss != null ? gloss : "&nbsp;", "V/LEX");
+            handler.convert("graphical_lexeme", false, gloss, "V/LEX");
             
-            m_Handler.convert("graphical_verbal_ending", true,
+            handler.convert("graphical_verbal_ending", false,
                 person + gender + number, "V/PGN");
 
-            m_Handler.convert("graphical_pron_suffix", true,
-                "&nbsp;", "V/SFX");
+            handler.convert("graphical_pron_suffix", true, "SFX", "V/SFX");
         }
         else if (psp.equals("noun")
             || psp.equals("proper_noun"))
@@ -148,11 +143,10 @@ public class HebrewMorphemeGenerator
                 type = "HEAD/NPROP";
             }
             
-            m_Handler.convert("graphical_lexeme", false, gloss, type);
-            m_Handler.convert("graphical_nominal_ending", true,
+            handler.convert("graphical_lexeme", false, gloss, type);
+            handler.convert("graphical_nominal_ending", false,
                 gender + number + "." + state, "MARK/N");
-            m_Handler.convert("graphical_pron_suffix", true,
-                "&nbsp;", "SFX/N");
+            handler.convert("graphical_pron_suffix", true, "SFX", "SFX/N");
         }
         else
         {
@@ -212,7 +206,7 @@ public class HebrewMorphemeGenerator
                     "part of speech: " + psp);
             }
             
-            m_Handler.convert("graphical_lexeme", true, psp, type);
+            handler.convert("graphical_lexeme", true, type, type);
         }   
 
     }

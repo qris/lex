@@ -19,7 +19,7 @@ import com.qwirx.lex.emdros.EmdrosDatabase;
 public class GenExporterTest extends TestCase
 {
     private static final String NEHEMIAH_2_11b_EXPORT =
-        "\\wordfield word\n" +
+        "\\wordfield morpheme\n" +
         "\\glossfield gloss\n" +
         "\\tagfield tag\n" +
         "\\transliterationfield trans\n" +
@@ -32,40 +32,97 @@ public class GenExporterTest extends TestCase
         "\\wordfieldisUTF8\n" +
         "\\transliterationfieldisUTF8\n" +
         "\n" +
-        "\\word וָ\n" +
+        "\\morpheme וָ\n" +
         "\\trans wā-\n" +
         "\\tag tag\n" +
-        "\\gloss \n" +
+        "\\gloss CONJ\n" +
         "\\lemma lemma\n" +
         "\\re\n" +
         "\n" +
-        "\\word אֱהִי\n" +
-        "\\trans ?ĕhî\n" +
+        "\\morpheme אֱ\n" +
+        "\\trans ?ĕ-\n" +
         "\\tag tag\n" +
-        "\\gloss (no exact matches)\n" +
+        "\\gloss wayyiqtol\n" +
         "\\lemma lemma\n" +
         "\\re\n" +
         "\n" +
-        "\\word שָׁ֖ם\n" +
+        "\\morpheme \n" +
+        "\\trans Ø-\n" +
+        "\\tag tag\n" +
+        "\\gloss (stem)\n" +
+        "\\lemma lemma\n" +
+        "\\re\n" +
+        "\n" +
+        "\\morpheme הִי־\n" +
+        "\\trans hî-\n" +
+        "\\tag tag\n" +
+        "\\gloss be\n" +
+        "\\lemma lemma\n" +
+        "\\re\n" +
+        "\n" +
+        "\\morpheme \n" +
+        "\\trans Ø-\n" +
+        "\\tag tag\n" +
+        "\\gloss 1us\n" +
+        "\\lemma lemma\n" +
+        "\\re\n" +
+        "\n" +
+        "\\morpheme \n" + 
+        "\\trans Ø\n" +
+        "\\tag tag\n" +
+        "\\gloss SFX\n" +
+        "\\lemma lemma\n" +
+        "\\re\n" +
+        "\n" +
+        "\\morpheme שָ֖ם\n" +
         "\\trans šām\n" +
         "\\tag tag\n" +
-        "\\gloss (no exact matches)\n" +
+        "\\gloss ADV\n" +
         "\\lemma lemma\n" +
         "\\re\n" +
         "\n" +
-        "\\word יָמִ֥ים\n" +
-        "\\trans jāmîm\n" +
+        "\\morpheme יָמ\n" +
+        "\\trans jām-\n" +
         "\\tag tag\n" +
-        "\\gloss days\n" +
+        "\\gloss day\n" +
         "\\lemma lemma\n" +
         "\\re\n" +
         "\n" +
-        "\\word שְׁלֹשָֽׁה\n" +
-        "\\trans šəlōšāh\n" +
+        "\\morpheme ִ֥ים\n" +
+        "\\trans îm-\n" +
         "\\tag tag\n" +
-        "\\gloss (no exact matches)\n" +
+        "\\gloss mp.absolute\n" +
         "\\lemma lemma\n" +
-        "\\re\n\n";
+        "\\re\n" +
+        "\n" +
+        "\\morpheme \n" + 
+        "\\trans Ø\n" +
+        "\\tag tag\n" +
+        "\\gloss SFX\n" +
+        "\\lemma lemma\n" +
+        "\\re\n" +
+        "\n" +
+        "\\morpheme שְלֹש\n" + 
+        "\\trans šəlōš-\n" +
+        "\\tag tag\n" +
+        "\\gloss null\n" +
+        "\\lemma lemma\n" +
+        "\\re\n" +
+        "\n" +
+        "\\morpheme ָֽה\n" +
+        "\\trans āh-\n" +
+        "\\tag tag\n" +
+        "\\gloss fs.absolute\n" +
+        "\\lemma lemma\n" +
+        "\\re\n" +
+        "\n" +
+        "\\morpheme \n" + 
+        "\\trans Ø\n" +
+        "\\tag tag\n" +
+        "\\gloss SFX\n" +
+        "\\lemma lemma\n" +
+        "\\re\n" +
+        "\n";
     
     public void testGenExportCode() throws Exception
     {
@@ -78,7 +135,11 @@ public class GenExporterTest extends TestCase
             "WHERE " +
             "[clause self = 1324989 " +
             " [phrase "+
-            "  [word GET text, graphical_word, lexeme]"+
+            "  [word GET phrase_dependent_part_of_speech, person, gender, " +
+            "            number, state, wordnet_gloss, lexeme, tense, " +
+            "            graphical_preformative, graphical_root_formation, " +
+            "            graphical_lexeme, graphical_verbal_ending, " +
+            "            graphical_nominal_ending, graphical_pron_suffix]" +
             " ]"+
             "]"
         );
@@ -93,7 +154,8 @@ public class GenExporterTest extends TestCase
         
         BookData verse = KJV.getVerse(emdros, "Nehemiah", 2, 11); 
 
-        assertEquals(NEHEMIAH_2_11b_EXPORT, GenExporter.export(clause, verse));
+        assertEquals(NEHEMIAH_2_11b_EXPORT, 
+            new GenExporter(emdros).export(clause, verse));
     }
     
     public void testGenExportJsp() throws Exception
@@ -119,7 +181,11 @@ public class GenExporterTest extends TestCase
             "WHERE " +
             "[verse GET book, chapter, verse " +
             " [clause self = 1324989 " +
-            "  [word GET text, graphical_word, lexeme]"+
+            "  [word GET phrase_dependent_part_of_speech, person, gender, " +
+            "            number, state, wordnet_gloss, lexeme, tense, " +
+            "            graphical_preformative, graphical_root_formation, " +
+            "            graphical_lexeme, graphical_verbal_ending, " +
+            "            graphical_nominal_ending]"+
             " ]"+
             "]"
         );

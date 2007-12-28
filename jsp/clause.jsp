@@ -184,83 +184,80 @@
 		
 		{
 			TreeNode root = new TreeNode("root");
+			HebrewMorphemeGenerator gen = new HebrewMorphemeGenerator(emdros);
 
+			SheafConstIterator phrases = clause.getSheaf().const_iterator();
+	
+			while (phrases.hasNext()) 
 			{
-				SheafConstIterator phrases = clause.getSheaf().const_iterator();
+				MatchedObject phrase =
+					phrases.next().const_iterator().next();
 	
-				while (phrases.hasNext()) 
+				String function_name = (String)( phrase_functions.get(
+					phrase.getEMdFValue("phrase_function").toString())
+				);
+	
+				SheafConstIterator words = phrase.getSheaf().const_iterator();
+				while (words.hasNext()) 
 				{
-					MatchedObject phrase =
-						phrases.next().const_iterator().next();
-	
-					String function_name = (String)( phrase_functions.get(
-						phrase.getEMdFValue("phrase_function").toString())
+					MatchedObject word = words.next().const_iterator().next();
+
+					String psp = (String)( parts_of_speech.get(
+						word.getEMdFValue("phrase_dependent_part_of_speech").toString()) 
 					);
-	
-					SheafConstIterator words = phrase.getSheaf().const_iterator();
-					while (words.hasNext()) 
-					{
-						MatchedObject word = words.next().const_iterator().next();
-	
-						String psp = (String)( parts_of_speech.get(
-							word.getEMdFValue("phrase_dependent_part_of_speech").toString()) 
-						);
 						
-						class HebrewFeatureConverter implements MorphemeHandler
+					class HebrewFeatureConverter implements MorphemeHandler
+					{
+						private TreeNode m_root;
+						private MatchedObject m_word;
+						private StringBuffer m_hebrew;
+						private List m_morphs;
+						
+						public HebrewFeatureConverter(TreeNode root,
+							MatchedObject word, StringBuffer hebrew,
+							List morphs)
 						{
-							private TreeNode m_root;
-							private MatchedObject m_word;
-							private StringBuffer m_hebrew;
-							private List m_morphs;
-							
-							public HebrewFeatureConverter(TreeNode root,
-								MatchedObject word, StringBuffer hebrew,
-								List morphs)
-							{
-								m_root   = root;
-								m_word   = word;
-								m_hebrew = hebrew;
-								m_morphs = morphs;
-							}
-							
-							public void convert(String surface, 
-								boolean lastMorpheme, String desc,
-								String morphNode)
-							{
-								String raw = m_word.getEMdFValue(surface).getString();
-
-								String hebrew = HebrewConverter.toHebrew(raw);
-								m_hebrew.append(hebrew);
-
-								String translit = HebrewConverter.toTranslit(raw);
-								translit = HebrewConverter.toHtml(translit);
-								if (translit.equals("")) translit = "&Oslash;";
-								if (!lastMorpheme) translit += "-";
-								TreeNode node = m_root.createChild(translit);
-
-								// node = node.createChild(raw);
-								node.createChild(desc);
-								
-								m_morphs.add(new MorphEdge(morphNode, 
-									translit, m_morphs.size()));
-							}
+							m_root   = root;
+							m_word   = word;
+							m_hebrew = hebrew;
+							m_morphs = morphs;
 						}
+						
+						public void convert(String surface, 
+							boolean lastMorpheme, String desc,
+							String morphNode)
+						{
+							String raw = m_word.getEMdFValue(surface).getString();
 
-						HebrewFeatureConverter hfc = 
-							new HebrewFeatureConverter(root, word, hebrewText,
+							String hebrew = HebrewConverter.toHebrew(raw);
+							m_hebrew.append(hebrew);
+
+							String translit = HebrewConverter.toTranslit(raw);
+							translit = HebrewConverter.toHtml(translit);
+							if (translit.equals("")) translit = "&Oslash;";
+							if (!lastMorpheme) translit += "-";
+
+							TreeNode node = m_root.createChild(translit);
+								// node = node.createChild(raw);
+							node.createChild(desc);
+							
+							m_morphs.add(new MorphEdge(morphNode, 
+								translit, m_morphs.size()));
+						}
+					}
+
+					HebrewFeatureConverter hfc = 
+						new HebrewFeatureConverter(root, word, hebrewText,
 							morphEdges);
 						
-						HebrewMorphemeGenerator gen = 
-							new HebrewMorphemeGenerator(emdros, hfc);
-						gen.parse(word);
+					gen.parse(word, hfc);
 												
-						hebrewText.append(" ");						
+					hebrewText.append(" ");						
 						
-						if (psp.equals("verb"))
-						{
-							predicate_text = 
-								word.getEMdFValue("lexeme").getString();
-						}
+					if (psp.equals("verb"))
+					{
+						predicate_text = 
+							word.getEMdFValue("lexeme").getString();
 					}
 				}
 			}
