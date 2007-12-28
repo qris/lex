@@ -203,7 +203,8 @@ public class Lex
     {
 		// System.out.println("Connection established.");
 
-    	String dsn = "jdbc:mysql://localhost:3306/lex?user=emdf&password=changeme";
+    	String dsn = "jdbc:mysql://localhost:3306/lex?user=emdf" +
+            "&password=changeme&useServerPrepStmts=false";
     	Connection dbconn;
     	
 		try {
