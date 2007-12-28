@@ -22,10 +22,10 @@ public class OntologyDb extends DefaultHandler
 	private OntologyDb() throws SAXException, IOException
 	{
 		super();
-		
+		/*
 		System.setProperty("org.xml.sax.driver",
 				"org.apache.crimson.parser.XMLReaderImpl");
-		
+		*/
 		XMLReader xr = XMLReaderFactory.createXMLReader();
 		xr.setContentHandler(this);
 		xr.setErrorHandler(this);
