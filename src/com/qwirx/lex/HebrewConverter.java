@@ -1,7 +1,15 @@
 package com.qwirx.lex;
 
-import jemdros.EMdFValue;
+import java.io.IOException;
+
+import org.xml.sax.SAXException;
+
 import jemdros.MatchedObject;
+
+import com.qwirx.db.DatabaseException;
+import com.qwirx.lex.emdros.EmdrosDatabase;
+import com.qwirx.lex.morph.HebrewMorphemeGenerator;
+import com.qwirx.lex.morph.MorphemeHandler;
 
 
 /*
@@ -337,35 +345,55 @@ public class HebrewConverter
             else if (c == '~') { } // Don't know function
             else if (c == '2') { } // Don't know function
             else if (c == '/') { } // Geresh? (That's a guess)
+            else if (c == '.')
+            {
+                // dagesh, double the last letter
+                output.append(output.charAt(output.length() - 1));
+            }
 
             else
             {
-                throw new AssertionError("Unknown code: "+substr);
+                throw new AssertionError("Unknown code: "+substr + 
+                    " (in " + input + ")");
             }
         }
         
         return output.toString();
     }
     
-    public static String wordToHtml(MatchedObject word)
+    static class Transliterator implements MorphemeHandler
     {
-        String out = toHtml(toTranslit(
-            word.getEMdFValue("graphical_preformative").getString()));
-        out += toHtml(toTranslit(
-            word.getEMdFValue("graphical_root_formation").getString()));
-        out += toHtml(toTranslit(
-            word.getEMdFValue("graphical_lexeme").getString()));
-        out += toHtml(toTranslit(
-            word.getEMdFValue("graphical_verbal_ending").getString()));
+        private MatchedObject m_Word;
+        private StringBuffer  m_Output;
         
-        EMdFValue nom = word.getEMdFValue("graphical_nominal_ending");
-        if (nom != null)
+        public Transliterator(MatchedObject word, StringBuffer output)
         {
-            out += toHtml(toTranslit(nom.getString()));
+            m_Word   = word;
+            m_Output = output;
         }
         
-        out += toHtml(toTranslit(
-            word.getEMdFValue("graphical_pron_suffix").getString()));
-        return out;
+        public void convert(String surface, 
+            boolean lastMorpheme, String desc,
+            String morphNode)
+        {
+            String raw = m_Word.getEMdFValue(surface).getString();
+            String translit = HebrewConverter.toTranslit(raw);
+            m_Output.append(translit);
+        }
+    }
+
+    public static String wordToHtml(MatchedObject word, EmdrosDatabase emdros)
+    throws IOException, DatabaseException, SAXException
+    {
+        return wordToHtml(word, new HebrewMorphemeGenerator(emdros));
+    }
+
+    public static String wordToHtml(MatchedObject word, 
+        HebrewMorphemeGenerator generator)
+    {
+        StringBuffer out = new StringBuffer();
+        Transliterator xlit = new Transliterator(word, out);
+        generator.parse(word, xlit, false);
+        return toHtml(out.toString());
     }
 }
