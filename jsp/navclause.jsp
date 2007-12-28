@@ -1,4 +1,6 @@
 <%@ page import="jemdros.*" %>
+<%@ page import="com.qwirx.lex.hebrew.*" %>
+<%@ page import="com.qwirx.lex.morph.*" %>
 <form name="nav" method="get">
 <table>
 <tr bgcolor="#ffcccc"><th colspan=4>Navigator</th></tr>
