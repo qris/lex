@@ -13,9 +13,9 @@ import java.util.Map;
 import java.util.Vector;
 import java.util.Map.Entry;
 
-import com.qwirx.lex.HebrewConverter;
 import com.qwirx.lex.ImmutableMap;
 import com.qwirx.lex.TreeNode;
+import com.qwirx.lex.hebrew.HebrewConverter;
 import com.qwirx.lex.parser.Rule.Attribute;
 
 public class MorphEdge extends EdgeBase

@@ -1,5 +1,7 @@
 package com.qwirx.lex;
 
+import com.qwirx.lex.hebrew.HebrewConverter;
+
 import junit.framework.TestCase;
 
 public class HebrewConverterTest extends TestCase

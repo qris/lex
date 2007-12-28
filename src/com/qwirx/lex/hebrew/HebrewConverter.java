@@ -1,4 +1,4 @@
-package com.qwirx.lex;
+package com.qwirx.lex.hebrew;
 
 import java.io.IOException;
 

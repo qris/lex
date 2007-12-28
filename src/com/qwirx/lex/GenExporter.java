@@ -11,6 +11,7 @@ import org.xml.sax.SAXException;
 
 import com.qwirx.db.DatabaseException;
 import com.qwirx.lex.emdros.EmdrosDatabase;
+import com.qwirx.lex.hebrew.HebrewConverter;
 import com.qwirx.lex.morph.HebrewMorphemeGenerator;
 import com.qwirx.lex.morph.MorphemeHandler;
 
