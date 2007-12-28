@@ -10,7 +10,7 @@ import org.crosswire.jsword.book.BookException;
 
 import com.qwirx.crosswire.kjv.KJV;
 
-public class GemExporter
+public class GenExporter
 {
     public static String export(MatchedObject object, BookData verse)
     throws IOException, BookException
