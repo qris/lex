@@ -1,5 +1,6 @@
 package com.qwirx.crosswire.kjv;
 
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -110,7 +111,7 @@ public class KJV
     }
     
     public static String getStrongGloss(BookData verse, String amsterdam)
-    throws Exception
+    throws IOException, BookException
     {
         amsterdam = amsterdam.replaceAll("[\\[/]$", "");
         
