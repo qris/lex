@@ -315,6 +315,7 @@
 		
 		{
 			TreeNode root = new TreeNode("root");
+			HebrewMorphemeGenerator gen = new HebrewMorphemeGenerator(emdros);
 			
 			{
 				SheafConstIterator phrases = clause.getSheaf().const_iterator();
@@ -373,9 +374,7 @@
 							new HebrewFeatureConverter(root, word, hebrewText,
 							morphEdges);
 						
-						HebrewMorphemeGenerator gen = 
-							new HebrewMorphemeGenerator(emdros, hfc);
-						gen.parse(word);
+						gen.parse(word, hfc, true);
 						
 						hebrewText.append(" ");						
 					}

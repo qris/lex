@@ -88,7 +88,7 @@ public class GenExporter
             HebrewFeatureConverter hfc = 
                 new HebrewFeatureConverter(object, buf);
             
-            m_Generator.parse(object, hfc);
+            m_Generator.parse(object, hfc, true);
         }
         
         if (!object.sheafIsEmpty())

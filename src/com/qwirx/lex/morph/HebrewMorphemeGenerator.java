@@ -1,6 +1,10 @@
 package com.qwirx.lex.morph;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 
 import jemdros.EMdFValue;
@@ -67,60 +71,111 @@ public class HebrewMorphemeGenerator
         }
     }
     
-    public void parse(MatchedObject word, MorphemeHandler handler)
+    public void parse(MatchedObject word, MorphemeHandler handler,
+        boolean generateGloss)
     {
         if (!word.getObjectTypeName().equals("word"))
         {
             throw new IllegalArgumentException("Can only parse words");
         }
         
-        EMdFValue pspValue = word.getEMdFValue("phrase_dependent_part_of_speech");
-        String pspCode = pspValue.toString();
-        String psp = (String)m_PartsOfSpeech.get(pspCode); 
+        List<String> requiredFeatures = Arrays.asList(new String[]{
+            "phrase_dependent_part_of_speech",
+            "graphical_preformative",
+            "graphical_root_formation",
+            "graphical_lexeme",
+            "graphical_verbal_ending",
+            "graphical_nominal_ending",
+            "graphical_pron_suffix",
+        });
         
-        String person = (String)m_Persons.get(
-            word.getEMdFValue("person").toString());
-        if      (person.equals("first_person"))  person = "1";
-        else if (person.equals("second_person")) person = "2";
-        else if (person.equals("third_person"))  person = "3";
-        
-        String gender = ((String)m_Genders.get(
-            word.getEMdFValue("gender").toString()
-            )).substring(0, 1);
-        
-        String number = ((String)m_Numbers.get(
-            word.getEMdFValue("number").toString()
-            )).substring(0, 1);
-        
-        String state = (String)m_States.get(
-            word.getEMdFValue("state").toString());
-        
-        String gloss = word.getEMdFValue("wordnet_gloss")
-            .getString();
-        
-        if (gloss.equals(""))
+        if (generateGloss)
         {
-            String lexeme = word.getEMdFValue("lexeme")
-                .getString();
-                
-            OntologyDb.OntologyEntry entry = 
-                m_Ontology.getWordByLexeme(lexeme);
-                
-            if (entry != null)
+            requiredFeatures = new ArrayList<String>(requiredFeatures);
+            requiredFeatures.addAll(Arrays.asList(new String[]{
+                "person",
+                "gender",
+                "number",
+                "state",
+                "wordnet_gloss",
+                "lexeme",
+                "tense",
+            }));
+        }
+        
+        for (Iterator<String> i = requiredFeatures.iterator(); i.hasNext();)
+        {
+            String feature = i.next();
+            if (word.getEMdFValue(feature) == null)
             {
-                gloss = entry.m_EnglishGloss;
-            }
-            else
-            {
-                gloss = null;
+                throw new IllegalArgumentException("Word does not have " +
+                        "required feature " + feature);
             }
         }
-
+        
+        EMdFValue pspValue = word.getEMdFValue("phrase_dependent_part_of_speech");
+        String pspCode = pspValue.toString();
+        String psp = (String)m_PartsOfSpeech.get(pspCode);
+       
+        String gloss = null;
+        String verbEnding = null;
+        String nounEnding = null; 
+        
+        if (generateGloss)
+        {
+            String person = (String)m_Persons.get(
+                word.getEMdFValue("person").toString());
+            if      (person.equals("first_person"))  person = "1";
+            else if (person.equals("second_person")) person = "2";
+            else if (person.equals("third_person"))  person = "3";
+            else if (person.equals("unknown"))       person = "";
+            
+            String gender = ((String)m_Genders.get(
+                word.getEMdFValue("gender").toString()
+                )).substring(0, 1);
+            
+            String number = ((String)m_Numbers.get(
+                word.getEMdFValue("number").toString()
+                )).substring(0, 1);
+            
+            String state = (String)m_States.get(
+                word.getEMdFValue("state").toString());
+            
+            gloss = word.getEMdFValue("wordnet_gloss").getString();
+            
+            if (gloss.equals(""))
+            {
+                String lexeme = word.getEMdFValue("lexeme")
+                    .getString();
+                    
+                OntologyDb.OntologyEntry entry = 
+                    m_Ontology.getWordByLexeme(lexeme);
+                    
+                if (entry != null)
+                {
+                    gloss = entry.m_EnglishGloss;
+                }
+                else
+                {
+                    gloss = null;
+                }
+            }
+            
+            verbEnding = person + gender + number;
+            nounEnding = gender + number + "." + state;
+        }
+        
         if (psp.equals("verb"))
         {
-            String tenseNum = word.getEMdFValue("tense").toString();
-            handler.convert("graphical_preformative", false,
-                (String)m_Tenses.get(tenseNum), "V/TNS");
+            String tense = null;
+            
+            if (generateGloss)
+            {
+                String tenseNum = word.getEMdFValue("tense").toString();
+                tense = (String)m_Tenses.get(tenseNum);
+            }
+            
+            handler.convert("graphical_preformative", false, tense, "V/TNS");
             
             // String stemNum = word.getEMdFValue("verbal_stem").toString();
             handler.convert("graphical_root_formation", false,
@@ -129,7 +184,7 @@ public class HebrewMorphemeGenerator
             handler.convert("graphical_lexeme", false, gloss, "V/LEX");
             
             handler.convert("graphical_verbal_ending", false,
-                person + gender + number, "V/PGN");
+                verbEnding, "V/PGN");
 
             handler.convert("graphical_pron_suffix", true, "SFX", "V/SFX");
         }
@@ -145,7 +200,7 @@ public class HebrewMorphemeGenerator
             
             handler.convert("graphical_lexeme", false, gloss, type);
             handler.convert("graphical_nominal_ending", false,
-                gender + number + "." + state, "MARK/N");
+                nounEnding, "MARK/N");
             handler.convert("graphical_pron_suffix", true, "SFX", "SFX/N");
         }
         else

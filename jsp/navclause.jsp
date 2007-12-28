@@ -276,6 +276,7 @@
 	{
 		boolean foundSelectedClause = false;
 		int defaultClauseId = 0;
+		HebrewMorphemeGenerator generator = new HebrewMorphemeGenerator(emdros);
 	
 		Sheaf sheaf = emdros.getSheaf
 		(
@@ -287,9 +288,13 @@
 			"       verse   = "+selVerseNum+
 			"       GET bart_gloss "+
 			"       [clause "+
-			"        [word GET lexeme, graphical_preformative, " +
-			"         graphical_root_formation, graphical_lexeme, " +
-			"         graphical_verbal_ending, graphical_pron_suffix]" +
+			"        [word GET phrase_dependent_part_of_speech, " +
+            "         graphical_preformative, " +
+            "         graphical_root_formation, " +
+            "         graphical_lexeme, " +
+            "         graphical_verbal_ending, " +
+            "         graphical_nominal_ending, " +
+            "         graphical_pron_suffix]" +
 			"       ]"+
 			"      ]");
 			 
@@ -311,11 +316,10 @@
 					clause.getSheaf().const_iterator();
 					
 				while (word_iter.hasNext()) {
-					MatchedObject word =
+					MatchedObject word = 
 						word_iter.next().const_iterator().next();
 						
-					// lexemes += word.getEMdFValue("lexeme").getString();
-					lexemes += HebrewConverter.wordToHtml(word);
+					lexemes += HebrewConverter.wordToHtml(word, generator);
 					
 					if (word_iter.hasNext()) 
 					{
@@ -336,7 +340,7 @@
 				%><%=
 					thisClauseId == selClauseId ? " SELECTED" : ""
 				%>><%=
-					lexemes.replaceAll("<", "&lt;").replaceAll(">", "&gt;")
+					lexemes
 				%><%
 			}
 		}

@@ -179,12 +179,12 @@
 		String predicate_text = "";
 		StringBuffer hebrewText = new StringBuffer();
 		List morphEdges = new ArrayList();
+		HebrewMorphemeGenerator generator = new HebrewMorphemeGenerator(emdros);
 		
 		/* Prescan to find the predicate lexeme and populate the chart */
 		
 		{
 			TreeNode root = new TreeNode("root");
-			HebrewMorphemeGenerator gen = new HebrewMorphemeGenerator(emdros);
 
 			SheafConstIterator phrases = clause.getSheaf().const_iterator();
 	
@@ -238,7 +238,8 @@
 							if (!lastMorpheme) translit += "-";
 
 							TreeNode node = m_root.createChild(translit);
-								// node = node.createChild(raw);
+							// node = node.createChild(raw);
+							if (desc == null) desc = "";
 							node.createChild(desc);
 							
 							m_morphs.add(new MorphEdge(morphNode, 
@@ -250,7 +251,7 @@
 						new HebrewFeatureConverter(root, word, hebrewText,
 							morphEdges);
 						
-					gen.parse(word, hfc);
+					generator.parse(word, hfc, true);
 												
 					hebrewText.append(" ");						
 						
@@ -444,7 +445,8 @@
 					
 					if (type.equals("word"))
 					{
-						String lexeme = HebrewConverter.wordToHtml(word);
+						String lexeme = HebrewConverter.wordToHtml(word, 
+							generator);
 						String part_of_speech = (String)
 							parts_of_speech.get(word.getEMdFValue("phrase_dependent_part_of_speech")
 								.toString());
@@ -1290,7 +1292,7 @@
 			while (sci.hasNext())
 			{
 				MatchedObject word = sci.next().const_iterator().next();
-				value_text += HebrewConverter.wordToHtml(word);
+				value_text += HebrewConverter.wordToHtml(word, generator);
 				if (sci.hasNext())
 				{
 					value_text += " ";
