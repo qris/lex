@@ -1459,6 +1459,9 @@
 </tr>
 </table>
 </form></p>
+	
+<p><a href="gen-export.jsp?clause=<%= selClauseId %>">Download clause in
+	GEN format for LTC</a>.</p>
 
 <hr>
         <%= session.getAttribute("book") %>,
