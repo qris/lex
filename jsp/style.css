@@ -54,3 +54,16 @@ div.clearer
 	font-size: x-large;
 	font-family: Doulos SIL, serif;
 }
+
+.bigborder
+{
+	margin: 1em;
+	border: 1px solid #bbf;
+	background-color: #eef;
+	padding: 1em 2em;
+}
+
+.bigborder p, .bigborder table
+{
+	margin: 1em 0em;
+}
