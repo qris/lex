@@ -1,3 +1,16 @@
-#Tue Jun 26 20:15:43 GMT 2007
-encoding/<project>=UTF-8
+#Fri Dec 28 01:47:54 CET 2007
 eclipse.preferences.version=1
+encoding//jsp/auth.jsp=UTF-8
+encoding//jsp/clause.jsp=UTF-8
+encoding//jsp/cleanup.jsp=UTF-8
+encoding//jsp/dump.jsp=UTF-8
+encoding//jsp/error.jsp=UTF-8
+encoding//jsp/gen-export.jsp=UTF-8
+encoding//jsp/header.jsp=UTF-8
+encoding//jsp/index.jsp=UTF-8
+encoding//jsp/login.jsp=UTF-8
+encoding//jsp/lsedit.jsp=UTF-8
+encoding//jsp/navclause.jsp=UTF-8
+encoding//jsp/parse.jsp=UTF-8
+encoding//jsp/rules.jsp=UTF-8
+encoding/<project>=UTF-8

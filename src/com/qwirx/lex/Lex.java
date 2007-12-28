@@ -27,6 +27,7 @@ import com.qwirx.db.DatabaseException;
 import com.qwirx.db.sql.DbColumn;
 import com.qwirx.db.sql.DbTable;
 import com.qwirx.db.sql.SqlDatabase;
+import com.qwirx.jemdros.Preloader;
 import com.qwirx.lex.emdros.EmdrosDatabase;
 import com.qwirx.lex.ontology.OntologyDb;
 
@@ -161,27 +162,15 @@ public class Lex
 		return getSqlConnection();
 	}
 
-	private static boolean isLibraryLoaded = false;
+	private static boolean m_IsLibraryLoaded = false;
 
     public static void loadLibrary() throws Exception 
     {
-    	if (isLibraryLoaded)
+    	if (m_IsLibraryLoaded)
     		return;
     		
-		Class.forName("com.qwirx.lex.Preloader").newInstance();
+		Preloader.load();
     	
-		// Get OS name
-//		String osName = System.getProperty("os.name");
-		// System.out.println(osName);
-
-//		if (osName.matches(".*[Ww]in.*")) {
-//			// Substitute your path
-//			System.load("c:\\programmer\\emdros\\lib\\jemdros.dll");
-//		} else {
-//			// Substitute your path
-//			System.load("/home/chris/project/emdros/root/lib/emdros/libjemdros.so");
-//		}
-//
 		Class.forName("com.mysql.jdbc.Driver").newInstance();
 
         URL url = Lex.class.getResource("/com/qwirx/crosswire/kjv");
@@ -190,7 +179,7 @@ public class Lex
         files[0] = new File(url.getPath());
         SwordBookPath.setAugmentPath(files);
 
-		isLibraryLoaded = true;		
+        m_IsLibraryLoaded = true;		
     }
     
     private Lex()
