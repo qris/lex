@@ -9,14 +9,11 @@ package com.qwirx.lex;
 import java.io.BufferedReader;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
-import java.io.IOException;
 import java.io.InputStreamReader;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
-import java.sql.SQLException;
 
 import com.qwirx.db.Change;
-import com.qwirx.db.DatabaseException;
 import com.qwirx.db.sql.SqlChange;
 import com.qwirx.db.sql.SqlDatabase;
 
