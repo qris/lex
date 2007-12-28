@@ -1,5 +1,6 @@
 package com.qwirx.lex;
 
+import jemdros.EMdFValue;
 import jemdros.MatchedObject;
 
 
@@ -206,7 +207,7 @@ public class HebrewConverter
             else if (c == '-') { /* output.append("\\u0"); */ } // Word continues
             else if (c == '_') { output.append("\u0020"); } // space
             else if (c == '|') { output.append("\u05c6"); } // Nun Inversum 
-            // (note that this is artificually produced from N by 
+            // (note that this is artificially produced from N by 
             // wit2utf8.py:get_suffix_and_form_stripped_of_suffix
 
             // Other
@@ -256,30 +257,12 @@ public class HebrewConverter
             }
             else if (substr.matches("[BCDFGJKLMNPQSTVWYZ]\\..*"))
             {
-                if (c == 'C')
-                {
-                    output.append("šš");
-                }
-                else if (c == 'F')
-                {
-                    output.append("śś");
-                }
-                else if (c == 'J')
-                {
-                    output.append("yy");
-                }
-                else if (c == 'V')
-                {
-                    output.append("ťť");
-                }
-                else if (c == 'W')
-                {
-                    output.append("ū");
-                }
-                else if (c == 'Y')
-                {
-                    output.append("tsts");
-                }
+                if      (c == 'C') { output.append("šš"); }
+                else if (c == 'F') { output.append("śś"); }
+                else if (c == 'J') { output.append("yy"); }
+                else if (c == 'V') { output.append("ťť"); }
+                else if (c == 'W') { output.append("ū");  }
+                else if (c == 'Y') { output.append("tsts"); }
                 else
                 {
                     String s = "" + c + c;
@@ -288,46 +271,16 @@ public class HebrewConverter
                 
                 i++; // skip the dagesh (.)
             }
-            else if (c == '>')
-            {
-                output.append("?");
-            }
-            else if (c == 'B')
-            {
-                output.append("v");
-            }
-            else if (c == 'X')
-            {
-                output.append("x");
-            }
-            else if (c == 'V')
-            {
-                output.append("ť");
-            }
-            else if (c == '<')
-            {
-                output.append("¿");
-            }
-            else if (c == 'P')
-            {
-                output.append("f");
-            }
-            else if (c == 'Y')
-            {
-                output.append("c");
-            }
-            else if (c == 'F')
-            {
-                output.append("ś");
-            }
-            else if (c == 'C')
-            {
-                output.append("š");
-            }
-            else if (c == '@')
-            {
-                output.append("ā");
-            }
+            else if (c == '>') { output.append("?"); }
+            else if (c == 'B') { output.append("v"); }
+            else if (c == 'X') { output.append("x"); }
+            else if (c == 'V') { output.append("ť"); }
+            else if (c == '<') { output.append("¿"); }
+            else if (c == 'P') { output.append("f"); }
+            else if (c == 'Y') { output.append("c"); }
+            else if (c == 'F') { output.append("ś"); }
+            else if (c == 'C') { output.append("š"); }
+            else if (c == '@') { output.append("ā"); }
             else if (c == 'D' || c == 'G' || c == 'H' || 
                 c == 'J' || c == 'K' || c == 'L' || c == 'M' ||
                 c == 'N' || c == 'Q' || c == 'R' || c == 'S' || 
@@ -340,10 +293,7 @@ public class HebrewConverter
                 output.append("ă");
                 i++;
             }
-            else if (c == 'A')
-            {
-                output.append("a");
-            }
+            else if (c == 'A') { output.append("a"); }
             else if (substr.matches(":O.*"))
             {
                 output.append("ŏ");
@@ -354,47 +304,29 @@ public class HebrewConverter
                 output.append("ô");
                 i++;
             }
-            else if (c == 'O')
-            {
-                output.append("ō");
-            }
-            else if (c == ';')
-            {
-                output.append("ē");
-            }
+            else if (c == 'O') { output.append("ō"); }
+            else if (c == ';') { output.append("ē"); }
             else if (substr.matches(":E.*"))
             {
                 output.append("ĕ");
                 i++;
             }
-            else if (c == 'E')
-            {
-                output.append("e");
-            }
-            else if (c == 'U')
-            {
-                output.append("u");
-            }
+            else if (c == 'E') { output.append("e"); }
+            else if (c == 'U') { output.append("u"); }
             else if (substr.matches("IJ.*"))
             {
                 output.append("î");
                 i++;
             }
-            else if (c == 'I')
-            {
-                output.append("i");
-            }
-            else if (c == ':')
-            {
-                output.append("ə");
-            }
+            else if (c == 'I') { output.append("i"); }
+            else if (c == ':') { output.append("ə"); }
             
             /* not sure about these */
             else if (c == '&') { } // Maqaf
             else if (c == '-') { output.append("-"); } // Word continues
             else if (c == '_') { } // space
             else if (c == '|') { } // Nun Inversum 
-            // (note that this is artificually produced from N by 
+            // (note that this is artificially produced from N by 
             // wit2utf8.py:get_suffix_and_form_stripped_of_suffix
             else if (c == '*') { } // asterisk indicates Qere/Ketiv
             else if (c == '[') { } // Don't know function
@@ -425,6 +357,13 @@ public class HebrewConverter
             word.getEMdFValue("graphical_lexeme").getString()));
         out += toHtml(toTranslit(
             word.getEMdFValue("graphical_verbal_ending").getString()));
+        
+        EMdFValue nom = word.getEMdFValue("graphical_nominal_ending");
+        if (nom != null)
+        {
+            out += toHtml(toTranslit(nom.getString()));
+        }
+        
         out += toHtml(toTranslit(
             word.getEMdFValue("graphical_pron_suffix").getString()));
         return out;
