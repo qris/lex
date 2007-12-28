@@ -6,6 +6,8 @@
  */
 package com.qwirx.db;
 
+import org.apache.log4j.Logger;
+
 /**
  * @author chris
  *
@@ -16,12 +18,18 @@ public class DatabaseException extends Exception
 {
 	private final String message, query;
 	private final Exception original;
+    private static final Logger LOG = Logger.getLogger(DatabaseException.class); 
 	
     public DatabaseException(String message, Exception original, String query) 
     {
         this.message  = message;
         this.query    = query;
         this.original = original;
+        LOG.error(message, original);
+        if (original != null)
+        {
+        	setStackTrace(original.getStackTrace());
+        }
     }
 
     public DatabaseException(String message, Exception original) 
