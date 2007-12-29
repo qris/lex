@@ -60,10 +60,33 @@ div.clearer
 	margin: 1em;
 	border: 1px solid #bbf;
 	background-color: #eef;
-	padding: 1em 2em;
+	padding: 1em 2em 2em;
 }
 
-.bigborder p, .bigborder table
+.bigborder > *
 {
-	margin: 1em 0em;
+	margin: 1em 0em 0em;
+}
+
+table.grid
+{
+	border-collapse: collapse;
+	width: 100%;
+}
+
+table.grid td, table.grid th
+{
+	margin: 0px;
+	border: 1px solid #bbf;
+	padding: 0.2em;
+}
+
+table.grid th
+{
+	text-align: left;
+}
+
+table.grid td
+{
+	text-align: center;
 }
