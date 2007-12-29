@@ -1,5 +1,13 @@
 package com.qwirx.lex;
 
+import java.util.Iterator;
+import java.util.List;
+
+import jemdros.MatchedObject;
+import jemdros.Sheaf;
+import jemdros.SheafConstIterator;
+import jemdros.Straw;
+import jemdros.StrawConstIterator;
 import junit.framework.TestCase;
 
 import org.aptivate.webutils.HtmlIterator;
@@ -7,10 +15,130 @@ import org.aptivate.webutils.HtmlIterator.Attributes;
 
 import com.meterware.httpunit.WebConversation;
 import com.meterware.httpunit.WebResponse;
+import com.qwirx.lex.Search.SearchResult;
+import com.qwirx.lex.emdros.EmdrosDatabase;
 import com.qwirx.lex.hebrew.HebrewConverter;
+import com.qwirx.lex.morph.HebrewMorphemeGenerator;
 
 public class SearchTest extends TestCase
 {
+    private EmdrosDatabase m_Emdros;
+    
+    public void setUp() throws Exception
+    {
+        m_Emdros = Lex.getEmdrosDatabase("test", "test");
+    }
+    
+    public void tearDown()
+    {
+        Lex.putEmdrosDatabase(m_Emdros);
+    }
+    
+    public void testSearchCode() throws Exception
+    {
+        List<SearchResult> actualResults = new Search("CMJM/", m_Emdros).run();
+        Iterator<SearchResult> actualIterator = actualResults.iterator();
+        
+        HebrewMorphemeGenerator generator = 
+            new HebrewMorphemeGenerator(m_Emdros);
+        
+        String getFeatures = "GET " +
+            "lexeme, " +
+            "phrase_dependent_part_of_speech, " +
+            "graphical_preformative, " +
+            "graphical_root_formation, " +
+            "graphical_lexeme, " +
+            "graphical_verbal_ending, " +
+            "graphical_nominal_ending, " +
+            "graphical_pron_suffix";
+        
+        String query = "CMJM/";
+        
+        Sheaf sheaf = m_Emdros.getSheaf
+        (
+            "SELECT ALL OBJECTS IN " +
+            m_Emdros.getVisibleMonadString() + " " +
+            "WHERE [verse GET book, chapter, verse, verse_label " +
+            "       [clause "+
+            "        [" +
+            "         [word FIRST lexeme = '"+query+"' " + getFeatures + "] " + 
+            "         [word " + getFeatures + "]* " +
+            "         [word LAST " + getFeatures + "] " +
+            "        ]" +
+            "        OR" +
+            "        [" +
+            "         [word FIRST " + getFeatures + "] " +
+            "         [word " + getFeatures + "]* " +
+            "         [word lexeme = '"+query+"' " + getFeatures + "] " + 
+            "         [word " + getFeatures + "]* " +
+            "         [word LAST " + getFeatures + "] " +
+            "        ]" +
+            "        OR" +
+            "        [" +
+            "         [word FIRST " + getFeatures + "] " +
+            "         [word " + getFeatures + "]* " +
+            "         [word LAST lexeme = '"+query+"' " + getFeatures + "] " + 
+            "        ]" +
+            "       ]"+
+            "      ]");
+             
+        SheafConstIterator sci = sheaf.const_iterator();
+        while (sci.hasNext())
+        {
+            Straw straw = sci.next();
+            MatchedObject verse = straw.const_iterator().next();
+            
+            SheafConstIterator clause_iter =
+                verse.getSheaf().const_iterator();
+                
+            while (clause_iter.hasNext())
+            {
+                MatchedObject clause =
+                    clause_iter.next().const_iterator().next();
+
+                String lexemes = "";
+                
+                StrawConstIterator word_iter =
+                    clause.getSheaf().const_iterator().next().const_iterator();
+                    
+                while (word_iter.hasNext())
+                {
+                    MatchedObject word = word_iter.next();
+                    
+                    if (word.getEMdFValue("lexeme").toString().equals(query))
+                    {
+                        lexemes += "<strong>";
+                    }
+                    
+                    lexemes += HebrewConverter.wordToHtml(word, generator);
+                    
+                    if (word.getEMdFValue("lexeme").toString().equals(query))
+                    {
+                        lexemes += "</strong>";
+                    }
+            
+                    lexemes += " ";
+                }
+
+                assertTrue(actualIterator.hasNext());
+                SearchResult actual = actualIterator.next();
+                assertEquals(verse.getEMdFValue("verse_label").getString(),
+                    actual.getLocation());
+                assertEquals(lexemes, actual.getDescription());
+                assertEquals("clause.jsp?book=" + 
+                    m_Emdros.getEnumConstNameFromValue("book_name_e",
+                        verse.getEMdFValue("book").getInt()) +
+                    "&amp;chapter=" + verse.getEMdFValue("chapter") +
+                    "&amp;verse="   + verse.getEMdFValue("verse") +
+                    "&amp;clause="  + clause.getID_D(),
+                    actual.getLinkUrl()
+                );
+            }
+        }
+        
+        assertFalse(actualIterator.hasNext());
+    }
+    
     public void testSearchQueryPage() throws Exception
     {
         WebConversation conv = new WebConversation();
@@ -70,34 +198,71 @@ public class SearchTest extends TestCase
         i.assertEmpty("div", new Attributes().clazz("clearer"));
         i.assertEnd("div", new Attributes().clazz("topmenu"));
         
-        i.assertStart("form", new Attributes().method("POST").clazz("bigborder"));
+        i.assertEmpty("script", new Attributes().type("text/javascript"));
+        
+        i.assertStart("form", new Attributes().method("GET").clazz("bigborder"));
         i.assertSimple("p", "Search for Hebrew word by root " +
                 "(surface consonants):");
         i.assertStart("p");
         i.assertEmpty("input", new Attributes().name("q"));
         i.assertEmpty("input", new Attributes().type("submit").value("Search"));
         i.assertEnd("p");
+        i.assertStart("p");
+        i.assertEmpty("input", new Attributes().type("checkbox")
+            .name("limit_loc").value("1")
+            .add("onclick", "return enableLimitControls()"));
+        i.assertText("Limit search to");
+        
+        List books = m_Emdros.getEnumerationConstantNames("book_name_e");
+        i.assertSelectFromList("book", "", books, false, 0);
+        i.assertEnd("p");
+        i.assertStart("p");
+        i.assertText("Return only the first");
+        i.assertInput("max_results", "100");
+        i.assertText("clauses");
+        i.assertEnd("p");
+        i.assertEmpty("hr");
+
         i.assertSimple("p", "Three Latin consonants are expected, in upper " +
                 "or lower case, from the set:");
-        String latin = ">BGDHWZXVJKLMNS<PYQRFCT";
+        
+        String latin  = ">BGDHWZXVJKLMNS<PYQRFCT";
         String hebrew = HebrewConverter.toHebrew(latin);
-        i.assertStart("table", new Attributes().add("border", "1"));
+        String trans  = HebrewConverter.toTranslit(latin);
+        
+        i.assertStart("table", new Attributes().clazz("grid"));
+        
         i.assertStart("tr");
+        i.assertSimple("th", "Consonants");
         for (int j = 0; j < latin.length(); j++)
         {
             String c = latin.substring(j, j + 1);
-            i.assertSimple("th", c);
+            i.assertSimple("td", c);
         }
         i.assertEnd("tr");
+        
         i.assertStart("tr");
+        i.assertSimple("th", "Hebrew");
         for (int j = 0; j < hebrew.length(); j++)
         {
             String c = hebrew.substring(j, j + 1);
-            i.assertSimple("th", c);
+            i.assertSimple("td", c);
         }
         i.assertEnd("tr");
+
+        i.assertStart("tr");
+        i.assertSimple("th", "Transliteration");
+        for (int j = 0; j < trans.length(); j++)
+        {
+            String c = trans.substring(j, j + 1);
+            i.assertSimple("td", c);
+        }
+        i.assertEnd("tr");
+
         i.assertEnd("table");
         i.assertEnd("form");
+        
+        i.assertEmpty("script", new Attributes().type("text/javascript"));
 
         i.assertEmpty("hr");
         i.assertStart("p");
