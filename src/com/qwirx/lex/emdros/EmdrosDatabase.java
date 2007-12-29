@@ -10,13 +10,13 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.Hashtable;
+import java.util.List;
 import java.util.Map;
 
 import jemdros.BadMonadsException;
-import jemdros.EMdFDBDBError;
 import jemdros.EmdrosEnv;
-import jemdros.EmdrosException;
 import jemdros.MatchedObject;
 import jemdros.MonadSetElement;
 import jemdros.SetOfMonads;
@@ -82,19 +82,7 @@ public class EmdrosDatabase implements Database
         {
             bDBResult = env.executeString(query, bCompilerResult, false, false);
         }
-        catch (TableException e)
-        {
-            throw new DatabaseException("Failed to execute query", e, query);
-        }
-        catch (BadMonadsException e)
-        {
-            throw new DatabaseException("Failed to execute query", e, query);
-        }
-        catch (EMdFDBDBError e)
-        {
-            throw new DatabaseException("Failed to execute query", e, query);
-        }
-        catch (EmdrosException e)
+        catch (Exception e)
         {
             throw new DatabaseException("Failed to execute query", e, query);
         }
@@ -174,10 +162,11 @@ public class EmdrosDatabase implements Database
         }
 	}
 	
-	public Map getEnumerationConstants(String type, boolean byName) 
+	public Map<String, String> getEnumerationConstants(String type,
+        boolean byName) 
 	throws DatabaseException 
     {
-		Hashtable result = new Hashtable();
+		Hashtable<String, String> result = new Hashtable<String, String>();
 		
 		Table table = getTable("SELECT ENUMERATION CONSTANTS FROM "+type);
 		
@@ -193,9 +182,13 @@ public class EmdrosDatabase implements Database
     			String number = row.getColumn(2);
     			
     			if (byName)
+                {
     				result.put(name, number);
-    			else
-    				result.put(number, name);
+                }
+                else
+                {
+                    result.put(number, name);
+                }
     		}
         }
         catch (TableException e)
@@ -206,7 +199,53 @@ public class EmdrosDatabase implements Database
         
 		return result;
 	}
+
+    public List<String> getEnumerationConstantNames(String type) 
+    throws DatabaseException 
+    {
+        List<String> result = new ArrayList<String>();
+        
+        String query = "SELECT ENUMERATION CONSTANTS FROM " + type;
+        Table table = getTable(query);
+        
+        TableIterator rows = table.iterator();
+        
+        try 
+        {
+            while (rows.hasNext()) 
+            {
+                TableRow row = rows.next();
+                String name   = row.getColumn(1);
+                // String number = row.getColumn(2);
+                result.add(name);
+            }
+        }
+        catch (TableException e)
+        {
+            throw new DatabaseException("Failed to get enumeration constants", 
+                e, query);
+        }
+        
+        return result;
+    }
     
+    public String getEnumConstNameFromValue(String enumName, int value)
+    throws DatabaseException
+    {
+        boolean[] dbOK = new boolean[1];
+        
+        String result = env.getEnumConstNameFromValue(value, enumName, dbOK);
+    
+        if (!dbOK[0])
+        {
+            throw new DatabaseException("Failed to get name for enum " + 
+                enumName + " value " + value,
+                new Exception(env.getDBError())); 
+        }
+        
+        return result;
+    }
+
     public String getMonadSet(String query)
     throws DatabaseException
     {
