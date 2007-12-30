@@ -3,14 +3,18 @@ package com.qwirx.lex;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 
+import jemdros.FlatSheaf;
+import jemdros.FlatSheafConstIterator;
+import jemdros.FlatStraw;
+import jemdros.FlatStrawConstIterator;
 import jemdros.MatchedObject;
 import jemdros.SetOfMonads;
 import jemdros.Sheaf;
 import jemdros.SheafConstIterator;
 import jemdros.Straw;
-import jemdros.StrawConstIterator;
 
 import org.xml.sax.SAXException;
 
@@ -30,13 +34,12 @@ public class Search
         m_Emdros = emdros;
     }
     
-    private static class ResultLocation
+    private static class ResultBase
     {
-        private SetOfMonads m_Monads;
-        public ResultLocation(SetOfMonads monads)
-        {
-            m_Monads = monads;
-        }
+        String location;
+        String url;
+        SetOfMonads monads;
+        List<MatchedObject> words = new ArrayList<MatchedObject>();
     }
     
     public List<SearchResult> run() 
@@ -45,45 +48,19 @@ public class Search
         HebrewMorphemeGenerator generator = 
             new HebrewMorphemeGenerator(m_Emdros);
         
-        String getFeatures = "GET " +
-            "lexeme, " +
-            "phrase_dependent_part_of_speech, " +
-            "graphical_preformative, " +
-            "graphical_root_formation, " +
-            "graphical_lexeme, " +
-            "graphical_verbal_ending, " +
-            "graphical_nominal_ending, " +
-            "graphical_pron_suffix";
-        
         Sheaf sheaf = m_Emdros.getSheaf
         (
             "SELECT ALL OBJECTS IN " +
             m_Emdros.getVisibleMonadString() + " " +
             "WHERE [verse GET book, chapter, verse, verse_label " +
             "       [clause "+
-            "        [" +
-            "         [word FIRST lexeme = '"+m_Query+"' " + getFeatures + "] " + 
-            "         [word " + getFeatures + "]* " +
-            "         [word LAST " + getFeatures + "] " +
-            "        ]" +
-            "        OR" +
-            "        [" +
-            "         [word FIRST " + getFeatures + "] " +
-            "         [word " + getFeatures + "]* " +
-            "         [word lexeme = '"+m_Query+"' " + getFeatures + "] " + 
-            "         [word " + getFeatures + "]* " +
-            "         [word LAST " + getFeatures + "] " +
-            "        ]" +
-            "        OR" +
-            "        [" +
-            "         [word FIRST " + getFeatures + "] " +
-            "         [word " + getFeatures + "]* " +
-            "         [word LAST lexeme = '"+m_Query+"' " + getFeatures + "] " + 
-            "        ]" +
-            "       ]"+
-            "      ]");
-             
-        List<SearchResult> results = new ArrayList<SearchResult>();
+            "        [word NORETRIEVE lexeme = '"+m_Query+"']" +
+            "       ]" +
+            "      ]"
+        );
+        
+        List<ResultBase> resultBases = new ArrayList<ResultBase>();
+        SetOfMonads powerSet = new SetOfMonads();
         
         SheafConstIterator sci = sheaf.const_iterator();
         while (sci.hasNext())
@@ -98,45 +75,86 @@ public class Search
             {
                 MatchedObject clause =
                     clause_iter.next().const_iterator().next();
-
-                String lexemes = "";
-                
-                StrawConstIterator word_iter =
-                    clause.getSheaf().const_iterator().next().const_iterator();
-                    
-                while (word_iter.hasNext())
-                {
-                    MatchedObject word = word_iter.next();
-                    
-                    if (word.getEMdFValue("lexeme").toString().equals(m_Query))
-                    {
-                        lexemes += "<strong>";
-                    }
-                    
-                    lexemes += HebrewConverter.wordToHtml(word, generator);
-                    
-                    if (word.getEMdFValue("lexeme").toString().equals(m_Query))
-                    {
-                        lexemes += "</strong>";
-                    }
-            
-                    lexemes += " ";
-                }
-
-                SearchResult result = new SearchResult(
-                    verse.getFeatureAsString(
-                        verse.getEMdFValueIndex("verse_label")),
-                    lexemes,
-                    "clause.jsp?book=" + 
+                ResultBase base = new ResultBase();
+                base.monads = clause.getMonads();
+                base.location = verse.getFeatureAsString(
+                    verse.getEMdFValueIndex("verse_label"));
+                base.url = "clause.jsp?book=" + 
                     m_Emdros.getEnumConstNameFromValue("book_name_e",
                         verse.getEMdFValue("book").getInt()) +
                     "&amp;chapter=" + verse.getEMdFValue("chapter") +
                     "&amp;verse="   + verse.getEMdFValue("verse") +
-                    "&amp;clause="  + clause.getID_D()
-                );
-                
-                results.add(result);
+                    "&amp;clause="  + clause.getID_D();
+                resultBases.add(base);
+                powerSet.unionWith(base.monads);
             }
+        }
+        
+        List<SearchResult> results = new ArrayList<SearchResult>();
+
+        if (powerSet.isEmpty())
+        {
+            return results;
+        }
+
+        FlatSheaf flat = m_Emdros.getFlatSheaf(
+            "GET OBJECTS HAVING MONADS IN " +
+            powerSet.toString() + 
+            "[word GET " +
+            " lexeme, " +
+            " phrase_dependent_part_of_speech, " +
+            " graphical_preformative, " +
+            " graphical_root_formation, " +
+            " graphical_lexeme, " +
+            " graphical_verbal_ending, " +
+            " graphical_nominal_ending, " +
+            " graphical_pron_suffix" +
+            "]");
+        
+        FlatSheafConstIterator fsci = flat.const_iterator();
+        FlatStraw fs = fsci.next();
+        FlatStrawConstIterator fwci = fs.const_iterator();
+        
+        while (fwci.hasNext())
+        {
+            MatchedObject word = fwci.next();
+            for (Iterator<ResultBase> i = resultBases.iterator(); i.hasNext();)
+            {
+                ResultBase base = i.next();
+                if (SetOfMonads.overlap(base.monads, word.getMonads()))
+                {
+                    base.words.add(word);
+                }
+            }
+        }
+        
+        for (Iterator<ResultBase> i = resultBases.iterator(); i.hasNext();)
+        {
+            ResultBase base = i.next();
+            String lexemes = "";
+            
+            for (Iterator<MatchedObject> j = base.words.iterator(); j.hasNext();)
+            {
+                MatchedObject word = j.next();
+                
+                if (word.getEMdFValue("lexeme").toString().equals(m_Query))
+                {
+                    lexemes += "<strong>";
+                }
+                
+                lexemes += HebrewConverter.wordToHtml(word, generator);
+                
+                if (word.getEMdFValue("lexeme").toString().equals(m_Query))
+                {
+                    lexemes += "</strong>";
+                }
+        
+                lexemes += " ";
+            }
+
+            SearchResult result = new SearchResult(base.location, 
+                lexemes, base.url);
+            results.add(result);
         }
         
         return results;
