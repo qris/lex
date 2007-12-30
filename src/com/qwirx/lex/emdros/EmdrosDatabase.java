@@ -17,6 +17,7 @@ import java.util.Map;
 
 import jemdros.BadMonadsException;
 import jemdros.EmdrosEnv;
+import jemdros.FlatSheaf;
 import jemdros.MatchedObject;
 import jemdros.MonadSetElement;
 import jemdros.SetOfMonads;
@@ -106,13 +107,26 @@ public class EmdrosDatabase implements Database
     {
 		executeDirect(query);
 		
-        if (! env.isSheaf()) 
+        if (!env.isSheaf()) 
         {
 			throw new DatabaseException("result is not a sheaf", query);
 		}
 		
         return env.takeOverSheaf();
 	}
+
+    public FlatSheaf getFlatSheaf(String query) 
+    throws DatabaseException 
+    {
+        executeDirect(query);
+        
+        if (!env.isFlatSheaf()) 
+        {
+            throw new DatabaseException("result is not a flat sheaf", query);
+        }
+        
+        return env.takeOverFlatSheaf();
+    }
 
 	public Table getTable(String query) 
 	throws DatabaseException 
