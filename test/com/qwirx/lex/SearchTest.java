@@ -34,9 +34,9 @@ public class SearchTest extends TestCase
         Lex.putEmdrosDatabase(m_Emdros);
     }
     
-    public void testSearchCode() throws Exception
+    private void assertSearchResultsMatch(String query) throws Exception
     {
-        List<SearchResult> actualResults = new Search("CMJM/", m_Emdros).run();
+        List<SearchResult> actualResults = new Search(query, m_Emdros).run();
         Iterator<SearchResult> actualIterator = actualResults.iterator();
         
         HebrewMorphemeGenerator generator = 
@@ -51,8 +51,6 @@ public class SearchTest extends TestCase
             "graphical_verbal_ending, " +
             "graphical_nominal_ending, " +
             "graphical_pron_suffix";
-        
-        String query = "CMJM/";
         
         Sheaf sheaf = m_Emdros.getSheaf
         (
@@ -137,6 +135,13 @@ public class SearchTest extends TestCase
         }
         
         assertFalse(actualIterator.hasNext());
+    }
+
+    public void testSearchCode() throws Exception
+    {
+        assertSearchResultsMatch("CMJM/");
+        assertSearchResultsMatch("W");
+        assertSearchResultsMatch("foo");
     }
     
     public void testSearchQueryPage() throws Exception
