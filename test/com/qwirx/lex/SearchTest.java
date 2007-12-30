@@ -59,7 +59,10 @@ public class SearchTest extends TestCase
             "WHERE [verse GET book, chapter, verse, verse_label " +
             "       [clause "+
             "        [" +
-            "         [word FIRST lexeme = '"+query+"' " + getFeatures + "] " + 
+            "         [word FIRST " +
+            "          lexeme = '"+query+"' OR " + 
+            "          lexeme = '"+query+"/' OR " +
+            "          lexeme = '"+query+"[' " + getFeatures + "] " + 
             "         [word " + getFeatures + "]* " +
             "         [word LAST " + getFeatures + "] " +
             "        ]" +
@@ -67,7 +70,10 @@ public class SearchTest extends TestCase
             "        [" +
             "         [word FIRST " + getFeatures + "] " +
             "         [word " + getFeatures + "]* " +
-            "         [word lexeme = '"+query+"' " + getFeatures + "] " + 
+            "         [word " +
+            "          lexeme = '"+query+"' OR " + 
+            "          lexeme = '"+query+"/' OR " +
+            "          lexeme = '"+query+"[' " + getFeatures + "] " + 
             "         [word " + getFeatures + "]* " +
             "         [word LAST " + getFeatures + "] " +
             "        ]" +
@@ -75,7 +81,10 @@ public class SearchTest extends TestCase
             "        [" +
             "         [word FIRST " + getFeatures + "] " +
             "         [word " + getFeatures + "]* " +
-            "         [word LAST lexeme = '"+query+"' " + getFeatures + "] " + 
+            "         [word LAST " +
+            "          lexeme = '"+query+"' OR " + 
+            "          lexeme = '"+query+"/' OR " +
+            "          lexeme = '"+query+"[' " + getFeatures + "] " + 
             "        ]" +
             "       ]"+
             "      ]");
@@ -118,7 +127,8 @@ public class SearchTest extends TestCase
                     lexemes += " ";
                 }
 
-                assertTrue(actualIterator.hasNext());
+                assertTrue("Expected to find clause " + clause.getID_D() +
+                    " but was missing", actualIterator.hasNext());
                 SearchResult actual = actualIterator.next();
                 assertEquals(verse.getEMdFValue("verse_label").getString(),
                     actual.getLocation());
@@ -139,9 +149,10 @@ public class SearchTest extends TestCase
 
     public void testSearchCode() throws Exception
     {
-        assertSearchResultsMatch("CMJM/");
-        assertSearchResultsMatch("W");
-        assertSearchResultsMatch("foo");
+        assertSearchResultsMatch("CMJM"); // noun
+        assertSearchResultsMatch("BR");   // verb
+        assertSearchResultsMatch("W");    // conjunction
+        assertSearchResultsMatch("foo");  // no match
     }
     
     public void testSearchQueryPage() throws Exception

@@ -54,7 +54,11 @@ public class Search
             m_Emdros.getVisibleMonadString() + " " +
             "WHERE [verse GET book, chapter, verse, verse_label " +
             "       [clause "+
-            "        [word NORETRIEVE lexeme = '"+m_Query+"']" +
+            "        [word NORETRIEVE " +
+            "         lexeme = '"+m_Query+"' OR " +
+            "         lexeme = '"+m_Query+"/' OR " +
+            "         lexeme = '"+m_Query+"['" +
+            "        ]" +
             "       ]" +
             "      ]"
         );
