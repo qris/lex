@@ -63,9 +63,14 @@ div.clearer
 	padding: 1em 2em 2em;
 }
 
-.bigborder > *
+.bigborder > *, .advanced > *
 {
 	margin: 1em 0em 0em;
+}
+
+.advanced
+{
+	display: none;
 }
 
 table.grid
@@ -89,4 +94,9 @@ table.grid th
 table.grid td
 {
 	text-align: center;
+}
+
+.errormsg
+{
+	color: red;
 }

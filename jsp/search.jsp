@@ -17,21 +17,115 @@ function enableLimitControls()
 	// form.max_results.disabled = !form.limit_num.checked;
 }
 
+function toggle(button, divid)
+{
+    div = document.getElementById(divid);
+    if (div.style.display == "block")
+	{
+		div.style.display = "none";
+    	button.value = button.value.replace("«", "»");
+	}
+	else
+	{
+		div.style.display = "block";
+    	button.value = button.value.replace("»", "«");
+	}
+}
+
 //--></script>
 
 <%
 	EditField field = new EditField(request);
 	List<String> books = emdros.getEnumerationConstantNames("book_name_e");
+	
+	int maxResults = 100;
+	
+	try
+	{
+		maxResults = Integer.parseInt(request.getParameter("max_results"));
+	}
+	catch (Exception e)
+	{
+		// do nothing
+	}
+	
+	String query  = null;
+	Search search = null;
+	DatabaseException exception = null;
+	boolean simpleSearch   = (request.getParameter("simple")   != null);
+	boolean advancedSearch = (request.getParameter("advanced") != null);
+	List<SearchResult> results = null;
+	
+	if (simpleSearch || advancedSearch)
+	{
+		search = new Search(emdros);
+		search.setMaxResults(maxResults);
+		
+		if (simpleSearch)
+		{
+			query = request.getParameter("q");
+			results = search.basic(query);
+		}
+		else if (advancedSearch)
+		{
+			query = request.getParameter("aq");
+			// results = search.advanced(query);
+			
+			try
+			{
+				results = search.advanced(query);
+			}
+			catch (DatabaseException e)
+			{
+				exception = e;
+			}
+		}
+	}
 %>
 
 <form name="simple" method="GET" class="bigborder">
 	<p>
-		Search for Hebrew word by root (surface consonants):
+		Simple search (enter surface consonants for a Hebrew word):
 	</p>
 	<p>
 		<%= field.text("q", "", true, 40) %>
-		<input type="submit" value="Search" />
+		<input type="submit" name="simple" value="Search" />
+		<%
+		if (simpleSearch && request.getParameter("q").equals(""))
+		{
+			results = null;
+			%><div class="errormsg">Please enter a word to search for.</div><%
+		}
+		%>
 	</p>
+	<hr />
+	<p>
+		Advanced search (enter an MQL query to nest within [clause]):
+	</p>
+	<p>
+		<%= field.text("aq").setAttribute("size", "40") %>
+		<input type="submit" name="advanced" value="Search" />
+		<%
+		if (advancedSearch)
+		{
+			if (request.getParameter("aq").equals(""))
+			{
+				results = null;
+				%><div class="errormsg">Please enter an MQL query.</div><%
+			}
+			else if (exception != null)
+			{
+				%>
+				<div class="errormsg">
+				<%= exception.getCause().getMessage() %>
+				</div>
+				<%
+			}
+		}
+		%>
+	</p>
+	<hr />
+	<div id="simple_adv_div" class="advanced">
 	<p>
 		<%= field.checkbox("limit_loc").setAttribute("onclick", 
 			"return enableLimitControls()") %>
@@ -90,6 +184,12 @@ function enableLimitControls()
 			%>
 		</tr>
 	</table>
+	</div>
+	<div>
+		<input type="button" name="simple_adv_btn" 
+			value="Advanced Options &raquo;"
+			onclick="toggle(this, 'simple_adv_div')" />
+	</div>
 </form>
 
 <script type="text/javascript"><!--
@@ -97,10 +197,22 @@ function enableLimitControls()
 //--></script>
 
 <%
-	String query = request.getParameter("q");
-	if (query != null)
-	{
-		List<SearchResult> results = new Search(query, emdros).run();
+	if (search != null && results != null)
+	{		
+		%>
+		<h3>Search Results for <em><%= query %></em></h3>
+		<%
+		
+		if (results.size() == 0)
+		{
+			%><h4>No matches found</h4><%
+		}
+		else
+		{
+			int numShown = search.getResultCount();
+			%><h4>Displaying first <%= results.size() %> of
+			<%= search.getResultCount() %> results.</h4><%
+		}
 		
 		%>
 		<table class="grid">
