@@ -1464,6 +1464,46 @@
 <p><a href="gen-export.jsp?clause=<%= selClauseId %>">Download clause in
 	GEN format for LTC</a>.</p>
 
+<%
+	if (emdros.canWriteTo(clause))
+	{
+		if (request.getParameter("publish") != null)
+		{
+			Change ch = sql.createChange(SqlChange.INSERT, "user_text_access",
+				null);
+			ch.setInt("Monad_First", clause.getMonads().first());
+			ch.setInt("Monad_Last",  clause.getMonads().last());
+			ch.setString("User_Name",   "anonymous");
+			ch.setInt("Write_Access", 0);
+			ch.execute();
+		}
+		else if (request.getParameter("unpublish") != null)
+		{
+			Change ch = sql.createChange(SqlChange.DELETE, "user_text_access",
+				"Monad_First = " + clause.getMonads().first() + " AND " +
+				"Monad_Last  = " + clause.getMonads().last()  + " AND " +
+				"User_Name   = \"anonymous\"");
+			ch.execute();
+		}
+		
+		boolean isPublished = sql.getSingleInteger("SELECT COUNT(1) " +
+			"FROM user_text_access " +
+			"WHERE Monad_First = " + clause.getMonads().first() +
+			" AND  Monad_Last  = " + clause.getMonads().last()  + 
+			" AND  User_Name   = \"anonymous\"") > 0;
+		
+		%>
+		<form method="POST">
+			<% if (isPublished) { %>
+			<input type="submit" name="unpublish" value="Unpublish" />
+			<% } else { %>
+			<input type="submit" name="publish" value="Publish" />
+			<% } %>
+		</form>
+		<%
+	}
+%>
+	
 <hr>
         <%= session.getAttribute("book") %>,
 Chapter <%= session.getAttribute("chapterNum") %>,
