@@ -1,3 +1,5 @@
+<% String pageTitle = "Text Browser"; %>
+<%@ include file="header2.jsp" %>
 <%@ page import="java.util.*" %>
 <%@ page import="java.util.regex.*" %>
 <%@ page import="java.net.*" %>
@@ -10,9 +12,7 @@
 <%@ page import="org.crosswire.jsword.book.*" %>
 <%@ page import="net.didion.jwnl.data.POS" %>
 <%@ page import="net.didion.jwnl.data.Synset" %>
-<html>
-<head>
-<title>Lex: Text Browser</title>
+
 <script type="text/javascript"><!--
 
 	function enableEditButton()
@@ -48,18 +48,16 @@
 	}
 	
 //--></script>
-<link rel="stylesheet" href="style.css" />
-</head>
+
 <style type="text/css">
-	TABLE.tree TD {
+	TABLE.tree TD
+	{
 		text-align: center;
 	}
-	div.topmenu a.clause_jsp <%@ include file="hilite.inc" %>
 </style>
-<body onLoad="enableEditButton()">
 
-<%@ include file="header.jsp" %>
 <%@ include file="auth.jsp" %>
+
 <%
 
 	Wordnet wordnet = Wordnet.getInstance();
@@ -445,7 +443,7 @@
 					
 					if (type.equals("word"))
 					{
-						String lexeme = HebrewConverter.wordToHtml(word, 
+						String lexeme = HebrewConverter.wordTranslitToHtml(word, 
 							generator);
 						String part_of_speech = (String)
 							parts_of_speech.get(word.getEMdFValue("phrase_dependent_part_of_speech")
@@ -1277,6 +1275,10 @@
 		}
 		%>
 		</p>
+				
+		<script type="text/javascript"><!--
+			enableEditButton();
+		//--></script>
 		
 		<p>Linked logical structure:
 		<%
@@ -1292,7 +1294,7 @@
 			while (sci.hasNext())
 			{
 				MatchedObject word = sci.next().const_iterator().next();
-				value_text += HebrewConverter.wordToHtml(word, generator);
+				value_text += HebrewConverter.wordTranslitToHtml(word, generator);
 				if (sci.hasNext())
 				{
 					value_text += " ";

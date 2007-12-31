@@ -5,6 +5,7 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Set;
 
 import jemdros.FlatSheaf;
 import jemdros.FlatSheafConstIterator;
@@ -15,6 +16,7 @@ import jemdros.SetOfMonads;
 import jemdros.Sheaf;
 import jemdros.SheafConstIterator;
 import jemdros.Straw;
+import jemdros.StrawConstIterator;
 
 import org.xml.sax.SAXException;
 
@@ -25,15 +27,15 @@ import com.qwirx.lex.morph.HebrewMorphemeGenerator;
 
 public class Search
 {
-    private String m_Query;
+    private int m_ResultCount = 0;
+    private int m_MaxResults = 100;
     private EmdrosDatabase m_Emdros;
     
-    public Search(String query, EmdrosDatabase emdros)
+    public Search(EmdrosDatabase emdros)
     {
-        m_Query  = query;
         m_Emdros = emdros;
     }
-    
+
     private static class ResultBase
     {
         String location;
@@ -42,31 +44,58 @@ public class Search
         List<MatchedObject> words = new ArrayList<MatchedObject>();
     }
     
-    public List<SearchResult> run() 
+    public void setMaxResults(int limit)
+    {
+        m_MaxResults = limit;
+    }
+    
+    public List<SearchResult> basic(String query) 
     throws DatabaseException, IOException, SAXException, SQLException
     {
+        return advanced("[word " +
+            "lexeme = '"+query+"' OR " +
+            "lexeme = '"+query+"/' OR " +
+            "lexeme = '"+query+"[']");
+    }
+    
+    private void addToMonadSet(Sheaf sheaf, SetOfMonads set)
+    {
+        SheafConstIterator shci = sheaf.const_iterator();
+        
+        while (shci.hasNext())
+        {
+            Straw straw = shci.next();
+            StrawConstIterator swci = straw.const_iterator();
+            
+            while (swci.hasNext())
+            {
+                MatchedObject object = swci.next();
+                set.unionWith(object.getMonads());
+            }
+        }
+    }
+    
+    public List<SearchResult> advanced(String query) 
+    throws DatabaseException, IOException, SAXException, SQLException
+    {    
         HebrewMorphemeGenerator generator = 
             new HebrewMorphemeGenerator(m_Emdros);
         
         Sheaf sheaf = m_Emdros.getSheaf
         (
             "SELECT ALL OBJECTS IN " +
-            m_Emdros.getVisibleMonadString() + " " +
+            m_Emdros.getVisibleMonads().toString() + " " +
             "WHERE [verse GET book, chapter, verse, verse_label " +
-            "       [clause "+
-            "        [word NORETRIEVE " +
-            "         lexeme = '"+m_Query+"' OR " +
-            "         lexeme = '"+m_Query+"/' OR " +
-            "         lexeme = '"+m_Query+"['" +
-            "        ]" +
-            "       ]" +
-            "      ]"
+            "       [clause " + query + "]]"
         );
         
         List<ResultBase> resultBases = new ArrayList<ResultBase>();
         SetOfMonads powerSet = new SetOfMonads();
-        
+        SetOfMonads matchSet = new SetOfMonads();
         SheafConstIterator sci = sheaf.const_iterator();
+        
+        m_ResultCount = 0;
+        
         while (sci.hasNext())
         {
             Straw straw = sci.next();
@@ -77,6 +106,9 @@ public class Search
                 
             while (clause_iter.hasNext())
             {
+                m_ResultCount++;
+                if (m_ResultCount > m_MaxResults) continue; // just count them
+                
                 MatchedObject clause =
                     clause_iter.next().const_iterator().next();
                 ResultBase base = new ResultBase();
@@ -91,6 +123,7 @@ public class Search
                     "&amp;clause="  + clause.getID_D();
                 resultBases.add(base);
                 powerSet.unionWith(base.monads);
+                addToMonadSet(clause.getSheaf(), matchSet);
             }
         }
         
@@ -118,7 +151,7 @@ public class Search
         FlatSheafConstIterator fsci = flat.const_iterator();
         FlatStraw fs = fsci.next();
         FlatStrawConstIterator fwci = fs.const_iterator();
-        
+
         while (fwci.hasNext())
         {
             MatchedObject word = fwci.next();
@@ -135,34 +168,46 @@ public class Search
         for (Iterator<ResultBase> i = resultBases.iterator(); i.hasNext();)
         {
             ResultBase base = i.next();
-            String lexemes = "";
+            String original = "";
+            String translit = "";
             
             for (Iterator<MatchedObject> j = base.words.iterator(); j.hasNext();)
             {
                 MatchedObject word = j.next();
                 
-                if (word.getEMdFValue("lexeme").toString().equals(m_Query))
+                boolean isMatch = SetOfMonads.overlap(word.getMonads(),
+                    matchSet);
+                
+                if (isMatch)
                 {
-                    lexemes += "<strong>";
+                    original += "<strong>";
+                    translit += "<strong>";
                 }
                 
-                lexemes += HebrewConverter.wordToHtml(word, generator);
+                original += HebrewConverter.wordHebrewToHtml  (word, generator);
+                translit += HebrewConverter.wordTranslitToHtml(word, generator);
                 
-                if (word.getEMdFValue("lexeme").toString().equals(m_Query))
+                if (isMatch)
                 {
-                    lexemes += "</strong>";
+                    original += "</strong>";
+                    translit += "</strong>";
                 }
         
-                lexemes += " ";
+                original += " ";
+                translit += " ";
             }
 
             SearchResult result = new SearchResult(base.location, 
-                lexemes, base.url);
+                "<div class=\"hebrew\">"   + original + "</div>\n" +
+                "<div class=\"translit\">" + translit + "</div>\n",
+                base.url);
             results.add(result);
         }
         
         return results;
     }
+    
+    public int getResultCount() { return m_ResultCount; }
     
     public static class SearchResult
     {

@@ -39,9 +39,17 @@ public class HebrewConverter
         for (int i = 0; i < input.length(); i++)
         {
             char c = input.charAt(i);
-            if (c >= 0x80)
+            if (c == '<')
             {
-                output.append("&#" + (int)c + ";");
+                output.append("&lt;");
+            }
+            else if (c == '>')
+            {
+                output.append("&gt;");
+            }
+            else if (c == '&')
+            {
+                output.append("&amp;");
             }
             else
             {
@@ -382,17 +390,47 @@ public class HebrewConverter
         }
     }
 
+    static class Hebrewator implements MorphemeHandler
+    {
+        private MatchedObject m_Word;
+        private StringBuffer  m_Output;
+        
+        public Hebrewator(MatchedObject word, StringBuffer output)
+        {
+            m_Word   = word;
+            m_Output = output;
+        }
+        
+        public void convert(String surface, 
+            boolean lastMorpheme, String desc,
+            String morphNode)
+        {
+            String raw = m_Word.getEMdFValue(surface).getString();
+            String hebrew = HebrewConverter.toHebrew(raw);
+            m_Output.append(hebrew);
+        }
+    }
+
     public static String wordToHtml(MatchedObject word, EmdrosDatabase emdros)
     throws IOException, DatabaseException, SAXException
     {
-        return wordToHtml(word, new HebrewMorphemeGenerator(emdros));
+        return wordTranslitToHtml(word, new HebrewMorphemeGenerator(emdros));
     }
 
-    public static String wordToHtml(MatchedObject word, 
+    public static String wordTranslitToHtml(MatchedObject word, 
         HebrewMorphemeGenerator generator)
     {
         StringBuffer out = new StringBuffer();
         Transliterator xlit = new Transliterator(word, out);
+        generator.parse(word, xlit, false);
+        return toHtml(out.toString());
+    }
+
+    public static String wordHebrewToHtml(MatchedObject word, 
+        HebrewMorphemeGenerator generator)
+    {
+        StringBuffer out = new StringBuffer();
+        Hebrewator xlit = new Hebrewator(word, out);
         generator.parse(word, xlit, false);
         return toHtml(out.toString());
     }

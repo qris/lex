@@ -1,5 +1,6 @@
 package com.qwirx.lex;
 
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
@@ -26,7 +27,7 @@ public class SearchTest extends TestCase
     
     public void setUp() throws Exception
     {
-        m_Emdros = Lex.getEmdrosDatabase("test", "test");
+        m_Emdros = Lex.getEmdrosDatabase("chris", "test");
     }
     
     public void tearDown()
@@ -34,15 +35,83 @@ public class SearchTest extends TestCase
         Lex.putEmdrosDatabase(m_Emdros);
     }
     
-    private void assertSearchResultsMatch(String query) throws Exception
+    private void assertSearchResultsMatch(String query)
+    throws Exception
     {
-        List<SearchResult> actualResults = new Search(query, m_Emdros).run();
+        Search search = new Search(m_Emdros);
+        assertSearchResultsMatch(query, search, 100);
+    }
+    
+    private void assertSearchResultsMatch(String query, int limit)
+    throws Exception
+    {
+        Search search = new Search(m_Emdros);
+        search.setMaxResults(limit);
+        assertSearchResultsMatch(query, search, limit);
+    }
+    
+    private void assertSearchResultsMatch(String query, Search search, 
+        int limit)
+    throws Exception
+    {    
+        List<SearchResult> actualResults = search.basic(query);
         Iterator<SearchResult> actualIterator = actualResults.iterator();
         
         HebrewMorphemeGenerator generator = 
             new HebrewMorphemeGenerator(m_Emdros);
         
-        String getFeatures = "GET " +
+        Sheaf sheaf = m_Emdros.getSheaf
+        (
+            "SELECT ALL OBJECTS IN " +
+            m_Emdros.getVisibleMonads().toString() + " " +
+            "WHERE [clause "+
+            "       [word " +
+            "        lexeme = '"+query+"' OR " + 
+            "        lexeme = '"+query+"/' OR " +
+            "        lexeme = '"+query+"[' " +
+            "       ]" +
+            "      ]"
+        );
+
+        List<Integer> clauses = new ArrayList<Integer>();
+        
+        int count = 0;
+        
+        SheafConstIterator sci = sheaf.const_iterator();
+        while (sci.hasNext())
+        {
+            count++;
+            if (count > limit) continue;
+
+            Straw straw = sci.next();
+            MatchedObject clause = straw.const_iterator().next();
+            clauses.add(new Integer(clause.getID_D()));
+        }
+        
+        String mql = "SELECT ALL OBJECTS IN " +
+            m_Emdros.getVisibleMonads().toString() + " " +
+            "WHERE " +
+            "[verse GET book, chapter, verse, verse_label " +
+            " [clause ";
+        
+        if (clauses.size() == 0)
+        {
+            mql += "self = -1"; // never matches
+        }
+        else
+        {
+            for (Iterator<Integer> i = clauses.iterator(); i.hasNext();)
+            {
+                Integer clauseId = i.next();
+                mql += "self = " + clauseId.toString();
+                if (i.hasNext())
+                {
+                    mql += " OR ";
+                }
+            }
+        }
+
+        mql += "[word GET " +
             "lexeme, " +
             "phrase_dependent_part_of_speech, " +
             "graphical_preformative, " +
@@ -50,46 +119,11 @@ public class SearchTest extends TestCase
             "graphical_lexeme, " +
             "graphical_verbal_ending, " +
             "graphical_nominal_ending, " +
-            "graphical_pron_suffix";
+            "graphical_pron_suffix]]]";
+
+        sheaf = m_Emdros.getSheaf(mql);
+        sci = sheaf.const_iterator();
         
-        Sheaf sheaf = m_Emdros.getSheaf
-        (
-            "SELECT ALL OBJECTS IN " +
-            m_Emdros.getVisibleMonadString() + " " +
-            "WHERE [verse GET book, chapter, verse, verse_label " +
-            "       [clause "+
-            "        [" +
-            "         [word FIRST " +
-            "          lexeme = '"+query+"' OR " + 
-            "          lexeme = '"+query+"/' OR " +
-            "          lexeme = '"+query+"[' " + getFeatures + "] " + 
-            "         [word " + getFeatures + "]* " +
-            "         [word LAST " + getFeatures + "] " +
-            "        ]" +
-            "        OR" +
-            "        [" +
-            "         [word FIRST " + getFeatures + "] " +
-            "         [word " + getFeatures + "]* " +
-            "         [word " +
-            "          lexeme = '"+query+"' OR " + 
-            "          lexeme = '"+query+"/' OR " +
-            "          lexeme = '"+query+"[' " + getFeatures + "] " + 
-            "         [word " + getFeatures + "]* " +
-            "         [word LAST " + getFeatures + "] " +
-            "        ]" +
-            "        OR" +
-            "        [" +
-            "         [word FIRST " + getFeatures + "] " +
-            "         [word " + getFeatures + "]* " +
-            "         [word LAST " +
-            "          lexeme = '"+query+"' OR " + 
-            "          lexeme = '"+query+"/' OR " +
-            "          lexeme = '"+query+"[' " + getFeatures + "] " + 
-            "        ]" +
-            "       ]"+
-            "      ]");
-             
-        SheafConstIterator sci = sheaf.const_iterator();
         while (sci.hasNext())
         {
             Straw straw = sci.next();
@@ -103,28 +137,39 @@ public class SearchTest extends TestCase
                 MatchedObject clause =
                     clause_iter.next().const_iterator().next();
 
-                String lexemes = "";
+                String original = "";
+                String translit = "";
                 
-                StrawConstIterator word_iter =
-                    clause.getSheaf().const_iterator().next().const_iterator();
+                SheafConstIterator word_iter = 
+                    clause.getSheaf().const_iterator();
                     
                 while (word_iter.hasNext())
                 {
-                    MatchedObject word = word_iter.next();
+                    MatchedObject word = 
+                        word_iter.next().const_iterator().next();
                     
-                    if (word.getEMdFValue("lexeme").toString().equals(query))
+                    String lexeme = word.getEMdFValue("lexeme").getString();
+                    boolean isMatch = lexeme.equals(query) ||
+                        lexeme.equals(query + "/") ||
+                        lexeme.equals(query + "[");
+                    
+                    if (isMatch)
                     {
-                        lexemes += "<strong>";
+                        original += "<strong>";
+                        translit += "<strong>";
                     }
                     
-                    lexemes += HebrewConverter.wordToHtml(word, generator);
+                    original += HebrewConverter.wordHebrewToHtml  (word, generator);
+                    translit += HebrewConverter.wordTranslitToHtml(word, generator);
                     
-                    if (word.getEMdFValue("lexeme").toString().equals(query))
+                    if (isMatch)
                     {
-                        lexemes += "</strong>";
+                        original += "</strong>";
+                        translit += "</strong>";
                     }
             
-                    lexemes += " ";
+                    original += " ";
+                    translit += " ";
                 }
 
                 assertTrue("Expected to find clause " + clause.getID_D() +
@@ -132,8 +177,12 @@ public class SearchTest extends TestCase
                 SearchResult actual = actualIterator.next();
                 assertEquals(verse.getEMdFValue("verse_label").getString(),
                     actual.getLocation());
-                assertEquals(lexemes, actual.getDescription());
-                assertEquals("clause.jsp?book=" + 
+                assertEquals(actual.getLocation(), 
+                    "<div class=\"hebrew\">" + original + "</div>\n" +
+                    "<div class=\"translit\">" + translit + "</div>\n",
+                    actual.getDescription());
+                assertEquals(actual.getLocation(),
+                    "clause.jsp?book=" + 
                     m_Emdros.getEnumConstNameFromValue("book_name_e",
                         verse.getEMdFValue("book").getInt()) +
                     "&amp;chapter=" + verse.getEMdFValue("chapter") +
@@ -142,17 +191,26 @@ public class SearchTest extends TestCase
                     actual.getLinkUrl()
                 );
             }
+
+            assertEquals(count, search.getResultCount());
         }
         
-        assertFalse(actualIterator.hasNext());
+        assertFalse("Found " + (actualResults.size() - count + 1) +
+            " more results than expected", actualIterator.hasNext());
     }
 
     public void testSearchCode() throws Exception
     {
-        assertSearchResultsMatch("CMJM"); // noun
-        assertSearchResultsMatch("BR");   // verb
-        assertSearchResultsMatch("W");    // conjunction
-        assertSearchResultsMatch("foo");  // no match
+        assertSearchResultsMatch("CMJM", 1); // noun
+        assertSearchResultsMatch("CMJM");    // noun
+        assertSearchResultsMatch("BR");      // verb
+        assertSearchResultsMatch("W", 0);    // conjunction
+        assertSearchResultsMatch("W", 1);    // conjunction
+        assertSearchResultsMatch("W", 10);   // conjunction
+        assertSearchResultsMatch("W", 100);  // conjunction
+        assertSearchResultsMatch("foo", 0);  // no match
+        assertSearchResultsMatch("foo", 1);  // no match
+        assertSearchResultsMatch("foo");     // no match
     }
     
     public void testSearchQueryPage() throws Exception

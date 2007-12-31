@@ -321,7 +321,7 @@
 					MatchedObject word = 
 						word_iter.next().const_iterator().next();
 						
-					lexemes += HebrewConverter.wordToHtml(word, generator);
+					lexemes += HebrewConverter.wordTranslitToHtml(word, generator);
 					
 					if (word_iter.hasNext()) 
 					{
