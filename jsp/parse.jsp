@@ -1,21 +1,12 @@
+<% String pageTitle = "Parser Testing"; %>
+<%@ include file="header2.jsp" %>
+
 <%@ page import="java.util.*" %>
 <%@ page import="com.qwirx.lex.ontology.*" %>
 <%@ page import="com.qwirx.lex.wordnet.*" %>
 <%@ page import="com.qwirx.lex.parser.*" %>
 <%@ page import="com.qwirx.lex.morph.*" %>
 
-<html>
-<head>
-	<title>Lex: Parser Testing</title>
-	<link rel="stylesheet" href="style.css"/>
-	<style>
-		div.topmenu a.parse_jsp <%@ include file="hilite.inc" %>
-		.hilite   { background-color: #fdd; }
-		.selected { background-color: #fee; }
-		.cb { float: right; }
-	</style>
-</head>
-	
 <script language="javascript">
 <!--
 	
@@ -239,10 +230,8 @@
 //-->
 </script>
 	
-<body>
-
-<%@ include file="header.jsp" %>
 <%@ include file="auth.jsp" %>
+
 <%@ include file="navclause.jsp" %>
 
 <%

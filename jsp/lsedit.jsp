@@ -1,3 +1,6 @@
+<% String pageTitle = "Edit Logical Structure"; %>
+<%@ include file="header2.jsp" %>
+
 <%@ page import="java.util.Collections" %>
 <%@ page import="java.util.Map" %>
 <%@ page import="java.util.Hashtable" %>
@@ -14,19 +17,13 @@
 <%@ page import="com.qwirx.lex.emdros.*" %>
 <%@ page import="com.qwirx.lex.lexicon.*" %>
 <%@ page import="com.qwirx.lex.lexicon.Lexeme.Variable" %>
-<html>
-<head>
-<title>Lex: Edit Logical Structure</title>
-<link rel="stylesheet" href="style.css"/>
+
 <style>
 	h4 { margin-top: 8pt; margin-bottom: 0pt; }
 	div.topmenu a.lsedit_jsp <%@ include file="hilite.inc" %>
 	td { vertical-align: top; }
 </style>
-</head>
-<body>
 
-<%@ include file="header.jsp" %>
 <%@ include file="auth.jsp" %>
 
 <%	

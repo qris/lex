@@ -100,3 +100,18 @@ table.grid td
 {
 	color: red;
 }
+
+.hilite
+{
+	background-color: #fdd;
+}
+
+.selected
+{
+	background-color: #fee;
+}
+
+.cb
+{
+	float: right;
+}

@@ -1,6 +1,6 @@
-<%
-	response.setContentType("text/html; charset=UTF-8");
-%>
+<% String pageTitle = "Emdros Database Dump"; %>
+<%@ include file="header2.jsp" %>
+
 <%@ page import="java.util.Enumeration" %>
 <%@ page import="java.util.Hashtable" %>
 <%@ page import="java.util.Vector" %>
@@ -11,18 +11,7 @@
 <%@ page import="com.qwirx.lex.*" %>
 <%@ page import="com.qwirx.db.sql.*" %>
 <%@ page import="com.qwirx.lex.emdros.*" %>
-<html>
-<head>
-	<title>Lex: Emdros Data Dump</title>
-	<link rel="stylesheet" href="style.css" />
-	<style>
-		div.topmenu a.dump_jsp <%@ include file="hilite.inc" %>
-	</style>
-</head>
-<body>
 	
-<%@ include file="header.jsp" %>
-
 <%@ include file="auth.jsp" %>
 
 <%@ include file="navclause.jsp" %>

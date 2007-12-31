@@ -1,5 +1,6 @@
 <% String pageTitle = "Search"; %>
 <%@ include file="header2.jsp" %>
+
 <%@ page import="java.util.*" %>
 <%@ page import="com.qwirx.lex.Search" %>
 <%@ page import="com.qwirx.lex.Search.SearchResult" %>
@@ -117,7 +118,8 @@ function toggle(button, divid)
 			{
 				%>
 				<div class="errormsg">
-				<%= exception.getCause().getMessage() %>
+				<%= exception.getCause().getMessage()
+					.replaceAll("\n(.)", ": $1") %>
 				</div>
 				<%
 			}

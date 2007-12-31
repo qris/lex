@@ -1,3 +1,6 @@
+<% String pageTitle = "Parser Rules"; %>
+<%@ include file="header2.jsp" %>
+
 <%@ page import="java.util.*" %>
 <%@ page import="java.sql.ResultSet" %>
 <%@ page import="com.qwirx.lex.ontology.*" %>
@@ -5,17 +8,6 @@
 <%@ page import="com.qwirx.lex.parser.*" %>
 <%@ page import="com.qwirx.lex.morph.*" %>
 
-<html>
-<head>
-	<title>Lex: Parser Rules</title>
-	<link rel="stylesheet" href="style.css"/>
-	<style>
-		div.topmenu a.rules_jsp <%@ include file="hilite.inc" %>
-		.hilite   { background-color: #fdd; }
-		.selected { background-color: #fee; }
-		.cb { float: right; }
-	</style>
-	
 <script language="javascript">
 <!--
 	
@@ -27,10 +19,6 @@
 //-->
 </script>
 
-</head>
-<body>
-
-<%@ include file="header.jsp" %>
 <%@ include file="auth.jsp" %>
 
 <%
