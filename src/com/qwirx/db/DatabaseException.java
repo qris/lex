@@ -16,20 +16,20 @@ import org.apache.log4j.Logger;
  */
 public class DatabaseException extends Exception 
 {
-	private final String message, query;
-	private final Exception original;
+	private final String query;
     private static final Logger LOG = Logger.getLogger(DatabaseException.class); 
 	
     public DatabaseException(String message, Exception original, String query) 
     {
-        this.message  = message;
-        this.query    = query;
-        this.original = original;
+        super(message, original);
         LOG.error(message, original);
+
         if (original != null)
         {
-        	setStackTrace(original.getStackTrace());
+            setStackTrace(original.getStackTrace());
         }
+
+        this.query = query;
     }
 
     public DatabaseException(String message, Exception original) 
@@ -53,18 +53,18 @@ public class DatabaseException extends Exception
     {
         StringBuffer out = new StringBuffer();
         
-		if (message != null) 
+		if (getMessage() != null) 
         {
-            out.append(message);
+            out.append(getMessage());
 		}
         
-        if (original != null)
+        if (getCause() != null)
         {
             if (out.length() > 0) 
             {
                 out.append(": ");
             }
-            out.append(original.toString());
+            out.append(getCause().toString());
         }
         
         if (query != null)
