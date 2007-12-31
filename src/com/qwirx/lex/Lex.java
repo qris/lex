@@ -78,12 +78,19 @@ public class Lex
                 return create();
             }
             
-            return m_Pool.pop();
+            EmdrosDatabase db = m_Pool.pop();
+            
+            if (!db.isAlive())
+            {
+                return create();
+            }
+            
+            return db;
         }
         
         public synchronized void put(EmdrosDatabase db)
         {
-            if (m_Pool.size() > 0)
+            if (m_Pool.size() > 0 || !db.isAlive())
             {
                 db.delete();
             }
@@ -97,20 +104,10 @@ public class Lex
         throws Exception
         {
             loadLibrary();
-            
-            EmdrosEnv env = new EmdrosEnv(eOutputKind.kOKConsole, 
-                eCharsets.kCSISO_8859_1, "localhost", "emdf", "changeme", 
-                "wihebrew");
 
-            if (!env.connectionOk()) 
-            {
-                showDatabaseError(env);
-                throw new IllegalStateException("Not connected to database "+
-                        "("+env.getDBError()+")");
-            }
-
-            EmdrosDatabase emdrosDb = new EmdrosDatabase(
-                    env, m_User, m_Host, "wihebrew", getLogDatabaseHandle());
+            EmdrosDatabase emdrosDb = new EmdrosDatabase("localhost", 
+                "wihebrew", "emdf", "changeme", m_User, m_Host,
+                getLogDatabaseHandle());
             
             emdrosDb.createObjectTypeIfMissing("note");
             emdrosDb.createFeatureIfMissing("note",  "text",             "string");

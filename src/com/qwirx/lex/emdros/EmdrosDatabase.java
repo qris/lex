@@ -26,6 +26,8 @@ import jemdros.Table;
 import jemdros.TableException;
 import jemdros.TableIterator;
 import jemdros.TableRow;
+import jemdros.eCharsets;
+import jemdros.eOutputKind;
 
 import org.apache.log4j.Logger;
 
@@ -47,31 +49,34 @@ public class EmdrosDatabase implements Database
 	private String username, userhost, database;
     private static final Logger m_LOG = Logger.getLogger(EmdrosDatabase.class);
 	
-	public EmdrosDatabase(EmdrosEnv env, String username, String userhost,
-	    String database, Connection conn) 
+	public EmdrosDatabase(String dbHost, String dbName, String dbUser,
+        String dbPass, String logUser, String logFrom, Connection logDb) 
+    throws DatabaseException
     {
-		this.env = env;
-		this.conn = conn;
-		this.username = username;
-        this.userhost = userhost;
-		this.database = database;
+        env = new EmdrosEnv(eOutputKind.kOKConsole, 
+            eCharsets.kCSISO_8859_1, dbHost, dbUser, dbPass, dbName); 
+
+        if (!env.connectionOk()) 
+        {
+            throw new DatabaseException("Failed to connect to database",
+                new Exception(env.getDBError()));
+        }
+
+        this.conn = logDb;
+        this.username = logUser;
+        this.userhost = logUser + "@" + logFrom;
+		this.database = dbName;
 	}
-	
-	public void setLogDatabaseHandle(Connection conn)
-	{
-		try
-		{
-			this.conn.close();
-		}
-		catch (SQLException e)
-		{
-			m_LOG.error("Failed to close old database connection: "+e);
-		}
-		this.conn = conn; 
-	}
-	
+
+    public boolean isAlive()
+    {
+        return env.connectionOk();
+    }
+    
 	public void executeDirect(String query) throws DatabaseException 
     {
+        m_LOG.info("Starting query: " + query);
+        
         long startTime = System.currentTimeMillis();
         
 		// Execute query
@@ -95,7 +100,8 @@ public class EmdrosDatabase implements Database
 
 		if (!bCompilerResult[0]) {
 			throw new DatabaseException(
-					"Compiler error: "+env.getCompilerError(), query);
+					"Compiler error", 
+                    new Exception(env.getCompilerError()), query);
 		}
         
         long totalTime = System.currentTimeMillis() - startTime;
@@ -143,39 +149,30 @@ public class EmdrosDatabase implements Database
 	
 	public int getMinM() throws DatabaseException 
     {
-		Table min_m_table = getTable("SELECT MIN_M");
-        try
+        int [] min_m = new int[1];
+        
+	    if (!env.getMin_m(min_m))
         {
-            return Integer.parseInt
-            (
-                min_m_table.iterator().next().iterator().next()
-			);
+	        throw new DatabaseException("Failed to get MIN_M", 
+                new Exception(env.getDBError()));   
         }
-        catch (TableException e)
-        {
-            throw new DatabaseException("Failed to get MIN_M", e, 
-                "SELECT MIN_M");
-        }
+        
+        return min_m[0];
 	}
 
-	public int getMaxM() throws DatabaseException 
+    public int getMaxM() throws DatabaseException 
     {
-		Table max_m_table = getTable("SELECT MAX_M");
+        int [] max_m = new int[1];
         
-        try
+        if (!env.getMax_m(max_m))
         {
-            return Integer.parseInt
-            (
-                max_m_table.iterator().next().iterator().next()
-			);
+            throw new DatabaseException("Failed to get MAX_M", 
+                new Exception(env.getDBError()));   
         }
-        catch (TableException e)
-        {
-            throw new DatabaseException("Failed to get MAX_M", e, 
-                "SELECT MAX_M");
-        }
-	}
-	
+        
+        return max_m[0];
+    }
+
 	public Map<String, String> getEnumerationConstants(String type,
         boolean byName) 
 	throws DatabaseException 
@@ -428,47 +425,6 @@ public class EmdrosDatabase implements Database
         }
         
         return result;
-    }
-
-    public String getVisibleMonadString()
-    throws SQLException
-    {
-        PreparedStatement stmt = conn.prepareStatement
-        (
-            "SELECT Monad_First, Monad_Last " +
-            "FROM   user_text_access " +
-            "WHERE  (User_Name = ? OR User_Name = 'anonymous')"
-        );
-        stmt.setString(1, username);
-        
-        ResultSet rs = stmt.executeQuery();
-        StringBuffer result = new StringBuffer();
-        result.append("{");
-        boolean haveMonads = false;
-        
-        while (rs.next()) 
-        {
-            haveMonads = true;
-            String first = rs.getString(1);
-            String last  = rs.getString(2);
-            result.append(first+"-"+last);
-            if (!rs.isLast())
-            {
-                result.append(",");
-            }
-        }
-        
-        result.append("}");
-        
-        stmt.close();
-        rs.close();
-        
-        if (!haveMonads)
-        {
-            return null;
-        }
-        
-        return result.toString();
     }
 
     public boolean canWriteTo(MatchedObject object)
