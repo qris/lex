@@ -3,8 +3,10 @@ package com.qwirx.lex;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
 import jemdros.FlatSheaf;
 import jemdros.FlatSheafConstIterator;
@@ -16,6 +18,10 @@ import jemdros.Sheaf;
 import jemdros.SheafConstIterator;
 import jemdros.Straw;
 import jemdros.StrawConstIterator;
+import jemdros.Table;
+import jemdros.TableException;
+import jemdros.TableIterator;
+import jemdros.TableRow;
 
 import org.xml.sax.SAXException;
 
@@ -40,6 +46,8 @@ public class Search
         String location;
         String url;
         SetOfMonads monads;
+        MatchedObject clause;
+        String predicate, logicalStructure;
         List<MatchedObject> words = new ArrayList<MatchedObject>();
     }
     
@@ -49,7 +57,8 @@ public class Search
     }
     
     public List<SearchResult> basic(String query) 
-    throws DatabaseException, IOException, SAXException, SQLException
+    throws DatabaseException, IOException, SAXException, SQLException,
+        TableException
     {
         return advanced("[word " +
             "lexeme = '"+query+"' OR " +
@@ -80,7 +89,8 @@ public class Search
     }
     
     public List<SearchResult> advanced(String query) 
-    throws DatabaseException, IOException, SAXException, SQLException
+    throws DatabaseException, IOException, SAXException, SQLException,
+        TableException
     {    
         HebrewMorphemeGenerator generator = 
             new HebrewMorphemeGenerator(m_Emdros);
@@ -90,13 +100,16 @@ public class Search
             "SELECT ALL OBJECTS IN " +
             m_Emdros.getVisibleMonads().toString() + " " +
             "WHERE [verse GET book, chapter, verse, verse_label " +
-            "       [clause " + query + "]]"
+            "       [clause " + query + " ]]"
         );
         
         List<ResultBase> resultBases = new ArrayList<ResultBase>();
         SetOfMonads powerSet = new SetOfMonads();
         SetOfMonads matchSet = new SetOfMonads();
         SheafConstIterator sci = sheaf.const_iterator();
+        
+        Map<Integer,ResultBase> clauseIdToBase =
+            new HashMap<Integer,ResultBase>();
         
         m_ResultCount = 0;
         
@@ -125,9 +138,12 @@ public class Search
                     "&amp;chapter=" + verse.getEMdFValue("chapter") +
                     "&amp;verse="   + verse.getEMdFValue("verse") +
                     "&amp;clause="  + clause.getID_D();
+                base.clause = clause;
                 resultBases.add(base);
                 powerSet.unionWith(base.monads);
                 addToMonadSet(clause.getSheaf(), matchSet);
+                
+                clauseIdToBase.put(new Integer(clause.getID_D()), base);
             }
         }
         
@@ -136,6 +152,29 @@ public class Search
         if (powerSet.isEmpty())
         {
             return results;
+        }
+        
+        {
+            String mql = "GET FEATURES predicate, logical_structure " +
+                "FROM OBJECTS WITH ID_DS = ";
+            for (Iterator<ResultBase> i = resultBases.iterator(); i.hasNext();)
+            {
+                ResultBase base = i.next();
+                mql += base.clause.getID_D();
+                if (i.hasNext())
+                {
+                    mql += ",";
+                }
+            }
+            mql += " [clause]";
+            Table table = m_Emdros.getTable(mql);
+            for (TableIterator ti = table.iterator(); ti.hasNext();)
+            {
+                TableRow tr = ti.next();
+                ResultBase base = clauseIdToBase.get(new Integer(tr.getColumn(1)));
+                base.predicate = tr.getColumn(2);
+                base.logicalStructure = tr.getColumn(3);
+            }
         }
 
         FlatSheaf flat = m_Emdros.getFlatSheaf(
@@ -204,7 +243,7 @@ public class Search
             SearchResult result = new SearchResult(base.location, 
                 "<div class=\"hebrew\">"   + original + "</div>\n" +
                 "<div class=\"translit\">" + translit + "</div>\n",
-                base.url);
+                base.url, base.predicate, base.logicalStructure);
             results.add(result);
         }
         
@@ -216,15 +255,22 @@ public class Search
     public static class SearchResult
     {
         private String m_Location, m_Description, m_LinkUrl;
+        private String m_Predicate, m_LogicalStructure;
+        
         public SearchResult(String location, String description,
-            String linkUrl)
+            String linkUrl, String predicate, String logicalStructure)
         {
             m_Location = location;
             m_Description = description;
             m_LinkUrl = linkUrl;
+            m_Predicate = predicate;
+            m_LogicalStructure = logicalStructure;
         }
+        
         public String getLocation() { return m_Location; }
         public String getDescription() { return m_Description; }
         public String getLinkUrl() { return m_LinkUrl; }
+        public String getPredicate() { return m_Predicate; }
+        public String getLogicalStructure() { return m_LogicalStructure; }
     }
 }

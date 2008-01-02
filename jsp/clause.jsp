@@ -64,27 +64,6 @@
 
 %><%@ include file="navclause.jsp" %><%
 
-	if (verse != null && verse.getEMdFValue("bart_gloss") != null)
-	{
-		%><p>BART Gloss for this verse:	<em><%=
-			verse.getEMdFValue("bart_gloss").getString()
-		%></em></p><%
-	}
-		
-	BookData swordVerse = null;
-	try
-	{
-		swordVerse = KJV.getVerse(emdros, selBook, selChapNum,
-			selVerseNum);
-		%><p>KJV Gloss for this verse: <em><%= 
-			OSISUtil.getCanonicalText(swordVerse.getOsisFragment())
-		%></em></p><%
-	}
-	catch (Exception e)
-	{
-		%><p>KJV Gloss for this verse: <em>not found</em></p><%
-	}		
-		
 	Map phrase_functions = emdros.getEnumerationConstants
 		("phrase_function_e",false);
 
@@ -267,6 +246,20 @@
 	
 			%><%= root.toHtml(rend) %><%
 		}
+
+		BookData swordVerse = null;
+		try
+		{
+			swordVerse = KJV.getVerse(emdros, selBook, selChapNum,
+				selVerseNum);
+			%><p><em><%= 
+				OSISUtil.getCanonicalText(swordVerse.getOsisFragment())
+			%></em></p><%
+		}
+		catch (Exception e)
+		{
+			%><p>KJV Gloss not found (<%= e %>)</p><%
+		}		
 			
 		%>
 		<p>Predicate text is: <%= 
@@ -461,13 +454,13 @@
 							"WHERE Lexeme = ?");
 						stmt.setString(1, lexeme);
 						ResultSet rs = sql.select();
-						String gloss = "";
+						String lexiconGloss = "";
 						int lexId = -1;
 						if (rs.next()) 
 						{
 							lexId = rs.getInt(1);
-							gloss = rs.getString(2);
-							if (gloss == null) gloss = "";
+							lexiconGloss = rs.getString(2);
+							if (lexiconGloss == null) lexiconGloss = "";
 						}
 						sql.finish();
 						
@@ -479,7 +472,7 @@
 							if (ewgId == wid &&
 								request.getParameter("ewgs") != null) 
 							{
-								gloss = request.getParameter("gloss");
+								lexiconGloss = request.getParameter("gloss");
 								Change ch;
 								if (lexId == -1) 
 								{
@@ -493,7 +486,7 @@
 										SqlChange.UPDATE, "lexicon_entries", 
 										"ID = "+lexId);
 								}
-								ch.setString("Gloss", gloss);
+								ch.setString("Gloss", lexiconGloss);
 								ch.execute();
 								ewgId = -1;
 							}
@@ -504,7 +497,7 @@
 									"<input type=\"hidden\" name=\"ewg\"" +
 									" value=\"" + wid + "\">\n" +
 									"<input name=\"gloss\" size=\"10\" value=\"" +
-									gloss.replaceAll("<", "&lt;")
+									lexiconGloss.replaceAll("<", "&lt;")
 										.replaceAll(">", "&gt;") +
 									"\">\n" +
 									"<input type=\"submit\" name=\"ewgs\""+
@@ -515,7 +508,8 @@
 							{
 								glossCell.html = "<a href=\"clause.jsp?ewg=" + 
 									wid + "\">" + 
-									(gloss.equals("") ? "(gloss)" : gloss) +
+									(lexiconGloss.equals("") ? "(gloss)" : 
+										lexiconGloss) +
 									"</a>";
 							}
 						}
@@ -730,18 +724,38 @@
 										"\">change</a>]";
 							}
 						}
-						
+
+						// DiB lookup
+						{
+							Cell dictCell = new Cell();
+							cell.subcells.add(dictCell);
+							String gloss = KJV.getDibGloss(
+								word.getEMdFValue("lexeme").getString());
+							if (gloss == null)
+							{
+								dictCell.html = "";
+							}
+							else
+							{
+								dictCell.html = "[DiB] " + gloss;
+							}	
+						}
+												
 						// Hebrew-English Dictionary lookup
 						if (swordVerse != null)
 						{
 							Cell dictCell = new Cell();
 							cell.subcells.add(dictCell);
-							dictCell.html = KJV.getStrongGloss(swordVerse,
+							String gloss = KJV.getKingJamesGloss(swordVerse,
 								word.getEMdFValue("lexeme").getString());
-							if (dictCell.html == null)
+							if (gloss == null)
 							{
 								dictCell.html = "";
 							}
+							else
+							{
+								dictCell.html = "[KJV] " + gloss;
+							}	
 						}
 					}
 				}
@@ -1318,99 +1332,90 @@
 			ch.setString("logical_structure", structure);
 			ch.execute();
 		}
-	}
-	
-%>
 
-<h3>Notes</h3>
-
-<%
-	if (request.getParameter("nc") != null &&
-		request.getParameter("nt") != null)
-	{
-		String newNoteText = request.getParameter("nt");
+		%><h3>Notes</h3><%
 		
-		EmdrosChange ch = (EmdrosChange)(
-			emdros.createChange(EmdrosChange.CREATE,
-				"note", null));
-		ch.setString("text", newNoteText);
-		ch.setMonadsFromObjects(new int[]{selClauseId});
-		ch.execute();
-	}
-
-	if (request.getParameter("nu") != null &&
-		request.getParameter("ni") != null &&
-		request.getParameter("nt") != null)
-	{
-		String updateNoteIdString = request.getParameter("ni");
-		int updateNoteId = Integer.parseInt(updateNoteIdString);
-		String newNoteText = request.getParameter("nt");
-		
-		EmdrosChange ch = (EmdrosChange)(
-			emdros.createChange(EmdrosChange.UPDATE,
-				"note", new int [] {updateNoteId}));
-		ch.setString("text", newNoteText);
-		ch.execute();
-	}
-
-	if (request.getParameter("nd") != null &&
-		request.getParameter("ni") != null)
-	{
-		String deleteNoteIdString = request.getParameter("ni");
-		int deleteNoteId = Integer.parseInt(deleteNoteIdString);
-		
-		EmdrosChange ch = (EmdrosChange)(
-			emdros.createChange(EmdrosChange.DELETE,
-				"note", new int[]{deleteNoteId}));
-		ch.execute();
-	}
-%>
-
-<table border>
-<%
-	{
-		boolean foundNotes = false;
-
-		String editNoteIdString = request.getParameter("ni");
-		int editNoteId = -1;
-		if (editNoteIdString != null)
+		if (request.getParameter("nc") != null &&
+			request.getParameter("nt") != null)
 		{
-			editNoteId = Integer.parseInt(editNoteIdString);
+			String newNoteText = request.getParameter("nt");
+			
+			EmdrosChange ch = (EmdrosChange)(
+				emdros.createChange(EmdrosChange.CREATE,
+					"note", null));
+			ch.setString("text", newNoteText);
+			ch.setMonadsFromObjects(new int[]{selClauseId});
+			ch.execute();
 		}
 	
-		Sheaf clauseSheaf = emdros.getSheaf
-			("SELECT ALL OBJECTS IN { "+min_m+" - "+max_m+"} "+
-			 "WHERE [clause self = "+selClauseId+
-			 " [note GET text]"+
-			 "]");
-
-		SheafConstIterator sci = clauseSheaf.const_iterator();
-		while (sci.hasNext()) 
+		if (request.getParameter("nu") != null &&
+			request.getParameter("ni") != null &&
+			request.getParameter("nt") != null)
 		{
-			Straw straw = sci.next();
-			clause = straw.const_iterator().next();
+			String updateNoteIdString = request.getParameter("ni");
+			int updateNoteId = Integer.parseInt(updateNoteIdString);
+			String newNoteText = request.getParameter("nt");
 			
-			Sheaf noteSheaf = clause.getSheaf();
-			SheafConstIterator nsci = noteSheaf.const_iterator();
-			while (nsci.hasNext()) 
+			EmdrosChange ch = (EmdrosChange)(
+				emdros.createChange(EmdrosChange.UPDATE,
+					"note", new int [] {updateNoteId}));
+			ch.setString("text", newNoteText);
+			ch.execute();
+		}
+	
+		if (request.getParameter("nd") != null &&
+			request.getParameter("ni") != null)
+		{
+			String deleteNoteIdString = request.getParameter("ni");
+			int deleteNoteId = Integer.parseInt(deleteNoteIdString);
+			
+			EmdrosChange ch = (EmdrosChange)(
+				emdros.createChange(EmdrosChange.DELETE,
+					"note", new int[]{deleteNoteId}));
+			ch.execute();
+	
+			%><table border><%
+			
+			boolean foundNotes = false;
+	
+			String editNoteIdString = request.getParameter("ni");
+			int editNoteId = -1;
+			if (editNoteIdString != null)
 			{
-				Straw ns = nsci.next();
-				MatchedObject note = ns.const_iterator().next();
-			
-				String noteText = note.getEMdFValue("text").getString();
-				if (!foundNotes)
-				{
-					foundNotes = true;
-				}
+				editNoteId = Integer.parseInt(editNoteIdString);
+			}
+		
+			Sheaf clauseSheaf = emdros.getSheaf
+				("SELECT ALL OBJECTS IN { "+min_m+" - "+max_m+"} "+
+				 "WHERE [clause self = "+selClauseId+
+				 " [note GET text]"+
+				 "]");
+	
+			SheafConstIterator sci = clauseSheaf.const_iterator();
+			while (sci.hasNext()) 
+			{
+				Straw straw = sci.next();
+				clause = straw.const_iterator().next();
 				
-				%>
-<tr>
-				<%
-
-				if (request.getParameter("ne") != null &&
-					editNoteId == note.getID_D())
+				Sheaf noteSheaf = clause.getSheaf();
+				SheafConstIterator nsci = noteSheaf.const_iterator();
+				while (nsci.hasNext()) 
 				{
-					%>
+					Straw ns = nsci.next();
+					MatchedObject note = ns.const_iterator().next();
+				
+					String noteText = note.getEMdFValue("text").getString();
+					if (!foundNotes)
+					{
+						foundNotes = true;
+					}
+					
+					%><tr><%
+	
+					if (request.getParameter("ne") != null &&
+						editNoteId == note.getID_D())
+					{
+						%>
 	<form method="POST" action="clause.jsp">
 	<input type="hidden" name="ni" value="<%= note.getID_D() %>" />
 	<td>
@@ -1423,32 +1428,29 @@
 		<input type="submit" name="nd" value="Delete" />
 	</td>
 	</form>
-					<%
-				}
-				else
-				{
-					%>					
+						<%
+					}
+					else
+					{
+						%>					
 	<td><%= noteText.replaceAll("<", "&lt;").replaceAll(">", "&gt;") %></td>
 	<td>
 		<a href="clause.jsp?ni=<%= note.getID_D() %>&ne=1">Edit</a>
 	</td>
-					<%
+						<%
+					}
+	
+					%></tr><%
 				}
-
-				%>
-</tr>
-				<%
+			}
+			
+			if (!foundNotes)
+			{
+				%><tr><td>No notes for this clause</td></tr><%
 			}
 		}
-		
-		if (!foundNotes)
-		{
-			%>
-<tr><td>No notes for this clause</td></tr>
-			<%
-		}
-	}
-%>
+			
+		%>
 </table>
 
 <p><form method="POST">
@@ -1465,42 +1467,55 @@
 	GEN format for LTC</a>.</p>
 
 <%
-	if (emdros.canWriteTo(clause))
-	{
-		if (request.getParameter("publish") != null)
+		if (emdros.canWriteTo(clause))
 		{
-			Change ch = sql.createChange(SqlChange.INSERT, "user_text_access",
-				null);
-			ch.setInt("Monad_First", clause.getMonads().first());
-			ch.setInt("Monad_Last",  clause.getMonads().last());
-			ch.setString("User_Name",   "anonymous");
-			ch.setInt("Write_Access", 0);
-			ch.execute();
-		}
-		else if (request.getParameter("unpublish") != null)
-		{
-			Change ch = sql.createChange(SqlChange.DELETE, "user_text_access",
-				"Monad_First = " + clause.getMonads().first() + " AND " +
-				"Monad_Last  = " + clause.getMonads().last()  + " AND " +
-				"User_Name   = \"anonymous\"");
-			ch.execute();
-		}
+			if (request.getParameter("publish") != null)
+			{
+				Change ch = sql.createChange(SqlChange.INSERT,
+					"user_text_access", null);
+				ch.setInt("Monad_First", clause.getMonads().first());
+				ch.setInt("Monad_Last",  clause.getMonads().last());
+				ch.setString("User_Name",   "anonymous");
+				ch.setInt("Write_Access", 0);
+				ch.execute();
+
+				ch = emdros.createChange(EmdrosChange.UPDATE, "clause", 
+					new int[]{clause.getID_D()});
+				ch.setInt("published", 1);
+				ch.setString("predicate", predicate_text);
+				ch.execute();
+			}
+			else if (request.getParameter("unpublish") != null)
+			{
+				Change ch = sql.createChange(SqlChange.DELETE,
+					"user_text_access",
+					"Monad_First = " + clause.getMonads().first() + " AND " +
+					"Monad_Last  = " + clause.getMonads().last()  + " AND " +
+					"User_Name   = \"anonymous\"");
+				ch.execute();
+	
+				ch = emdros.createChange(EmdrosChange.UPDATE, "clause", 
+					new int[]{clause.getID_D()});
+				ch.setInt("published", 0);
+				ch.execute();
+			}
 		
-		boolean isPublished = sql.getSingleInteger("SELECT COUNT(1) " +
-			"FROM user_text_access " +
-			"WHERE Monad_First = " + clause.getMonads().first() +
-			" AND  Monad_Last  = " + clause.getMonads().last()  + 
-			" AND  User_Name   = \"anonymous\"") > 0;
+			boolean isPublished = sql.getSingleInteger("SELECT COUNT(1) " +
+				"FROM user_text_access " +
+				"WHERE Monad_First = " + clause.getMonads().first() +
+				" AND  Monad_Last  = " + clause.getMonads().last()  + 
+				" AND  User_Name   = \"anonymous\"") > 0;
 		
-		%>
-		<form method="POST">
-			<% if (isPublished) { %>
-			<input type="submit" name="unpublish" value="Unpublish" />
-			<% } else { %>
-			<input type="submit" name="publish" value="Publish" />
-			<% } %>
-		</form>
-		<%
+			%>
+			<form method="POST">
+				<% if (isPublished) { %>
+				<input type="submit" name="unpublish" value="Unpublish" />
+				<% } else { %>
+				<input type="submit" name="publish" value="Publish" />
+				<% } %>
+			</form>
+			<%
+		}
 	}
 %>
 	
