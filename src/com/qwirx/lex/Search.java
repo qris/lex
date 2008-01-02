@@ -5,7 +5,6 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Set;
 
 import jemdros.FlatSheaf;
 import jemdros.FlatSheafConstIterator;
@@ -60,6 +59,11 @@ public class Search
     
     private void addToMonadSet(Sheaf sheaf, SetOfMonads set)
     {
+        if (sheaf == null)
+        {
+            return;
+        }
+        
         SheafConstIterator shci = sheaf.const_iterator();
         
         while (shci.hasNext())
