@@ -214,33 +214,34 @@ function toggle(button, divid)
 			int numShown = search.getResultCount();
 			%><h4>Displaying first <%= results.size() %> of
 			<%= search.getResultCount() %> results.</h4><%
-		}
 		
-		%>
-		<table class="search_results">
-			<tr>
-				<th>Reference</th>
-				<th>Clause Text</th>
-				<th>Link</th>
-			</tr>
-		<%
-	
-		for (Iterator<SearchResult> i = results.iterator(); i.hasNext();)
-		{
-			SearchResult result = i.next();
-			
 			%>
-			<tr>
-				<td class="verse"><%= result.getLocation() %></td>
-				<td class="translit"><%= result.getDescription() %></td>
-				<td><a href="<%= result.getLinkUrl() %>">Open</a></td>
-			</tr>
+			<table class="search_results">
+				<tr>
+					<th>Reference</th>
+					<th>Clause Text</th>
+					<th>Link</th>
+				</tr>
+			<%
+		
+			for (Iterator<SearchResult> i = results.iterator(); i.hasNext();)
+			{
+				SearchResult result = i.next();
+				
+				%>
+				<tr>
+					<td class="verse"><%= result.getLocation() %></td>
+					<td class="translit"><%= result.getDescription() %></td>
+					<td><a href="<%= result.getLinkUrl() %>">Open</a></td>
+				</tr>
+				<%
+			}
+		
+			%>
+			</table>
 			<%
 		}
-	
-		%>
-		</table>
-		<%
 	}	
 %>
+
 <%@ include file="footer.jsp" %>

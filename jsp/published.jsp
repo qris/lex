@@ -41,31 +41,32 @@
 		int numShown = search.getResultCount();
 		%><h4>Displaying first <%= results.size() %> of
 		<%= search.getResultCount() %> results.</h4><%
+		%>
+		<table class="search_results">
+			<tr>
+				<th>Reference</th>
+				<th>Verb</th>
+				<th>Logical Structure</th>
+			</tr>
+		<%
+		
+		for (Iterator<SearchResult> i = results.iterator(); i.hasNext();)
+		{
+			SearchResult result = i.next();
+			
+			%>
+			<tr>
+				<td><a href="result.getLinkUrl()"><%= result.getLocation() %></a></td>
+				<td><%= HebrewConverter.toHebrew(result.getPredicate()) %></td>
+				<td><%= HebrewConverter.toHtml(result.getLogicalStructure()) %></td>
+			</tr>
+			<%
+		}
+		
+		%>
+		</table>
+		<%
 	}
 %>
-
-<table class="search_results">
-	<tr>
-		<th>Reference</th>
-		<th>Verb</th>
-		<th>Logical Structure</th>
-	</tr>
-<%
-
-for (Iterator<SearchResult> i = results.iterator(); i.hasNext();)
-{
-	SearchResult result = i.next();
-	
-	%>
-	<tr>
-		<td><a href="result.getLinkUrl()"><%= result.getLocation() %></a></td>
-		<td><%= HebrewConverter.toHebrew(result.getPredicate()) %></td>
-		<td><%= HebrewConverter.toHtml(result.getLogicalStructure()) %></td>
-	</tr>
-	<%
-}
-
-%>
-</table>
 
 <%@ include file="footer.jsp" %>
