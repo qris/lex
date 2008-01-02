@@ -66,9 +66,9 @@ public class HebrewConverter
         
         for (int i = 0; i < input.length(); i++)
         {
-            char c = input.charAt(i);
             String substr = input.substring(i);
 
+            char c = input.charAt(i);
             char c2 = 0xffff;
             if (i < input.length() - 1)
             {
@@ -93,11 +93,11 @@ public class HebrewConverter
             else if (c == '@') { output.append("\u05b8"); } // Qamets
             else if (c == 'A') { output.append("\u05b7"); } // Patah
             else if (c == 'B') { output.append("\u05d1"); } // Bet
-            else if (c == 'C') { output.append("\u05e9"); } // 05c1 // Shin, Shin Dot
+            else if (c == 'C') { output.append("\u05e9\u05c1"); } // Shin, Shin Dot
             else if (c == '#') { output.append("\u05e9"); } // S/hin with no dot
             else if (c == 'D') { output.append("\u05d3"); } // Dalet
             else if (c == 'E') { output.append("\u05b6"); } // Segol
-            else if (c == 'F') { output.append("\u05e9"); } // 05c2 // Shin, Sin Dot
+            else if (c == 'F') { output.append("\u05e9\u05c2"); } // Shin, Sin Dot
             else if (c == 'G') { output.append("\u05d2"); } // Gimel
             else if (c == 'H') { output.append("\u05d4"); } // He
             else if (c == 'I') { output.append("\u05b4"); } // Hiriq
@@ -125,7 +125,8 @@ public class HebrewConverter
             else if (c == 'y') { output.append("\u05e5"); } // Final Tsade
 
             // Cantillation Marks/Punctuation ala MC
-
+            // removed at Nicolai's request 2/1/08
+            /*
             else if (c == '0')
             {
                 i++;
@@ -170,6 +171,14 @@ public class HebrewConverter
                 else { throw new IllegalArgumentException(substr); }
             }
             
+            else if (c == '5')
+            {
+                i++;
+                if      (c2 == '2') { output.append("\u05c4"); } // Puncta Extraordinaria above (not a revia!)
+                else if (c2 == '3') { output.append("\u0323"); } // Puncta Extraordinaria below; Ps 27:13 only
+                else { throw new IllegalArgumentException(substr); }
+            }
+
             else if (c == '6')
             {
                 i++;
@@ -215,6 +224,11 @@ public class HebrewConverter
                 else if (c2 == '4') { output.append("\u05a7"); } // darga
                 else if (c2 == '5') { output.append("\u05bd"); } // meteg, silluq (right)
                 else { throw new IllegalArgumentException(substr); }
+            }*/
+            
+            else if (c >= '0' && c <= '9' && c2 >= '0' && c2 <= '9')
+            {
+                i++; // skip both
             }
             
             // Extended Punctuation
@@ -227,14 +241,6 @@ public class HebrewConverter
             // wit2utf8.py:get_suffix_and_form_stripped_of_suffix
 
             // Other
-
-            else if (c == '5')
-            {
-                i++;
-                if      (c2 == '2') { output.append("\u05c4"); } // Puncta Extraordinaria above (not a revia!)
-                else if (c2 == '3') { output.append("\u0323"); } // Puncta Extraordinaria below; Ps 27:13 only
-                else { throw new IllegalArgumentException(substr); }
-            }
 
             else if (c == '*') { /* 0 */ } // asterisk indicates Qere/Ketiv
 
@@ -257,24 +263,29 @@ public class HebrewConverter
     
     public static String toTranslit(String input)
     {
+        input = input.toUpperCase().replaceAll("\\d\\d", "");
         StringBuffer output = new StringBuffer();
 
-        input = input.replaceAll("\\d\\d", "").toUpperCase();
-        
         for (int i = 0; i < input.length(); i++)
         {
             String substr = input.substring(i);
             char c = input.charAt(i);
-            
+            char c2 = 0xffff;
+            if (i < input.length() - 1)
+            {
+                c2 = input.charAt(i + 1);
+            }
+
             if (substr.matches("[BGDKPT]\\.[@AEIOUW;:].*"))
             {
                 output.append(substr.substring(0, 1).toLowerCase());
                 i++; // skip the dagesh (.)
             }
-            else if (substr.matches("[BCDFGJKLMNPQSTVWYZ]\\..*"))
+            else if (substr.matches("[BCDFGJKLMNPQSTVWYZ#]\\..*"))
             {
                 if      (c == 'C') { output.append("šš"); }
                 else if (c == 'F') { output.append("śś"); }
+                else if (c == '#') { output.append("ss"); } // ?? guess ??
                 else if (c == 'J') { output.append("yy"); }
                 else if (c == 'V') { output.append("ťť"); }
                 else if (c == 'W') { output.append("ū");  }
@@ -296,6 +307,7 @@ public class HebrewConverter
             else if (c == 'Y') { output.append("c"); }
             else if (c == 'F') { output.append("ś"); }
             else if (c == 'C') { output.append("š"); }
+            else if (c == '#') { output.append("s"); } // ?? guess ??
             else if (c == '@') { output.append("ā"); }
             else if (c == 'D' || c == 'G' || c == 'H' || 
                 c == 'J' || c == 'K' || c == 'L' || c == 'M' ||
