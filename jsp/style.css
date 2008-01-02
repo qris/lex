@@ -73,7 +73,7 @@ div.clearer
 	display: none;
 }
 
-table.grid
+table.grid, table.search_results
 {
 	border-collapse: collapse;
 	width: 100%;
@@ -95,6 +95,16 @@ table.grid td
 {
 	text-align: center;
 }
+
+table.search_results td, table.search_results th
+{
+	margin: 0px;
+	border-top: 1px solid #bbf;
+	border-bottom: 1px solid #bbf;
+	padding: 0.2em 0.4em;
+	text-align: left;
+}
+	
 
 .errormsg
 {
