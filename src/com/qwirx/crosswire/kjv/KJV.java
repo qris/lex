@@ -1,10 +1,13 @@
 package com.qwirx.crosswire.kjv;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.TreeSet;
 
 import jemdros.Table;
 import jemdros.TableException;
@@ -110,7 +113,45 @@ public class KJV
         return null;
     }
     
-    public static String getStrongGloss(BookData verse, String amsterdam)
+    public static String getDibGloss(String amsterdam)
+    throws IOException
+    {
+        amsterdam = amsterdam.replaceAll("[\\[/]$", "");
+        
+        List<HebrewEnglishDatabase.Entry> matches = 
+            HebrewEnglishDatabase.getInstance().getMatches(amsterdam);
+
+        if (matches == null)
+        {
+            return null;
+        }
+        
+        List<String> meanings = new ArrayList<String>();
+        for (Iterator<HebrewEnglishDatabase.Entry> i = matches.iterator(); 
+            i.hasNext();)
+        {
+            HebrewEnglishDatabase.Entry entry = i.next();
+            String meaning = entry.getMeaning();
+            if (meanings.contains(meaning)) continue;
+            meanings.add(meaning);
+        }
+        
+        StringBuffer out = new StringBuffer();
+        
+        for (Iterator<String> i = meanings.iterator(); i.hasNext();)
+        {
+            String meaning = i.next();
+            out.append(meaning);
+            if (i.hasNext())
+            {
+                out.append("; ");
+            }
+        }
+        
+        return out.toString();
+    }
+    
+    public static String getKingJamesGloss(BookData verse, String amsterdam)
     throws IOException, BookException
     {
         amsterdam = amsterdam.replaceAll("[\\[/]$", "");
