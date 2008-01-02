@@ -15,10 +15,6 @@ import java.util.Hashtable;
 import java.util.Map;
 import java.util.Stack;
 
-import jemdros.EmdrosEnv;
-import jemdros.eCharsets;
-import jemdros.eOutputKind;
-
 import org.apache.log4j.Logger;
 import org.crosswire.jsword.book.sword.SwordBookPath;
 import org.xml.sax.SAXException;
@@ -41,11 +37,6 @@ public class Lex
 {
     private static final Logger m_LOG = Logger.getLogger(Lex.class);
     
-	private static void showDatabaseError(EmdrosEnv env) 
-    {
-		m_LOG.error("DB Error: " + env.getDBError());
-	}
-	
 	public static final SqlDatabase getSqlDatabase(String user) 
 	throws Exception 
     {
@@ -82,6 +73,7 @@ public class Lex
             
             if (!db.isAlive())
             {
+                db.delete();
                 return create();
             }
             
@@ -111,12 +103,14 @@ public class Lex
             
             emdrosDb.createObjectTypeIfMissing("note");
             emdrosDb.createFeatureIfMissing("note",  "text",             "string");
+            emdrosDb.createFeatureIfMissing("verse", "bart_gloss",       "string");
             emdrosDb.createFeatureIfMissing("clause","logical_struct_id","integer");
+            emdrosDb.createFeatureIfMissing("clause","logical_structure","string");
+            emdrosDb.createFeatureIfMissing("clause","published",        "integer default 0");
+            emdrosDb.createFeatureIfMissing("clause","predicate",        "string");
             emdrosDb.createFeatureIfMissing("phrase","argument_name",    "string");
             emdrosDb.createFeatureIfMissing("phrase","type_id",          "integer");
             emdrosDb.createFeatureIfMissing("phrase","macrorole_number", "integer default -1");
-            emdrosDb.createFeatureIfMissing("clause","logical_structure","string");
-            emdrosDb.createFeatureIfMissing("verse", "bart_gloss",       "string");
             emdrosDb.createFeatureIfMissing("word",  "wordnet_gloss",    "string");
             emdrosDb.createFeatureIfMissing("word",  "wordnet_synset",   "integer");
             
