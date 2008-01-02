@@ -30,7 +30,8 @@
 <div class="topmenu">
 	<a 	class="index_jsp"  href="index.jsp">Home</a><a 
 		class="db_jsp"     >Databases</a><a 
-		class="clause_jsp" href="clause.jsp">Text</a><a 
+		class="published_jsp" href="published.jsp">Published</a><a 
+		class="clause_jsp" href="clause.jsp">Browse</a><a 
 		class="search_jsp" href="search.jsp">Search</a><a 
 		class="lsedit_jsp" href="lsedit.jsp">Lexicon</a><a  
 		class="parse_jsp"  href="parse.jsp" >Parser</a><a  
