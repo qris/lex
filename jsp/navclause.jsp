@@ -81,6 +81,7 @@
 				int new_max_m = Integer.parseInt(monad_row.getColumn(3)); 	
 				if (min_m < new_min_m) min_m = new_min_m;
 				if (max_m > new_max_m) max_m = new_max_m;
+				// System.out.println("book restricts to " + min_m + "-" + max_m);
 			}
 				
 			%>
@@ -118,8 +119,7 @@
 
 	try 
 	{
-		int newChapNum = Integer.parseInt(request.getParameter("chapter"));
-		selChapNum = newChapNum;
+		selChapNum = Integer.parseInt(request.getParameter("chapter"));
 	} 
 	catch (Exception e) { /* ignore it and use default chapter */ }
 	
@@ -171,6 +171,7 @@
 				int new_max_m = Integer.parseInt(monad_row.getColumn(3)); 	
 				if (min_m < new_min_m) min_m = new_min_m;
 				if (max_m > new_max_m) max_m = new_max_m;
+				// System.out.println("chapter restricts to " + min_m + "-" + max_m);
 			}
 			
 			%>	
@@ -204,28 +205,26 @@
 	
 	try
 	{ 
-		int newVerseNum = Integer.parseInt(request.getParameter("verse")); 
-		selVerseNum = newVerseNum;
+		selVerseNum = Integer.parseInt(request.getParameter("verse")); 
 	}
 	catch (Exception e) { /* ignore it and use default chapter */ }
 	
 	{
 		boolean foundVerse = false;
 	
-		Sheaf sheaf = emdros.getSheaf
+		FlatSheaf sheaf = emdros.getFlatSheaf
 		(
-			"SELECT ALL OBJECTS IN " +
+			"GET OBJECTS HAVING MONADS IN " +
 			emdros.intersect(userTextAccessSet, min_m, max_m) +
-			" WHERE [verse "+
-			"        book    = "+selBook+" AND "+
-			"        chapter = "+selChapNum+
-			"        GET verse, verse_label]"
+			"[verse GET verse, verse_label]"
 		);
 
-		SheafConstIterator sci = sheaf.const_iterator();
-		while (sci.hasNext()) {
-			Straw straw = sci.next();
-			MatchedObject verse = straw.const_iterator().next();
+		FlatStrawConstIterator sci = 
+			sheaf.const_iterator().next().const_iterator();
+			
+		while (sci.hasNext())
+		{
+			MatchedObject verse = sci.next();
 			
 			int thisVerseNum = verse.getEMdFValue("verse").getInt();
 			if (thisVerseNum == selVerseNum)
@@ -235,16 +234,17 @@
 				verse.getSOM(som, false);
 				min_m = som.first();
 				max_m = som.last();
+				// System.out.println("verse restricts to " + min_m + "-" + max_m);
 			}
 							
 			%>
-			<option value=<%=
+			<option value="<%=
 				thisVerseNum
-			%><%=
-				thisVerseNum == selVerseNum ? " SELECTED" : ""
+			%>"<%=
+				thisVerseNum == selVerseNum ? " selected=\"selected\"" : ""
 			%>><%=
 				verse.getEMdFValue("verse_label").getString()
-			%><%
+			%></option><%
 		}
 		
 		if (foundVerse)
@@ -268,10 +268,11 @@
 			selClauseId = sessionClauseId.intValue();
 	}
 	
-	try { 
-		int newClauseId = Integer.parseInt(request.getParameter("clause"));
-		selClauseId = newClauseId;
-	} catch (Exception e) { /* ignore it and use default chapter */ }
+	try
+	{ 
+		selClauseId = Integer.parseInt(request.getParameter("clause"));
+	}
+	catch (Exception e) { /* ignore it and use default chapter */ }
 	
 	MatchedObject verse = null;
 	
@@ -284,71 +285,68 @@
 		(
 			"SELECT ALL OBJECTS IN " +
 			emdros.intersect(userTextAccessSet, min_m, max_m) +
-			" WHERE [verse "+
-			"       book    = "+selBook+" AND "+
-			"       chapter = "+selChapNum+" AND "+
-			"       verse   = "+selVerseNum+
-			"       GET bart_gloss "+
-			"       [clause "+
-			"        [word GET phrase_dependent_part_of_speech, " +
-            "         graphical_preformative, " +
-            "         graphical_root_formation, " +
-            "         graphical_lexeme, " +
-            "         graphical_verbal_ending, " +
-            "         graphical_nominal_ending, " +
-            "         graphical_pron_suffix]" +
-			"       ]"+
-			"      ]");
+			" WHERE " +
+			"[clause "+
+			" [word GET phrase_dependent_part_of_speech, " +
+            "  graphical_preformative, " +
+            "  graphical_root_formation, " +
+            "  graphical_lexeme, " +
+            "  graphical_verbal_ending, " +
+            "  graphical_nominal_ending, " +
+            "  graphical_pron_suffix" +
+			" ]"+
+			"]");
 			 
-		SheafConstIterator sci = sheaf.const_iterator();
-		while (sci.hasNext()) {
-			Straw straw = sci.next();
-			verse = straw.const_iterator().next();
-			
-			SheafConstIterator clause_iter =
-				verse.getSheaf().const_iterator();
+		SheafConstIterator clause_iter =
+			sheaf.const_iterator();
 				
-			while (clause_iter.hasNext()) {
-				MatchedObject clause =
-					clause_iter.next().const_iterator().next();
+		while (clause_iter.hasNext())
+		{
+			MatchedObject clause =
+				clause_iter.next().const_iterator().next();
 
-				String lexemes = "";
+			String lexemes = "";
 				
-				SheafConstIterator word_iter =
-					clause.getSheaf().const_iterator();
+			SheafConstIterator word_iter =
+				clause.getSheaf().const_iterator();
 					
-				while (word_iter.hasNext()) {
-					MatchedObject word = 
-						word_iter.next().const_iterator().next();
+			while (word_iter.hasNext())
+			{
+				MatchedObject word = word_iter.next().const_iterator().next();
 						
-					lexemes += HebrewConverter.wordTranslitToHtml(word, generator);
+				lexemes += HebrewConverter.wordTranslitToHtml(word, generator);
 					
-					if (word_iter.hasNext()) 
-					{
-						lexemes += " ";
-					}
+				if (word_iter.hasNext()) 
+				{
+					lexemes += " ";
 				}
-				
-				int thisClauseId = clause.getID_D();
-				if (thisClauseId == selClauseId)
-					foundSelectedClause = true;
-					
-				if (defaultClauseId == 0)
-					defaultClauseId = thisClauseId;
-					
-				%>
-				<option value=<%=
-					thisClauseId
-				%><%=
-					thisClauseId == selClauseId ? " SELECTED" : ""
-				%>><%=
-					lexemes
-				%><%
 			}
+				
+			int thisClauseId = clause.getID_D();
+			if (thisClauseId == selClauseId)
+			{
+				foundSelectedClause = true;
+			}
+					
+			if (defaultClauseId == 0)
+			{
+				defaultClauseId = thisClauseId;
+			}
+					
+			%>
+			<option value=<%=
+				thisClauseId
+			%><%=
+				thisClauseId == selClauseId ? " SELECTED" : ""
+			%>><%=
+				lexemes
+			%><%
 		}
 		
 		if (!foundSelectedClause)
+		{
 			selClauseId = defaultClauseId;
+		}
 			
 		session.setAttribute("clauseId", new Integer(selClauseId));
 	}
