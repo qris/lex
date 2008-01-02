@@ -197,15 +197,33 @@ public class JswordExamples extends TestCase
         
         String gloss = KJV.getStrongGloss(verse, entry.getStrongsNum());
         assertEquals("wheat", gloss);
+    }
+    
+    public void testKingJamesLookup() throws Exception
+    {   
+        BookData verse = KJV.getVerse(m_Emdros, "Judges", 6, 11);
+        assertNotNull(verse);
         
-        assertNull(KJV.getStrongGloss(verse, "W"));
-        assertEquals("Gideon", KJV.getStrongGloss(verse, "GD<WN/"));
-        assertEquals("and his son", KJV.getStrongGloss(verse, "BN/"));
-        assertEquals("threshed", KJV.getStrongGloss(verse, "XBV["));
-        assertEquals("wheat", KJV.getStrongGloss(verse, "XVH/"));
-        assertNull(KJV.getStrongGloss(verse, "B"));
-        assertNull(KJV.getStrongGloss(verse, "H"));
-        assertEquals("by the winepress", KJV.getStrongGloss(verse, "GT/"));
+        assertNull(KJV.getKingJamesGloss(verse, "W"));
+        assertEquals("Gideon", KJV.getKingJamesGloss(verse, "GD<WN/"));
+        assertEquals("and his son", KJV.getKingJamesGloss(verse, "BN/"));
+        assertEquals("threshed", KJV.getKingJamesGloss(verse, "XBV["));
+        assertEquals("wheat", KJV.getKingJamesGloss(verse, "XVH/"));
+        assertNull(KJV.getKingJamesGloss(verse, "B"));
+        assertNull(KJV.getKingJamesGloss(verse, "H"));
+        assertEquals("by the winepress", KJV.getKingJamesGloss(verse, "GT/"));
+    }
+
+    public void testDibLookup() throws Exception
+    {   
+        assertEquals(null, KJV.getDibGloss("W"));
+        assertEquals("Gidon", KJV.getDibGloss("GD<WN/"));
+        assertEquals("a son; Ben", KJV.getDibGloss("BN/"));
+        assertEquals("to knock out, off", KJV.getDibGloss("XBV["));
+        assertEquals("wheat", KJV.getDibGloss("XVH/"));
+        assertEquals(null, KJV.getDibGloss("B"));
+        assertEquals(null, KJV.getDibGloss("H"));
+        assertEquals("a wine-press; Gath", KJV.getDibGloss("GT/"));
     }
 
     /**
