@@ -217,7 +217,12 @@ function toggle(button, divid)
 		}
 		
 		%>
-		<table class="grid">
+		<table class="search_results">
+			<tr>
+				<th>Reference</th>
+				<th>Clause Text</th>
+				<th>Link</th>
+			</tr>
 		<%
 	
 		for (Iterator<SearchResult> i = results.iterator(); i.hasNext();)
@@ -226,7 +231,7 @@ function toggle(button, divid)
 			
 			%>
 			<tr>
-				<th class="verse"><%= result.getLocation() %></th>
+				<td class="verse"><%= result.getLocation() %></td>
 				<td class="translit"><%= result.getDescription() %></td>
 				<td><a href="<%= result.getLinkUrl() %>">Open</a></td>
 			</tr>
