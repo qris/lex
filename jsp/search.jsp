@@ -218,9 +218,8 @@ function toggle(button, divid)
 			%>
 			<table class="search_results">
 				<tr>
-					<th>Reference</th>
 					<th>Clause Text</th>
-					<th>Link</th>
+					<th>Reference</th>
 				</tr>
 			<%
 		
@@ -230,9 +229,10 @@ function toggle(button, divid)
 				
 				%>
 				<tr>
-					<td class="verse"><%= result.getLocation() %></td>
 					<td class="translit"><%= result.getDescription() %></td>
-					<td><a href="<%= result.getLinkUrl() %>">Open</a></td>
+					<td><a href="<%= result.getLinkUrl() %>"><%= 
+						result.getLocation() 
+					%></a></td>
 				</tr>
 				<%
 			}
