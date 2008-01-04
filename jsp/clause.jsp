@@ -106,7 +106,7 @@
 		"        [phrase GET phrase_type, phrase_function, argument_name, "+
 		"                    type_id, macrorole_number "+
 		"          [word GET lexeme, phrase_dependent_part_of_speech, " +
-		"                    tense, wordnet_gloss, wordnet_synset, " +
+		"                    tense, stem, wordnet_gloss, wordnet_synset, " +
 		"                    graphical_preformative, " +
 		"                    graphical_locative, " +
 		"                    graphical_lexeme, " +
@@ -164,6 +164,7 @@
 			TreeNode root = new TreeNode("root");
 
 			SheafConstIterator phrases = clause.getSheaf().const_iterator();
+			boolean isFirstWord = true;
 	
 			while (phrases.hasNext()) 
 			{
@@ -175,6 +176,7 @@
 				);
 	
 				SheafConstIterator words = phrase.getSheaf().const_iterator();
+				
 				while (words.hasNext()) 
 				{
 					MatchedObject word = words.next().const_iterator().next();
@@ -189,15 +191,25 @@
 						private MatchedObject m_word;
 						private StringBuffer m_hebrew;
 						private List m_morphs;
+						boolean m_IsFirstWord, m_IsLastWord;
+						boolean m_IsMorpheme;
 						
 						public HebrewFeatureConverter(TreeNode root,
 							MatchedObject word, StringBuffer hebrew,
-							List morphs)
+							List morphs, boolean isFirstWord,
+							boolean isLastWord)
 						{
 							m_root   = root;
 							m_word   = word;
 							m_hebrew = hebrew;
 							m_morphs = morphs;
+							m_IsFirstWord = isFirstWord;
+							m_IsLastWord  = isLastWord;
+						}
+						
+						public boolean isMorpheme()
+						{
+							return m_IsMorpheme;
 						}
 						
 						public void convert(String surface, 
@@ -212,12 +224,42 @@
 							String translit = HebrewConverter.toTranslit(raw);
 							translit = HebrewConverter.toHtml(translit);
 							if (translit.equals("")) translit = "&Oslash;";
-							if (!lastMorpheme) translit += "-";
+							
+							if (desc != null && desc.equals("CONJ"))
+							{
+								if (m_IsFirstWord) { desc = "CLM"; }
+								else               { desc = "CR"; }
+							}
+							
+							// desc += ":" + lastMorpheme + ":" + m_IsLastWord;
+							
+							if (!lastMorpheme)
+							{
+								translit += "-";
+								desc += "-";
+								m_IsMorpheme = true;
+							}
+							else if (translit.endsWith("-"))
+							{
+								desc += "-";
+								lastMorpheme = false;
+								m_IsMorpheme = true;
+							}
+							else
+							{
+								m_IsMorpheme = false;
+							}
 
 							TreeNode node = m_root.createChild(translit);
 							// node = node.createChild(raw);
 							if (desc == null) desc = "";
 							node.createChild(desc);
+
+							if (lastMorpheme && !m_IsLastWord)
+							{
+								// blank cell between words
+								m_root.createChild("");
+							}
 							
 							m_morphs.add(new MorphEdge(morphNode, 
 								translit, m_morphs.size()));
@@ -226,12 +268,17 @@
 
 					HebrewFeatureConverter hfc = 
 						new HebrewFeatureConverter(root, word, hebrewText,
-							morphEdges);
+							morphEdges, isFirstWord,
+							!phrases.hasNext() && !words.hasNext());
 						
 					generator.parse(word, hfc, true);
-												
-					hebrewText.append(" ");						
-						
+					isFirstWord = false;
+					
+					if (!hfc.isMorpheme())
+					{				
+						hebrewText.append(" ");						
+					}
+					
 					if (psp.equals("verb"))
 					{
 						predicate_text = 

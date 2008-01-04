@@ -100,6 +100,7 @@ public class HebrewMorphemeGenerator
                 "wordnet_gloss",
                 "lexeme",
                 "tense",
+                "stem",
             }));
         }
         
@@ -130,16 +131,31 @@ public class HebrewMorphemeGenerator
             else if (person.equals("third_person"))  person = "3";
             else if (person.equals("unknown"))       person = "";
             
-            String gender = ((String)m_Genders.get(
-                word.getEMdFValue("gender").toString()
-                )).substring(0, 1);
+            String gender;
+            switch (word.getFeatureAsLong(word.getEMdFValueIndex("gender")))
+            {
+            case 2: gender = ""; break;
+            case 3: gender = "M"; break;
+            case 4: gender = "F"; break;
+            default: gender = "=" + word.getFeatureAsLong(
+                word.getEMdFValueIndex("gender"));
+            }
             
-            String number = ((String)m_Numbers.get(
-                word.getEMdFValue("number").toString()
-                )).substring(0, 1);
+            String number;
+            switch (word.getFeatureAsLong(word.getEMdFValueIndex("number")))
+            {
+            case 0: number = ""; break;
+            case 3: number = "sg"; break;
+            case 4: number = "pl"; break;
+            case 5: number = "dl"; break;
+            default: number = word.getFeatureAsString(
+                word.getEMdFValueIndex("number"));
+            }
             
             String state = (String)m_States.get(
                 word.getEMdFValue("state").toString());
+            if      (state.equals("construct")) { state = "CS"; }
+            else if (state.equals("absolute"))  { state = "AB"; }
             
             gloss = word.getEMdFValue("wordnet_gloss").getString();
             
@@ -162,31 +178,47 @@ public class HebrewMorphemeGenerator
             }
             
             verbEnding = person + gender + number;
-            nounEnding = gender + number + "." + state;
+            nounEnding = gender + number + state;
         }
         
         if (psp.equals("verb"))
         {
             String tense = null;
+            String stem  = null;
             
             if (generateGloss)
             {
-                String tenseNum = word.getEMdFValue("tense").toString();
-                tense = (String)m_Tenses.get(tenseNum);
+                tense = word.getFeatureAsString(word.getEMdFValueIndex("tense"));
+                if      (tense.equals("imperfect"))  { tense = "IMPF"; }
+                else if (tense.equals("perfect"))    { tense = "PRFV"; }
+                else if (tense.equals("imperative")) { tense = "IMP"; }
+                else if (tense.equals("infinitive_construct")) { tense = "INF"; }
+                else if (tense.equals("infinitive_absolute"))  { tense = "EMPH"; }
+                else if (tense.equals("participle")) { tense = "PART"; }
+                else if (tense.equals("wayyiqtol"))  { tense = "NARR"; }
+
+                stem = word.getFeatureAsString(word.getEMdFValueIndex("stem"));
+                if      (stem.equals("qal"))     { stem = "Qa"; }
+                else if (stem.equals("piel"))    { stem = "Pi"; }
+                else if (stem.equals("hifil"))   { stem = "Hi"; } 
+                else if (stem.equals("nifal"))   { stem = "Ni"; }
+                else if (stem.equals("pual"))    { stem = "Pu"; }
+                else if (stem.equals("hitpael")) { stem = "Hit"; }
+                else if (stem.equals("hofal"))   { stem = "Ho"; }
             }
             
             handler.convert("graphical_preformative", false, tense, "V/TNS");
             
             // String stemNum = word.getEMdFValue("verbal_stem").toString();
             handler.convert("graphical_root_formation", false,
-                "(stem)", "V/STM");
+                stem, "V/STM");
             
             handler.convert("graphical_lexeme", false, gloss, "V/LEX");
             
             handler.convert("graphical_verbal_ending", false,
                 verbEnding, "V/PGN");
 
-            handler.convert("graphical_pron_suffix", true, "SFX", "V/SFX");
+            handler.convert("graphical_pron_suffix", true, "SUFF", "V/SFX");
         }
         else if (psp.equals("noun")
             || psp.equals("proper_noun"))
@@ -201,7 +233,7 @@ public class HebrewMorphemeGenerator
             handler.convert("graphical_lexeme", false, gloss, type);
             handler.convert("graphical_nominal_ending", false,
                 nounEnding, "MARK/N");
-            handler.convert("graphical_pron_suffix", true, "SFX", "SFX/N");
+            handler.convert("graphical_pron_suffix", true, "SUFF", "SFX/N");
         }
         else
         {
@@ -217,7 +249,7 @@ public class HebrewMorphemeGenerator
             }
             else if (psp.equals("article"))
             {
-                type = "DET";
+                type = "ART";
             }
             else if (psp.equals("conjunction"))
             {
