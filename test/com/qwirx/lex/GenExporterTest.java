@@ -42,14 +42,14 @@ public class GenExporterTest extends TestCase
         "\\morpheme אֱ\n" +
         "\\trans ?ĕ-\n" +
         "\\tag tag\n" +
-        "\\gloss wayyiqtol\n" +
+        "\\gloss NARR\n" +
         "\\lemma lemma\n" +
         "\\re\n" +
         "\n" +
         "\\morpheme \n" +
         "\\trans Ø-\n" +
         "\\tag tag\n" +
-        "\\gloss (stem)\n" +
+        "\\gloss Qa\n" +
         "\\lemma lemma\n" +
         "\\re\n" +
         "\n" +
@@ -63,18 +63,18 @@ public class GenExporterTest extends TestCase
         "\\morpheme \n" +
         "\\trans Ø-\n" +
         "\\tag tag\n" +
-        "\\gloss 1us\n" +
+        "\\gloss 1sg\n" +
         "\\lemma lemma\n" +
         "\\re\n" +
         "\n" +
         "\\morpheme \n" + 
         "\\trans Ø\n" +
         "\\tag tag\n" +
-        "\\gloss SFX\n" +
+        "\\gloss SUFF\n" +
         "\\lemma lemma\n" +
         "\\re\n" +
         "\n" +
-        "\\morpheme שָ֖ם\n" +
+        "\\morpheme שָׁם\n" +
         "\\trans šām\n" +
         "\\tag tag\n" +
         "\\gloss ADV\n" +
@@ -88,38 +88,38 @@ public class GenExporterTest extends TestCase
         "\\lemma lemma\n" +
         "\\re\n" +
         "\n" +
-        "\\morpheme ִ֥ים\n" +
+        "\\morpheme ִים\n" +
         "\\trans îm-\n" +
         "\\tag tag\n" +
-        "\\gloss mp.absolute\n" +
+        "\\gloss MplAB\n" +
         "\\lemma lemma\n" +
         "\\re\n" +
         "\n" +
         "\\morpheme \n" + 
         "\\trans Ø\n" +
         "\\tag tag\n" +
-        "\\gloss SFX\n" +
+        "\\gloss SUFF\n" +
         "\\lemma lemma\n" +
         "\\re\n" +
         "\n" +
-        "\\morpheme שְלֹש\n" + 
+        "\\morpheme שְׁלֹשׁ\n" + 
         "\\trans šəlōš-\n" +
         "\\tag tag\n" +
         "\\gloss null\n" +
         "\\lemma lemma\n" +
         "\\re\n" +
         "\n" +
-        "\\morpheme ָֽה\n" +
+        "\\morpheme ָה\n" +
         "\\trans āh-\n" +
         "\\tag tag\n" +
-        "\\gloss fs.absolute\n" +
+        "\\gloss FsgAB\n" +
         "\\lemma lemma\n" +
         "\\re\n" +
         "\n" +
         "\\morpheme \n" + 
         "\\trans Ø\n" +
         "\\tag tag\n" +
-        "\\gloss SFX\n" +
+        "\\gloss SUFF\n" +
         "\\lemma lemma\n" +
         "\\re\n" +
         "\n";
@@ -136,7 +136,7 @@ public class GenExporterTest extends TestCase
             "[clause self = 1324989 " +
             " [phrase "+
             "  [word GET phrase_dependent_part_of_speech, person, gender, " +
-            "            number, state, wordnet_gloss, lexeme, tense, " +
+            "            number, state, wordnet_gloss, lexeme, tense, stem, " +
             "            graphical_preformative, graphical_root_formation, " +
             "            graphical_lexeme, graphical_verbal_ending, " +
             "            graphical_nominal_ending, graphical_pron_suffix]" +

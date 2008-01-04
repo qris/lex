@@ -31,7 +31,7 @@
             "[verse GET book, chapter, verse " +
 			" [clause self = " + clauseIdString + " " +
             "  [word GET phrase_dependent_part_of_speech, person, gender, " +
-            "            number, state, wordnet_gloss, lexeme, tense, " +
+            "            number, state, wordnet_gloss, lexeme, tense, stem, " +
             "            graphical_preformative, graphical_root_formation, " +
             "            graphical_lexeme, graphical_verbal_ending, " +
             "            graphical_nominal_ending, graphical_pron_suffix]" +
