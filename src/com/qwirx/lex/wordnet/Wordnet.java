@@ -18,7 +18,8 @@ public class Wordnet
 {
     private static Wordnet ms_Instance;
     
-    public static Wordnet getInstance() throws IOException, JWNLException
+    public synchronized static Wordnet getInstance()
+    throws IOException, JWNLException
     {
         if (ms_Instance == null)
         {
@@ -26,6 +27,12 @@ public class Wordnet
         }
         
         return ms_Instance;
+    }
+    
+    public synchronized static void delete()
+    {
+        ms_Instance = null;
+        JWNL.shutdown();
     }
     
     private Wordnet() throws IOException, JWNLException

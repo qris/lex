@@ -262,7 +262,7 @@
 		"        [phrase GET phrase_type, argument_name, "+
 		"                    type_id, macrorole_number "+
 		"          [word GET lexeme, phrase_dependent_part_of_speech, "+
-		"                    tense, wordnet_gloss, wordnet_synset, " +
+		"                    tense, stem, wordnet_gloss, wordnet_synset, " +
 		"                    graphical_preformative, " +
 		"                    graphical_locative, " +
 		"                    graphical_lexeme, " +
@@ -304,7 +304,7 @@
 		
 		{
 			TreeNode root = new TreeNode("root");
-			HebrewMorphemeGenerator gen = new HebrewMorphemeGenerator(emdros);
+			HebrewMorphemeGenerator gen = new HebrewMorphemeGenerator();
 			
 			{
 				SheafConstIterator phrases = clause.getSheaf().const_iterator();
@@ -363,7 +363,7 @@
 							new HebrewFeatureConverter(root, word, hebrewText,
 							morphEdges);
 						
-						gen.parse(word, hfc, true);
+						gen.parse(word, hfc, true, sql);
 						
 						hebrewText.append(" ");						
 					}

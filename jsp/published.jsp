@@ -44,9 +44,9 @@
 		%>
 		<table class="search_results">
 			<tr>
-				<th>Reference</th>
 				<th>Verb</th>
 				<th>Logical Structure</th>
+				<th>Reference</th>
 			</tr>
 		<%
 		
@@ -56,9 +56,15 @@
 			
 			%>
 			<tr>
-				<td><a href="result.getLinkUrl()"><%= result.getLocation() %></a></td>
-				<td><%= HebrewConverter.toHebrew(result.getPredicate()) %></td>
-				<td><%= HebrewConverter.toHtml(result.getLogicalStructure()) %></td>
+				<td><%=
+					HebrewConverter.toHebrew(result.getPredicate())
+				%></td>
+				<td><%=
+					HebrewConverter.toHtml(result.getLogicalStructure())
+				%></td>
+				<td><a href="<%= result.getLinkUrl() %>"><%=
+					result.getLocation()
+				%></a></td>
 			</tr>
 			<%
 		}

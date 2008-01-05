@@ -8,6 +8,7 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.Vector;
 
+import jemdros.EmdrosException;
 import jemdros.MatchedObject;
 import jemdros.Sheaf;
 import jemdros.SheafConstIterator;
@@ -38,7 +39,7 @@ public final class LexemeTest extends TestCase
     {
         super(name);
         sql    = Lex.getSqlDatabase   ("test");
-        emdros = Lex.getEmdrosDatabase("test", "localhost");
+        emdros = Lex.getEmdrosDatabase("test", "localhost", sql);
     }
     
     class EmdrosObject 
@@ -383,7 +384,7 @@ public final class LexemeTest extends TestCase
     }
     
     private String getEvaluatedLogicalStructure(int emdrosClauseId)
-    throws DatabaseException
+    throws DatabaseException, EmdrosException
     {
         Sheaf sheaf = emdros.getSheaf
             ("SELECT ALL OBJECTS IN { 1 - 5 } "+

@@ -13,10 +13,15 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.Vector;
 
+import jemdros.EmdrosException;
+import jemdros.MatchedObject;
+
 import com.qwirx.db.Change;
 import com.qwirx.db.DatabaseException;
 import com.qwirx.db.sql.SqlChange;
 import com.qwirx.db.sql.SqlDatabase;
+import com.qwirx.lex.hebrew.HebrewConverter.Transliterator;
+import com.qwirx.lex.morph.HebrewMorphemeGenerator;
 
 public class Lexeme implements Comparable 
 {
@@ -48,7 +53,7 @@ public class Lexeme implements Comparable
     }
     
     public int    id, parentId, numSyntacticArgs;
-    public String label, desc, surface;
+    public String label, desc, surface, m_Gloss;
     public Lexeme parent;
     public List   children  = new Vector();
 
@@ -228,6 +233,31 @@ public class Lexeme implements Comparable
         
         return true;
     }
+    
+    public String getTranslit() throws EmdrosException
+    {
+        assert(m_WordObject != null);
+        StringBuffer out = new StringBuffer();
+        Transliterator xlit = new Transliterator(m_WordObject, out);
+        new HebrewMorphemeGenerator().parse(m_WordObject, xlit, false, 
+            (String)null);
+        return out.toString();
+    }
+    
+    public String getGloss()
+    {
+        return m_Gloss;
+    }
+    
+    public void setGloss(String gloss)
+    {
+        this.m_Gloss = gloss; 
+    }
+    
+    public int getID()
+    {
+        return id;
+    }
 
     private static Lexeme load(SqlDatabase sqldb, ResultSet rs) 
     throws SQLException
@@ -236,6 +266,7 @@ public class Lexeme implements Comparable
         
         l.id       = rs.getInt("ID");
         l.surface  = rs.getString("Lexeme");
+        l.m_Gloss    = rs.getString("Gloss");
         l.label    = rs.getString("Domain_Label");
         l.desc     = rs.getString("Domain_Desc");
         l.parentId = rs.getInt("Domain_Parent_ID");
@@ -260,7 +291,7 @@ public class Lexeme implements Comparable
     
     private static String getColumnList() 
     {
-        return "ID,Lexeme,Structure,Domain_Label,Domain_Desc,"+
+        return "ID,Lexeme,Gloss,Structure,Domain_Label,Domain_Desc,"+
             "Domain_Parent_ID,Syntactic_Args, Caused, "+
             "Punctual, Has_Result_State, Telic, Predicate, "+
             "Thematic_Relation, Dynamic, Has_Endpoint, "+
@@ -295,6 +326,53 @@ public class Lexeme implements Comparable
         return result;
     }
     
+    private MatchedObject m_WordObject = null;
+
+    public static Lexeme load(SqlDatabase sqldb, MatchedObject word)
+    throws DatabaseException, SQLException, EmdrosException
+    {
+        Lexeme result = null;
+        
+        try 
+        {
+            PreparedStatement stmt = sqldb.prepareSelect
+                ("SELECT " + getColumnList() + " " +
+                 "FROM lexicon_entries " +
+                 "WHERE Lexeme = ?");
+            stmt.setString(1, word.getEMdFValue("lexeme").getString());
+            ResultSet rs = sqldb.select();
+            
+            if (!rs.next()) 
+            {
+                return null;
+            }
+            
+            result = load(sqldb, rs);
+        } 
+        finally 
+        {
+            sqldb.finish();
+        }
+        
+        result.m_WordObject = word;
+        return result;
+    }
+
+    public static Lexeme findOrBuild(SqlDatabase sqldb, MatchedObject word)
+    throws DatabaseException, SQLException, EmdrosException
+    {
+        Lexeme result = load(sqldb, word);
+
+        if (result == null)
+        {
+            result = new Lexeme(sqldb);
+            result.m_WordObject = word;
+            result.surface = word.getEMdFValue("lexeme").getString();
+        }
+        
+        return result;
+    }
+
     public static Lexeme getTreeRoot(SqlDatabase sqldb) 
     throws DatabaseException, SQLException
     {
@@ -357,6 +435,7 @@ public class Lexeme implements Comparable
         {
             ch = m_sqldb.createChange(SqlChange.INSERT, "lexicon_entries", 
                 null);
+            ch.setString("Lexeme", surface);
         }
         else
         {
@@ -364,6 +443,7 @@ public class Lexeme implements Comparable
                 "ID = " + id);
         }
 
+        ch.setString("Gloss",      m_Gloss);
         ch.setString("Structure",  getLogicalStructure());
         ch.setString("Caused",     isCaused()   ? "1" : "0");
         ch.setString("Punctual",   isPunctual() ? "1" : "0");

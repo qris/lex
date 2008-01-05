@@ -152,7 +152,7 @@ public class MorphEdge extends EdgeBase
     
     public String getHtmlSurface()
     {
-        return HebrewConverter.toHtml(m_Surface);
+        return m_Surface;
     }
     
     public TreeNode toTree()

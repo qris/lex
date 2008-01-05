@@ -31,7 +31,7 @@ import com.qwirx.db.DatabaseException;
  */
 public class SqlDatabase implements Database
 {
-	private Connection conn;
+	private Connection m_Connection;
 	private PreparedStatement stmt;
 	private ResultSet rs;
 	private String username, database, query;
@@ -41,7 +41,7 @@ public class SqlDatabase implements Database
 	public SqlDatabase(Connection conn, String username, String database)
 	throws DatabaseException
     {
-		this.conn = conn;
+		this.m_Connection = conn;
 		this.username = username;
 		this.database = database;
 		
@@ -87,13 +87,18 @@ public class SqlDatabase implements Database
 			throw new DatabaseException("Error checking table structures", e);
 		}
 	}
-	
+    
+    public Connection getConnection()
+    {
+        return m_Connection;
+    }
+    
 	public void executeDirect(String sql) throws DatabaseException 
     {
 		try 
         {
             long startTime = System.currentTimeMillis();
-			PreparedStatement s = conn.prepareStatement(sql);
+			PreparedStatement s = m_Connection.prepareStatement(sql);
 			s.executeUpdate();
 			s.close();
             long totalTime = System.currentTimeMillis() - startTime;
@@ -120,7 +125,7 @@ public class SqlDatabase implements Database
 		
 		try 
         {
-			stmt = conn.prepareStatement(sql);
+			stmt = m_Connection.prepareStatement(sql);
 		} 
         catch (SQLException e) 
         {
@@ -183,12 +188,12 @@ public class SqlDatabase implements Database
 			Object conditions)
 	{
 		return new SqlChange(username, database, 
-			(SqlChange.Type)type, table, (String)conditions, conn);
+			(SqlChange.Type)type, table, (String)conditions, m_Connection);
 	}
 	
 	public void close() throws SQLException
 	{
-		conn.close();
+		m_Connection.close();
 	}
 	
     public int getSingleInteger(String query)

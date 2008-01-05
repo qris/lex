@@ -9,16 +9,18 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URL;
 import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.util.Hashtable;
+import java.util.Iterator;
 import java.util.Map;
+import java.util.Properties;
 import java.util.Stack;
 
 import org.apache.log4j.Logger;
 import org.crosswire.jsword.book.sword.SwordBookPath;
 import org.xml.sax.SAXException;
 
+import com.mysql.jdbc.Driver;
 import com.qwirx.db.DatabaseException;
 import com.qwirx.db.sql.DbColumn;
 import com.qwirx.db.sql.DbTable;
@@ -116,6 +118,16 @@ public class Lex
             
             return emdrosDb;
         }
+        
+        public void clear()
+        {
+            for (Iterator<EmdrosDatabase> i = m_Pool.iterator(); i.hasNext();)
+            {
+                EmdrosDatabase db = i.next();
+                db.delete();
+                i.remove();
+            }
+        }
     }
     
     private static Map<String, EmdrosDatabasePool> m_EmdrosPools = 
@@ -124,7 +136,7 @@ public class Lex
         new Hashtable<EmdrosDatabase, EmdrosDatabasePool>();
 
 	public static final EmdrosDatabase getEmdrosDatabase(String user, 
-        String host) 
+        String host, SqlDatabase logDatabase) 
 	throws Exception 
     {
         String key = user + "@" + host;
@@ -139,13 +151,33 @@ public class Lex
         
         EmdrosDatabase db = pool.get();
         m_Ledger.put(db, pool);
+        db.setLogConnection(logDatabase.getConnection());
         return db;
 	}
     
     public static final void putEmdrosDatabase(EmdrosDatabase db)
     {
         EmdrosDatabasePool pool = m_Ledger.get(db);
+        if (pool == null)
+        {
+            db.delete();
+            return;
+        }
+        
         pool.put(db);
+        m_Ledger.remove(db);
+    }
+    
+    public static final void emptyPools()
+    {
+        for (Iterator<String> i = m_EmdrosPools.keySet().iterator();
+            i.hasNext();)
+        {
+            String key = i.next();
+            EmdrosDatabasePool pool = m_EmdrosPools.get(key);
+            pool.clear();
+            i.remove();
+        }
     }
 	
 	private static final Connection getLogDatabaseHandle()
@@ -162,8 +194,6 @@ public class Lex
     		
 		Preloader.load();
     	
-		Class.forName("com.mysql.jdbc.Driver").newInstance();
-
         URL url = Lex.class.getResource("/com/qwirx/crosswire/kjv");
         assert(url != null);
         File[] files = new File[1];
@@ -184,11 +214,12 @@ public class Lex
 		// System.out.println("Connection established.");
 
     	String dsn = "jdbc:mysql://localhost:3306/lex?user=emdf" +
-            "&password=changeme&useServerPrepStmts=false";
+            "&password=changeme&useServerPrepStmts=false" +
+            "&jdbcCompliantTruncation=false";
     	Connection dbconn;
     	
 		try {
-			dbconn = DriverManager.getConnection(dsn);
+			dbconn = new Driver().connect(dsn, new Properties());
 
 			new DbTable("object_types",
 				new DbColumn[]{

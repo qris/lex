@@ -1,78 +1,41 @@
 package com.qwirx.lex.morph;
 
-import java.io.IOException;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 
-import jemdros.EMdFValue;
+import jemdros.EmdrosException;
 import jemdros.MatchedObject;
 
-import org.xml.sax.SAXException;
-
 import com.qwirx.db.DatabaseException;
-import com.qwirx.lex.Lex;
-import com.qwirx.lex.emdros.EmdrosDatabase;
-import com.qwirx.lex.ontology.OntologyDb;
+import com.qwirx.db.sql.SqlDatabase;
+import com.qwirx.lex.lexicon.Lexeme;
 
 public class HebrewMorphemeGenerator
 {
-    private static Map m_Persons, m_Genders, m_Numbers, m_States, 
-        m_PartsOfSpeech, m_Tenses;
-    private OntologyDb m_Ontology;
-    
-    public HebrewMorphemeGenerator(EmdrosDatabase emdros)
-    throws DatabaseException, IOException, SAXException
+    public void parse(MatchedObject word, MorphemeHandler handler,
+        boolean generateGloss, SqlDatabase sql)
+    throws SQLException, DatabaseException, EmdrosException
     {
-        if (m_Persons == null)
+        String gloss = null;
+        
+        if (generateGloss)
         {
-            m_Persons = emdros.getEnumerationConstants("person_e", false);
+            Lexeme lexeme = Lexeme.load(sql, word);
+            if (lexeme != null)
+            {
+                gloss = lexeme.getGloss();
+            }
         }
         
-        if (m_Genders == null)
-        {
-            m_Genders = emdros.getEnumerationConstants("gender_e", false);
-        }
-        
-        if (m_Numbers == null)
-        {
-            m_Numbers = emdros.getEnumerationConstants("number_e", false);
-        }
-        
-        if (m_States == null)
-        {
-            m_States = emdros.getEnumerationConstants("state_e", false);
-        }
-        
-        if (m_PartsOfSpeech == null)
-        {
-            m_PartsOfSpeech = emdros.getEnumerationConstants("part_of_speech_e",
-                false);
-        }
-
-        if (m_Tenses == null)
-        {
-            m_Tenses = emdros.getEnumerationConstants("tense_e", false);
-        }
-
-        /*
-        if (m_Stems == null)
-        {
-            m_Stems = emdros.getEnumerationConstants("verbal_stem_t", false);
-            
-        }
-        */
-
-        if (m_Ontology == null)
-        {
-            m_Ontology = Lex.getOntologyDb();
-        }
+        parse(word, handler, generateGloss, gloss);
     }
     
     public void parse(MatchedObject word, MorphemeHandler handler,
-        boolean generateGloss)
+        boolean generateGloss, String gloss)
+    throws EmdrosException
     {
         if (!word.getObjectTypeName().equals("word"))
         {
@@ -114,18 +77,16 @@ public class HebrewMorphemeGenerator
             }
         }
         
-        EMdFValue pspValue = word.getEMdFValue("phrase_dependent_part_of_speech");
-        String pspCode = pspValue.toString();
-        String psp = (String)m_PartsOfSpeech.get(pspCode);
+        String psp = word.getFeatureAsString(
+            word.getEMdFValueIndex("phrase_dependent_part_of_speech"));
        
-        String gloss = null;
         String verbEnding = null;
         String nounEnding = null; 
         
         if (generateGloss)
         {
-            String person = (String)m_Persons.get(
-                word.getEMdFValue("person").toString());
+            String person = word.getFeatureAsString(
+                word.getEMdFValueIndex("person"));
             if      (person.equals("first_person"))  person = "1";
             else if (person.equals("second_person")) person = "2";
             else if (person.equals("third_person"))  person = "3";
@@ -152,30 +113,10 @@ public class HebrewMorphemeGenerator
                 word.getEMdFValueIndex("number"));
             }
             
-            String state = (String)m_States.get(
-                word.getEMdFValue("state").toString());
+            String state = word.getFeatureAsString(
+                word.getEMdFValueIndex("state"));
             if      (state.equals("construct")) { state = "CS"; }
             else if (state.equals("absolute"))  { state = "AB"; }
-            
-            gloss = word.getEMdFValue("wordnet_gloss").getString();
-            
-            if (gloss.equals(""))
-            {
-                String lexeme = word.getEMdFValue("lexeme")
-                    .getString();
-                    
-                OntologyDb.OntologyEntry entry = 
-                    m_Ontology.getWordByLexeme(lexeme);
-                    
-                if (entry != null)
-                {
-                    gloss = entry.m_EnglishGloss;
-                }
-                else
-                {
-                    gloss = null;
-                }
-            }
             
             verbEnding = person + gender + number;
             nounEnding = gender + number + state;

@@ -32,7 +32,7 @@
 			selBook = selBook2;
 		}
 	} 
-	
+
 	{
 		boolean foundBook = false;
 	
@@ -81,6 +81,7 @@
 				int new_max_m = Integer.parseInt(monad_row.getColumn(3)); 	
 				if (min_m < new_min_m) min_m = new_min_m;
 				if (max_m > new_max_m) max_m = new_max_m;
+				if (min_m > max_m) max_m = min_m + 1;
 				// System.out.println("book restricts to " + min_m + "-" + max_m);
 			}
 				
@@ -169,9 +170,11 @@
 				TableRow monad_row = monadTable.iterator().next();
 				int new_min_m = Integer.parseInt(monad_row.getColumn(2)); 	
 				int new_max_m = Integer.parseInt(monad_row.getColumn(3)); 	
+				System.out.println("before chapter was " + min_m + "-" + max_m);
 				if (min_m < new_min_m) min_m = new_min_m;
 				if (max_m > new_max_m) max_m = new_max_m;
-				// System.out.println("chapter restricts to " + min_m + "-" + max_m);
+				if (min_m > max_m) max_m = min_m + 1;
+				System.out.println("chapter restricts to " + min_m + "-" + max_m);
 			}
 			
 			%>	
@@ -195,6 +198,7 @@
 	<select name="verse" onChange="document.forms.nav.submit()">
 <%
 	int selVerseNum = 1;
+	System.out.println("4");
 	
 	{
 		Integer sessionVerseNum = 
@@ -260,6 +264,7 @@
 	<select name="clause" onChange="document.forms.nav.submit()">
 <%
 	int selClauseId = 0;
+		System.out.println("5");
 	
 	{
 		Integer sessionClauseId = 
@@ -279,7 +284,7 @@
 	{
 		boolean foundSelectedClause = false;
 		int defaultClauseId = 0;
-		HebrewMorphemeGenerator generator = new HebrewMorphemeGenerator(emdros);
+		HebrewMorphemeGenerator generator = new HebrewMorphemeGenerator();
 	
 		Sheaf sheaf = emdros.getSheaf
 		(

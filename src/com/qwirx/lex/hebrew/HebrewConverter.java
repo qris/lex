@@ -1,12 +1,8 @@
 package com.qwirx.lex.hebrew;
 
-import java.io.IOException;
-
-import org.xml.sax.SAXException;
-
+import jemdros.EmdrosException;
 import jemdros.MatchedObject;
 
-import com.qwirx.db.DatabaseException;
 import com.qwirx.lex.emdros.EmdrosDatabase;
 import com.qwirx.lex.morph.HebrewMorphemeGenerator;
 import com.qwirx.lex.morph.MorphemeHandler;
@@ -270,11 +266,14 @@ public class HebrewConverter
         {
             String substr = input.substring(i);
             char c = input.charAt(i);
+            
+            /*
             char c2 = 0xffff;
             if (i < input.length() - 1)
             {
                 c2 = input.charAt(i + 1);
             }
+            */
 
             if (substr.matches("[BGDKPT]\\.[@AEIOUW;:].*"))
             {
@@ -381,7 +380,7 @@ public class HebrewConverter
         return output.toString();
     }
     
-    static class Transliterator implements MorphemeHandler
+    public static class Transliterator implements MorphemeHandler
     {
         private MatchedObject m_Word;
         private StringBuffer  m_Output;
@@ -392,9 +391,9 @@ public class HebrewConverter
             m_Output = output;
         }
         
-        public void convert(String surface, 
-            boolean lastMorpheme, String desc,
+        public void convert(String surface, boolean lastMorpheme, String desc,
             String morphNode)
+        throws EmdrosException
         {
             String raw = m_Word.getEMdFValue(surface).getString();
             String translit = HebrewConverter.toTranslit(raw);
@@ -413,9 +412,9 @@ public class HebrewConverter
             m_Output = output;
         }
         
-        public void convert(String surface, 
-            boolean lastMorpheme, String desc,
+        public void convert(String surface, boolean lastMorpheme, String desc,
             String morphNode)
+        throws EmdrosException
         {
             String raw = m_Word.getEMdFValue(surface).getString();
             String hebrew = HebrewConverter.toHebrew(raw);
@@ -424,26 +423,28 @@ public class HebrewConverter
     }
 
     public static String wordToHtml(MatchedObject word, EmdrosDatabase emdros)
-    throws IOException, DatabaseException, SAXException
+    throws EmdrosException
     {
-        return wordTranslitToHtml(word, new HebrewMorphemeGenerator(emdros));
+        return wordTranslitToHtml(word, new HebrewMorphemeGenerator());
     }
 
     public static String wordTranslitToHtml(MatchedObject word, 
         HebrewMorphemeGenerator generator)
+    throws EmdrosException
     {
         StringBuffer out = new StringBuffer();
         Transliterator xlit = new Transliterator(word, out);
-        generator.parse(word, xlit, false);
+        generator.parse(word, xlit, false, (String)null);
         return toHtml(out.toString());
     }
 
     public static String wordHebrewToHtml(MatchedObject word, 
         HebrewMorphemeGenerator generator)
+    throws EmdrosException
     {
         StringBuffer out = new StringBuffer();
         Hebrewator xlit = new Hebrewator(word, out);
-        generator.parse(word, xlit, false);
+        generator.parse(word, xlit, false, (String)null);
         return toHtml(out.toString());
     }
 }

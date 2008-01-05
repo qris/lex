@@ -8,6 +8,7 @@
 <%@ page import="com.qwirx.lex.wordnet.*" %>
 <%@ page import="com.qwirx.lex.parser.*" %>
 <%@ page import="com.qwirx.lex.morph.*" %>
+<%@ page import="com.qwirx.lex.lexicon.*" %>
 <%@ page import="com.qwirx.crosswire.kjv.KJV" %>
 <%@ page import="org.crosswire.jsword.book.*" %>
 <%@ page import="net.didion.jwnl.data.POS" %>
@@ -128,7 +129,7 @@
 	        return "<table class=\"tree\" border>" + contents + "</table>\n";
 	    }
 	}
-	
+
 	BorderTableRenderer rend = new BorderTableRenderer();
 	
 	MatchedObject clause = null;
@@ -156,7 +157,7 @@
 		String predicate_text = "";
 		StringBuffer hebrewText = new StringBuffer();
 		List morphEdges = new ArrayList();
-		HebrewMorphemeGenerator generator = new HebrewMorphemeGenerator(emdros);
+		HebrewMorphemeGenerator generator = new HebrewMorphemeGenerator();
 		
 		/* Prescan to find the predicate lexeme and populate the chart */
 		
@@ -271,7 +272,7 @@
 							morphEdges, isFirstWord,
 							!phrases.hasNext() && !words.hasNext());
 						
-					generator.parse(word, hfc, true);
+					generator.parse(word, hfc, true, sql);
 					isFirstWord = false;
 					
 					if (!hfc.isMorpheme())
@@ -459,7 +460,8 @@
 			int column = 0;
 			
 			SheafConstIterator phrases = clause.getSheaf().const_iterator();
-			while (phrases.hasNext()) {
+			while (phrases.hasNext())
+			{
 				MatchedObject phrase =
 					phrases.next().const_iterator().next();
 				int first_col = column;
@@ -479,38 +481,23 @@
 					MatchedObject word =
 						words.next().const_iterator().next();
 					column++;
-					boolean canWriteToWord = emdros.canWriteTo(word);
 					
 					if (type.equals("word"))
 					{
-						String lexeme = HebrewConverter.wordTranslitToHtml(word, 
-							generator);
-						String part_of_speech = (String)
-							parts_of_speech.get(word.getEMdFValue("phrase_dependent_part_of_speech")
-								.toString());
+						Lexeme lexeme = Lexeme.findOrBuild(sql, word);
+						
+						String part_of_speech = word.getFeatureAsString(
+							word.getEMdFValueIndex(
+								"phrase_dependent_part_of_speech"));
+						boolean canWriteToWord = emdros.canWriteTo(word);
 							
 						Cell cell = new Cell();
-						cell.label = lexeme;
+						cell.label = lexeme.getTranslit();
 						cell.columns = 1;
 						word_row.addElement(cell);
 						
 						int wid = word.getID_D();
-						
-						PreparedStatement stmt = sql.prepareSelect(
-							"SELECT ID, Gloss FROM lexicon_entries "+
-							"WHERE Lexeme = ?");
-						stmt.setString(1, lexeme);
-						ResultSet rs = sql.select();
-						String lexiconGloss = "";
-						int lexId = -1;
-						if (rs.next()) 
-						{
-							lexId = rs.getInt(1);
-							lexiconGloss = rs.getString(2);
-							if (lexiconGloss == null) lexiconGloss = "";
-						}
-						sql.finish();
-						
+
 						// lexicon gloss
 						{
 							Cell glossCell = new Cell();
@@ -519,33 +506,25 @@
 							if (ewgId == wid &&
 								request.getParameter("ewgs") != null) 
 							{
-								lexiconGloss = request.getParameter("gloss");
-								Change ch;
-								if (lexId == -1) 
-								{
-									ch = sql.createChange(
-										SqlChange.INSERT, "lexicon_entries", null);
-									ch.setString("Lexeme", lexeme);
-								} 
-								else 
-								{
-									ch = sql.createChange(
-										SqlChange.UPDATE, "lexicon_entries", 
-										"ID = "+lexId);
-								}
-								ch.setString("Gloss", lexiconGloss);
-								ch.execute();
+								lexeme.setGloss(request.getParameter("gloss"));
+								lexeme.save();
+								lexeme = Lexeme.load(sql, word);
 								ewgId = -1;
 							}
 							
+							String lexiconGloss = lexeme.getGloss();
+							
 							if (ewgId == wid) 
 							{
+								if (lexiconGloss == null)
+								{
+									lexiconGloss = "";
+								}
 								glossCell.html = "<form method=\"post\">\n" +
 									"<input type=\"hidden\" name=\"ewg\"" +
 									" value=\"" + wid + "\">\n" +
 									"<input name=\"gloss\" size=\"10\" value=\"" +
-									lexiconGloss.replaceAll("<", "&lt;")
-										.replaceAll(">", "&gt;") +
+									HebrewConverter.toHtml(lexiconGloss) +
 									"\">\n" +
 									"<input type=\"submit\" name=\"ewgs\""+
 									" value=\"Save\">\n" +
@@ -553,11 +532,12 @@
 							} 
 							else 
 							{
+								if (lexiconGloss == null)
+								{
+									lexiconGloss = "(gloss)";
+								}
 								glossCell.html = "<a href=\"clause.jsp?ewg=" + 
-									wid + "\">" + 
-									(lexiconGloss.equals("") ? "(gloss)" : 
-										lexiconGloss) +
-									"</a>";
+									wid + "\">" + lexiconGloss + "</a>";
 							}
 						}
 

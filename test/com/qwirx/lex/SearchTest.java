@@ -8,7 +8,6 @@ import jemdros.MatchedObject;
 import jemdros.Sheaf;
 import jemdros.SheafConstIterator;
 import jemdros.Straw;
-import jemdros.StrawConstIterator;
 import junit.framework.TestCase;
 
 import org.aptivate.webutils.HtmlIterator;
@@ -27,7 +26,8 @@ public class SearchTest extends TestCase
     
     public void setUp() throws Exception
     {
-        m_Emdros = Lex.getEmdrosDatabase("chris", "test");
+        m_Emdros = Lex.getEmdrosDatabase("chris", "test",
+            Lex.getSqlDatabase("test"));
     }
     
     public void tearDown()
@@ -57,8 +57,7 @@ public class SearchTest extends TestCase
         List<SearchResult> actualResults = search.basic(query);
         Iterator<SearchResult> actualIterator = actualResults.iterator();
         
-        HebrewMorphemeGenerator generator = 
-            new HebrewMorphemeGenerator(m_Emdros);
+        HebrewMorphemeGenerator generator = new HebrewMorphemeGenerator();
         
         Sheaf sheaf = m_Emdros.getSheaf
         (
@@ -80,10 +79,11 @@ public class SearchTest extends TestCase
         SheafConstIterator sci = sheaf.const_iterator();
         while (sci.hasNext())
         {
+            Straw straw = sci.next();
+
             count++;
             if (count > limit) continue;
 
-            Straw straw = sci.next();
             MatchedObject clause = straw.const_iterator().next();
             clauses.add(new Integer(clause.getID_D()));
         }
@@ -253,7 +253,9 @@ public class SearchTest extends TestCase
             new Attributes().clazz("index_jsp").href("index.jsp"));
         i.assertSimple("a", "Databases", 
             new Attributes().clazz("db_jsp").href(null));
-        i.assertSimple("a", "Text", 
+        i.assertSimple("a", "Published", 
+            new Attributes().clazz("published_jsp").href("published.jsp"));
+        i.assertSimple("a", "Browse", 
             new Attributes().clazz("clause_jsp").href("clause.jsp"));
         i.assertSimple("a", "Search", 
             new Attributes().clazz("search_jsp").href("search.jsp"));

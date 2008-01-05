@@ -42,7 +42,8 @@ public class OntologyDb extends DefaultHandler
     
     private static OntologyDb m_Instance = null;
     
-    public static OntologyDb getInstance() throws IOException, SAXException
+    public synchronized static OntologyDb getInstance()
+    throws IOException, SAXException
     {
         if (m_Instance == null)
         {
@@ -50,6 +51,11 @@ public class OntologyDb extends DefaultHandler
         }
         
         return m_Instance;
+    }
+    
+    public synchronized static void delete()
+    {
+        m_Instance = null;
     }
 	
 	private List m_OntologyEntries = new Vector(); 

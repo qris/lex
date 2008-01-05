@@ -67,7 +67,7 @@
 		response.setHeader("Content-disposition", 
 			"attachment; filename=export.gen");
 		response.getWriter().print(
-			new GenExporter(emdros).export(clause, verseData));
+			new GenExporter().export(clause, verseData, sql));
 	}
 	finally
 	{

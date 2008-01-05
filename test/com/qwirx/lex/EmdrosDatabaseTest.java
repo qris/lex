@@ -10,6 +10,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Iterator;
 
+import jemdros.EmdrosException;
 import jemdros.Table;
 import jemdros.TableIterator;
 import jemdros.TableRow;
@@ -39,7 +40,7 @@ public class EmdrosDatabaseTest extends TestCase
 	public EmdrosDatabaseTest() throws Exception 
     {
 		logDb  = Lex.getSqlDatabase("test");
-		emdros = Lex.getEmdrosDatabase("test", "localhost");
+		emdros = Lex.getEmdrosDatabase("test", "localhost", logDb);
 	}
 	
 	/* Crashes Emdros
@@ -136,7 +137,7 @@ public class EmdrosDatabaseTest extends TestCase
 	
 	public void checkCurrentValues(int objectID_D, String objectType, 
 			ChangedRow cr) 
-	throws DatabaseException 
+	throws DatabaseException, EmdrosException
 	{
 		StringBuffer query = new StringBuffer("GET FEATURES ");
 		

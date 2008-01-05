@@ -126,7 +126,8 @@ public class GenExporterTest extends TestCase
     
     public void testGenExportCode() throws Exception
     {
-        EmdrosDatabase emdros = Lex.getEmdrosDatabase("test", "localhost");
+        EmdrosDatabase emdros = Lex.getEmdrosDatabase("test", "localhost",
+            Lex.getSqlDatabase("test"));
         
         Sheaf sheaf = emdros.getSheaf
         (
@@ -155,7 +156,7 @@ public class GenExporterTest extends TestCase
         BookData verse = KJV.getVerse(emdros, "Nehemiah", 2, 11); 
 
         assertEquals(NEHEMIAH_2_11b_EXPORT, 
-            new GenExporter(emdros).export(clause, verse));
+            new GenExporter().export(clause, verse, Lex.getSqlDatabase("test")));
     }
     
     public void testGenExportJsp() throws Exception
@@ -172,7 +173,8 @@ public class GenExporterTest extends TestCase
 
     public void testCrashJavaWithGetStringOnFeature2() throws Exception
     {
-        EmdrosDatabase emdros = Lex.getEmdrosDatabase("test", "localhost");
+        EmdrosDatabase emdros = Lex.getEmdrosDatabase("test", "localhost",
+            Lex.getSqlDatabase("test"));
         
         Sheaf sheaf = emdros.getSheaf
         ( 

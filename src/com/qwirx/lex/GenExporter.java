@@ -1,7 +1,9 @@
 package com.qwirx.lex;
 
 import java.io.IOException;
+import java.sql.SQLException;
 
+import jemdros.EmdrosException;
 import jemdros.MatchedObject;
 import jemdros.SheafConstIterator;
 
@@ -10,23 +12,16 @@ import org.crosswire.jsword.book.BookException;
 import org.xml.sax.SAXException;
 
 import com.qwirx.db.DatabaseException;
-import com.qwirx.lex.emdros.EmdrosDatabase;
+import com.qwirx.db.sql.SqlDatabase;
 import com.qwirx.lex.hebrew.HebrewConverter;
 import com.qwirx.lex.morph.HebrewMorphemeGenerator;
 import com.qwirx.lex.morph.MorphemeHandler;
 
 public class GenExporter
 {
-    private HebrewMorphemeGenerator m_Generator;
-    
-    public GenExporter(EmdrosDatabase emdros)
-    throws IOException, DatabaseException, SAXException
-    {
-        m_Generator = new HebrewMorphemeGenerator(emdros);
-    }
-    
-    public String export(MatchedObject object, BookData verse)
-    throws IOException, BookException
+    public String export(MatchedObject object, BookData verse, SqlDatabase sql)
+    throws IOException, BookException, SAXException, 
+        DatabaseException, SQLException, EmdrosException
     {
         StringBuffer buf = new StringBuffer();
         buf.append("\\wordfield morpheme\n" +
@@ -43,7 +38,7 @@ public class GenExporter
             "\\transliterationfieldisUTF8\n" +
             "\n");
         
-        exportObject(object, verse, buf);
+        exportObject(object, verse, buf, sql);
         
         return buf.toString();
     }
@@ -62,6 +57,7 @@ public class GenExporter
         public void convert(String surface, 
             boolean lastMorpheme, String desc,
             String morphNode)
+        throws EmdrosException
         {
             String raw = m_Word.getEMdFValue(surface).getString();
 
@@ -81,15 +77,16 @@ public class GenExporter
     }
 
     private void exportObject(MatchedObject object, BookData verse,
-        StringBuffer buf)
-    throws IOException, BookException
+        StringBuffer buf, SqlDatabase sql)
+    throws IOException, BookException, SAXException,
+        DatabaseException, SQLException, EmdrosException
     {
         if (object.getObjectTypeName().equals("word"))
         {
             HebrewFeatureConverter hfc = 
                 new HebrewFeatureConverter(object, buf);
             
-            m_Generator.parse(object, hfc, true);
+            new HebrewMorphemeGenerator().parse(object, hfc, true, sql);
         }
         
         if (!object.sheafIsEmpty())
@@ -98,7 +95,7 @@ public class GenExporter
             while (straws.hasNext())
             {
                 MatchedObject child = straws.next().const_iterator().next();
-                exportObject(child, verse, buf);
+                exportObject(child, verse, buf, sql);
             }
         }
     }

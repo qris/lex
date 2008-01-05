@@ -1,6 +1,5 @@
 package com.qwirx.lex;
 
-import java.io.IOException;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -8,6 +7,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
+import jemdros.EmdrosException;
 import jemdros.FlatSheaf;
 import jemdros.FlatSheafConstIterator;
 import jemdros.FlatStraw;
@@ -22,8 +22,6 @@ import jemdros.Table;
 import jemdros.TableException;
 import jemdros.TableIterator;
 import jemdros.TableRow;
-
-import org.xml.sax.SAXException;
 
 import com.qwirx.db.DatabaseException;
 import com.qwirx.lex.emdros.EmdrosDatabase;
@@ -57,8 +55,7 @@ public class Search
     }
     
     public List<SearchResult> basic(String query) 
-    throws DatabaseException, IOException, SAXException, SQLException,
-        TableException
+    throws DatabaseException, SQLException, TableException, EmdrosException
     {
         return advanced("[word " +
             "lexeme = '"+query+"' OR " +
@@ -67,6 +64,7 @@ public class Search
     }
     
     private void addToMonadSet(Sheaf sheaf, SetOfMonads set)
+    throws EmdrosException
     {
         if (sheaf == null)
         {
@@ -89,11 +87,10 @@ public class Search
     }
     
     public List<SearchResult> advanced(String query) 
-    throws DatabaseException, IOException, SAXException, SQLException,
-        TableException
+    throws DatabaseException, SQLException, TableException, EmdrosException
     {    
         HebrewMorphemeGenerator generator = 
-            new HebrewMorphemeGenerator(m_Emdros);
+            new HebrewMorphemeGenerator();
         
         Sheaf sheaf = m_Emdros.getSheaf
         (
@@ -123,11 +120,12 @@ public class Search
                 
             while (clause_iter.hasNext())
             {
+                MatchedObject clause =
+                    clause_iter.next().const_iterator().next();
+
                 m_ResultCount++;
                 if (m_ResultCount > m_MaxResults) continue; // just count them
                 
-                MatchedObject clause =
-                    clause_iter.next().const_iterator().next();
                 ResultBase base = new ResultBase();
                 base.monads = clause.getMonads();
                 base.location = verse.getFeatureAsString(

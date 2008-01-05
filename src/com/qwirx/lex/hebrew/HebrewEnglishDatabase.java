@@ -158,4 +158,9 @@ public class HebrewEnglishDatabase
         
         return m_Instance;
     }
+    
+    public synchronized static void delete()
+    {
+        m_Instance = null;
+    }
 }

@@ -93,7 +93,8 @@ public class JswordExamples extends TestCase
         files[0] = new File(url.getPath());
         SwordBookPath.setAugmentPath(files);
         
-        m_Emdros = Lex.getEmdrosDatabase("test", "localhost");
+        m_Emdros = Lex.getEmdrosDatabase("test", "localhost", 
+            Lex.getSqlDatabase("test"));
     }
     
     public void tearDown()

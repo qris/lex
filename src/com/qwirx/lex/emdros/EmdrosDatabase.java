@@ -17,6 +17,7 @@ import java.util.Map;
 
 import jemdros.BadMonadsException;
 import jemdros.EmdrosEnv;
+import jemdros.EmdrosException;
 import jemdros.FlatSheaf;
 import jemdros.MatchedObject;
 import jemdros.MonadSetElement;
@@ -45,13 +46,13 @@ import com.qwirx.db.DatabaseException;
 public class EmdrosDatabase implements Database 
 {
 	private EmdrosEnv env;
-	private Connection conn;
+	private Connection m_LogDatabase;
 	private String username, userhost, database;
     private static final Logger m_LOG = Logger.getLogger(EmdrosDatabase.class);
 	
 	public EmdrosDatabase(String dbHost, String dbName, String dbUser,
         String dbPass, String logUser, String logFrom, Connection logDb) 
-    throws DatabaseException
+    throws DatabaseException, EmdrosException
     {
         env = new EmdrosEnv(eOutputKind.kOKConsole, 
             eCharsets.kCSISO_8859_1, dbHost, dbUser, dbPass, dbName); 
@@ -62,7 +63,7 @@ public class EmdrosDatabase implements Database
                 new Exception(env.getDBError()));
         }
 
-        this.conn = logDb;
+        m_LogDatabase = logDb;
         this.username = logUser;
         this.userhost = logUser + "@" + logFrom;
 		this.database = dbName;
@@ -71,6 +72,11 @@ public class EmdrosDatabase implements Database
     public boolean isAlive()
     {
         return env.connectionOk();
+    }
+    
+    public void setLogConnection(Connection logDb)
+    {
+        m_LogDatabase = logDb;
     }
     
 	public void executeDirect(String query) throws DatabaseException 
@@ -300,12 +306,16 @@ public class EmdrosDatabase implements Database
     }
     
     public SetOfMonads intersect(SetOfMonads set, int min_m, int max_m)
+    throws EmdrosException
     {
+        System.out.println(set.toString());
+        System.out.println(min_m + " : " + max_m);
     	return SetOfMonads.intersect(set, new SetOfMonads(min_m, max_m));
     }
     
 	public Change createChange(ChangeType changeType, String objectType, 
-			Object objectIds) throws DatabaseException
+			Object objectIds)
+    throws DatabaseException
 	{
         int [] id_ds = (int [])objectIds;
         
@@ -318,14 +328,14 @@ public class EmdrosDatabase implements Database
                     " " + objectIds);
             }
         }
-        catch (DatabaseException e)
+        catch (Exception e)
         {
             throw new DatabaseException("Failed to determine object access",
                 e, null);
         }
         
 		return new EmdrosChange(username+"@"+userhost, database, 
-			(EmdrosChange.Type)changeType, objectType, conn, this, 
+			(EmdrosChange.Type)changeType, objectType, m_LogDatabase, this, 
 			id_ds);
 	}
 	
@@ -393,9 +403,9 @@ public class EmdrosDatabase implements Database
     }
 
     public SetOfMonads getVisibleMonads()
-    throws SQLException
+    throws SQLException, EmdrosException
     {
-        PreparedStatement stmt = conn.prepareStatement
+        PreparedStatement stmt = m_LogDatabase.prepareStatement
         (
             "SELECT Monad_First, Monad_Last " +
             "FROM   user_text_access " +
@@ -436,13 +446,13 @@ public class EmdrosDatabase implements Database
     }
 
     public boolean canWriteTo(String objectType, int objectId)
-    throws DatabaseException
+    throws DatabaseException, EmdrosException
     {
         return canWriteTo(objectType, new int[]{objectId});
     }
     
     public boolean canWriteTo(String objectType, int[] objectIds)
-    throws DatabaseException
+    throws DatabaseException, EmdrosException
     {
         String query = "GET MONADS FROM OBJECTS WITH ID_DS = ";
         
@@ -492,7 +502,7 @@ public class EmdrosDatabase implements Database
         
         try
         {
-            stmt = conn.prepareStatement(query);
+            stmt = m_LogDatabase.prepareStatement(query);
             stmt.setString(1, username);
             rs = stmt.executeQuery();
         }
