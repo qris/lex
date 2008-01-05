@@ -18,7 +18,7 @@ import com.qwirx.lex.emdros.EmdrosDatabase;
 
 public class GenExporterTest extends TestCase
 {
-    private static final String NEHEMIAH_2_11b_EXPORT =
+    private static final String NEHEMIAH_2_11b_EXPORT_HEBREW =
         "\\wordfield morpheme\n" +
         "\\glossfield gloss\n" +
         "\\tagfield tag\n" +
@@ -56,7 +56,7 @@ public class GenExporterTest extends TestCase
         "\\morpheme הִי־\n" +
         "\\trans hî-\n" +
         "\\tag tag\n" +
-        "\\gloss be\n" +
+        "\\gloss to be\n" +
         "\\lemma lemma\n" +
         "\\re\n" +
         "\n" +
@@ -123,7 +123,13 @@ public class GenExporterTest extends TestCase
         "\\lemma lemma\n" +
         "\\re\n" +
         "\n";
-    
+    private static final String NEHEMIAH_2_11b_EXPORT_TRANS =
+        NEHEMIAH_2_11b_EXPORT_HEBREW
+        .replaceAll("\\\\morpheme .*\n", "")
+        .replaceAll("\\\\trans (.*)\n", "\\\\morpheme $1\n")
+        .replaceAll("\\\\transliterationfield trans\n", "")
+        .replaceAll("\\\\righttoleft\n", "\\\\lefttoright\n");
+        
     public void testGenExportCode() throws Exception
     {
         EmdrosDatabase emdros = Lex.getEmdrosDatabase("test", "localhost",
@@ -155,79 +161,33 @@ public class GenExporterTest extends TestCase
         
         BookData verse = KJV.getVerse(emdros, "Nehemiah", 2, 11); 
 
-        assertEquals(NEHEMIAH_2_11b_EXPORT, 
-            new GenExporter().export(clause, verse, Lex.getSqlDatabase("test")));
+        assertEquals(NEHEMIAH_2_11b_EXPORT_HEBREW, 
+            new GenExporter().export(clause, verse,
+                Lex.getSqlDatabase("test"), true));
+
+        assertEquals(NEHEMIAH_2_11b_EXPORT_TRANS,
+            new GenExporter().export(clause, verse,
+                Lex.getSqlDatabase("test"), false));
     }
     
     public void testGenExportJsp() throws Exception
     {
         WebConversation conv = new WebConversation();
         WebResponse response = conv.getResponse("http://localhost:8080/lex" +
-                "/gen-export.jsp?clause=1324989");
+                "/gen-export.jsp?clause=1324989&hebrew=y");
         assertEquals("text/x-gen", response.getContentType());
         assertEquals("UTF-8", response.getCharacterSet());
         assertEquals("attachment; filename=export.gen", 
             response.getHeaderField("Content-disposition"));
-        assertEquals(NEHEMIAH_2_11b_EXPORT, response.getText());
-    }
+        assertEquals(NEHEMIAH_2_11b_EXPORT_HEBREW, response.getText());
 
-    public void testCrashJavaWithGetStringOnFeature2() throws Exception
-    {
-        EmdrosDatabase emdros = Lex.getEmdrosDatabase("test", "localhost",
-            Lex.getSqlDatabase("test"));
-        
-        Sheaf sheaf = emdros.getSheaf
-        ( 
-            "SELECT ALL OBJECTS IN " +
-            "{1-1000000} " +
-            "WHERE " +
-            "[verse GET book, chapter, verse " +
-            " [clause self = 1324989 " +
-            "  [word GET phrase_dependent_part_of_speech, person, gender, " +
-            "            number, state, wordnet_gloss, lexeme, tense, " +
-            "            graphical_preformative, graphical_root_formation, " +
-            "            graphical_lexeme, graphical_verbal_ending, " +
-            "            graphical_nominal_ending]"+
-            " ]"+
-            "]"
-        );
-
-        SheafConstIterator sci = sheaf.const_iterator();
-        assertTrue(sci.hasNext());
-        Straw straw = sci.next();
-        StrawConstIterator swci = straw.const_iterator();
-        assertTrue(swci.hasNext());
-        MatchedObject verse = swci.next();
-        
-        Map bookNumToNameMap = emdros.getEnumerationConstants("book_name_e", 
-            false);
-        
-        assertEquals("verse", verse.getObjectTypeName());
-        
-        String bookName = (String)bookNumToNameMap.get(
-            "" + verse.getEMdFValue("book").getEnum());
-        assertEquals("Nehemiah", bookName);
-
-        BookData verseData = KJV.getVerse(emdros, bookName,
-            verse.getEMdFValue("chapter").getInt(),
-            verse.getEMdFValue("verse").getInt()); 
-
-        sci = verse.getSheaf().const_iterator();
-        assertTrue(sci.hasNext());
-        straw = sci.next();
-        swci = straw.const_iterator();
-        assertTrue(swci.hasNext());
-        MatchedObject clause = swci.next();
-
-        /*
-        verse.getEMdFValue("chapter").getInt();
-        verse.getEMdFValue("verse").getInt(); 
-
-        sci = verse.getSheaf().const_iterator();
-        straw = sci.next();
-        swci = straw.const_iterator();
-        MatchedObject clause = swci.next();
-        */
+        response = conv.getResponse("http://localhost:8080/lex" +
+            "/gen-export.jsp?clause=1324989&hebrew=n");
+        assertEquals("text/x-gen", response.getContentType());
+        assertEquals("UTF-8", response.getCharacterSet());
+        assertEquals("attachment; filename=export.gen", 
+            response.getHeaderField("Content-disposition"));
+        assertEquals(NEHEMIAH_2_11b_EXPORT_TRANS, response.getText());
     }
 
     public static void main(String[] args)

@@ -1,4 +1,5 @@
 <%@   page import="java.util.Map"
+%><%@ page import="com.qwirx.db.sql.*"
 %><%@ page import="com.qwirx.lex.*"
 %><%@ page import="com.qwirx.lex.emdros.*"
 %><%@ page import="com.qwirx.crosswire.kjv.KJV"
@@ -20,7 +21,8 @@
 
 	try
 	{
-		emdros = Lex.getEmdrosDatabase(username, hostname);
+		SqlDatabase sql = Lex.getSqlDatabase(username);
+		emdros = Lex.getEmdrosDatabase(username, hostname, sql);
 		int min_m = emdros.getMinM(), max_m = emdros.getMaxM();
 
         Sheaf sheaf = emdros.getSheaf
@@ -67,7 +69,8 @@
 		response.setHeader("Content-disposition", 
 			"attachment; filename=export.gen");
 		response.getWriter().print(
-			new GenExporter().export(clause, verseData, sql));
+			new GenExporter().export(clause, verseData, sql,
+			request.getParameter("hebrew").equals("y")));
 	}
 	finally
 	{

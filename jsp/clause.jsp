@@ -1278,8 +1278,13 @@
 </table>
 </form></p>
 	
-<p><a href="gen-export.jsp?clause=<%= selClauseId %>">Download clause in
-	GEN format for LTC</a>.</p>
+<p>Download clause in GEN format for LTC:</p>
+<ul>
+	<li><a href="gen-export.jsp?clause=<%= selClauseId %>&hebrew=y">With
+		Hebrew (right-to-left)</a></li>
+	<li><a href="gen-export.jsp?clause=<%= selClauseId %>&hebrew=n">Without
+		Hebrew (left-to-right)</a></li>
+</ul>
 
 <%
 		if (emdros.canWriteTo(clause))
