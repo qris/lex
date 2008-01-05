@@ -125,3 +125,13 @@ table.search_results td, table.search_results th
 {
 	float: right;
 }
+
+.nav1
+{
+	 background-color: #fcc;
+}
+
+.nav2
+{
+	 background-color: #fee;
+}

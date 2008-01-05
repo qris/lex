@@ -18,9 +18,8 @@
 <%@ page import="com.qwirx.lex.lexicon.*" %>
 <%@ page import="com.qwirx.lex.lexicon.Lexeme.Variable" %>
 
-<style>
+<style type="text/css">
 	h4 { margin-top: 8pt; margin-bottom: 0pt; }
-	div.topmenu a.lsedit_jsp <%@ include file="hilite.inc" %>
 	td { vertical-align: top; }
 </style>
 
@@ -67,12 +66,15 @@
 				desc += ": " + ls;
 			}
 			
-			desc = desc.replaceAll("<", "&lt;").replaceAll(">", "&gt;");	
+			desc = desc.replaceAll("&", "&amp;")
+				.replaceAll("<", "&lt;")
+				.replaceAll(">", "&gt;");
+				
 		
 			%>
-			<option <%= selected_id == e.id ? "SELECTED" : ""
-			%> value=<%= e.id == 0 ? "BadID" : (e.id+"") %>>
-			<%= fullPath %> <%= desc %>
+			<option <%= selected_id == e.id ? "selected=\"selected\"" : ""
+			%> value="<%= e.id == 0 ? "BadID" : (e.id+"") %>">
+			<%= fullPath %> <%= desc %></option>
 			<%
 		}		
 	}
@@ -440,29 +442,29 @@
 	];
 
 //--></script>
-<script type="text/javascript" src="lsedit.js" />
+<script type="text/javascript" src="lsedit.js"></script>
 
-<form name="nav" method="GET">
+<form name="nav" method="get" action="lsedit.jsp">
 <table>
-<tr bgcolor="#FFCCCC"><th colspan=4>Navigator</th></tr>
-<tr bgcolor="#FFEEEE">
+<tr class="nav1"><th colspan="4">Navigator</th></tr>
+<tr class="nav2">
   <th>Filter</th>
   <th>Lexicon Entry</th>
   <th>Action</th>
 </tr>
-<tr bgcolor="#FFEEEE">
+<tr class="nav1">
 	<td><input name="filter" value="<%=
 		request.getParameter("filter") != null
 		? request.getParameter("filter") : ""
-	%>" onKeyUp="doFilter(filter, lsid, logics)"></td>
+	%>" onKeyUp="doFilter(filter, lsid, logics)" /></td>
 	<td>
 		<select name="lsid">
-		<option value="">New Structure...
+		<option value="">New Structure...</option>
 		<% new LogicalStructureList(out, lsId, -1, root).visit(); %>
 		</select>
 	</td>
 	<td>
-		<input type="submit" value="Go">
+		<input type="submit" value="Go" />
 	</td>
 </tr>
 </table>
@@ -479,13 +481,13 @@
 if (request.getParameter("lsid") == null)
 {
 	%>
-	Please select a lexicon entry from the list above.
+	<p>Please select a lexicon entry from the list above.</p>
 	<%
 }
 else if (lsId <= 0)
 {
 	%>
-	The selected lexicon entry does not exist or is invalid.
+	<p>The selected lexicon entry does not exist or is invalid.</p>
 	<%
 }
 else
@@ -988,10 +990,11 @@ else
 			
 			<form name="dpform" method="POST" action="lsedit.jsp">
 			<input type="hidden" name="lsid" value="<%= lsId %>" />
-			<input name="filter" onKeyUp="doFilter(filter, dpid, parents)">
+			<input name="filter" onKeyUp="doFilter(filter, dpid, parents)" />
 			<select name="dpid">
-			<option <%= current.parentId == 0 ? "SELECTED" : "" %> value="0">
-				None
+			<option <%=
+				current.parentId == 0 ? "selected=\"selected\"" : ""
+			%> value="0">None</option>
 			<%
 				new LogicalStructureList(out, current.parentId, -1, root)
 					.visit();
