@@ -4,7 +4,7 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
 	"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 
-<html>
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 
 <head>
 	<title>Lex: <%= pageTitle %></title>
@@ -23,19 +23,20 @@
 <%@ page import="com.qwirx.db.sql.*" %>
 
 <body>
-<h1>Lex <font style="font-size: medium">by 
-	<a href="http://www.qwirx.com">Chris Wilson</a></font></h1>
+<h1>Lex <span style="font-size: medium">by 
+	<a href="http://www.qwirx.com">Chris Wilson</a></span></h1>
 <h2>RLM for BH: 
 	<a href="http://www.winthernielsen.dk">Nicolai Winther-Nielsen</a></h2>
 <div class="topmenu">
-	<a 	class="index_jsp"  href="index.jsp">Home</a><a 
-		class="db_jsp"     >Databases</a><a 
+	<a 	class="index_jsp"   href="index.jsp"   >Home</a><a 
+		class="db_jsp"                         >Databases</a><a 
 		class="published_jsp" href="published.jsp">Published</a><a 
-		class="clause_jsp" href="clause.jsp">Browse</a><a 
-		class="search_jsp" href="search.jsp">Search</a><a 
-		class="lsedit_jsp" href="lsedit.jsp">Lexicon</a><a  
-		class="parse_jsp"  href="parse.jsp" >Parser</a><a  
-		class="rules_jsp"  href="rules.jsp" >Rules</a><%
+		class="clause_jsp"  href="clause.jsp"  >Browse</a><a 
+		class="search_jsp"  href="search.jsp"  >Search</a><a 
+		class="lsedit_jsp"  href="lsedit.jsp"  >Lexicon</a><a  
+		class="parse_jsp"   href="parse.jsp"   >Parser</a><a  
+		class="rules_jsp"   href="rules.jsp"   >Rules</a><a  
+		class="wordnet_jsp" href="wordnet.jsp" >Wordnet</a><%
 		
 		if (request.getRemoteUser() != null)
 		{
