@@ -4,8 +4,6 @@
 <%@ page import="java.util.regex.*" %>
 <%@ page import="java.net.*" %>
 <%@ page import="java.sql.*" %>
-<%@ page import="com.qwirx.lex.ontology.*" %>
-<%@ page import="com.qwirx.lex.wordnet.*" %>
 <%@ page import="com.qwirx.lex.parser.*" %>
 <%@ page import="com.qwirx.lex.morph.*" %>
 <%@ page import="com.qwirx.lex.lexicon.*" %>
@@ -59,11 +57,9 @@
 
 <%@ include file="auth.jsp" %>
 
+<%@ include file="navclause.jsp" %>
+
 <%
-
-	Wordnet wordnet = Wordnet.getInstance();
-
-%><%@ include file="navclause.jsp" %><%
 
 	Map phrase_functions = emdros.getEnumerationConstants
 		("phrase_function_e",false);
@@ -152,18 +148,16 @@
 	} 
 	else 
 	{
-		OntologyDb ontology = Lex.getOntologyDb();
-		
 		String predicate_text = "";
 		StringBuffer hebrewText = new StringBuffer();
 		List morphEdges = new ArrayList();
 		HebrewMorphemeGenerator generator = new HebrewMorphemeGenerator();
+		BookData swordVerse = null;
 		
 		/* Prescan to find the predicate lexeme and populate the chart */
 		
 		{
-			TreeNode root = new TreeNode("root");
-
+			List<String[]> columns = new ArrayList<String[]>();
 			SheafConstIterator phrases = clause.getSheaf().const_iterator();
 			boolean isFirstWord = true;
 	
@@ -188,19 +182,19 @@
 						
 					class HebrewFeatureConverter implements MorphemeHandler
 					{
-						private TreeNode m_root;
+						private List<String[]> m_Columns;
 						private MatchedObject m_word;
 						private StringBuffer m_hebrew;
 						private List m_morphs;
 						boolean m_IsFirstWord, m_IsLastWord;
 						boolean m_IsMorpheme;
 						
-						public HebrewFeatureConverter(TreeNode root,
+						public HebrewFeatureConverter(List<String[]> columns,
 							MatchedObject word, StringBuffer hebrew,
 							List morphs, boolean isFirstWord,
 							boolean isLastWord)
 						{
-							m_root   = root;
+							m_Columns = columns;
 							m_word   = word;
 							m_hebrew = hebrew;
 							m_morphs = morphs;
@@ -251,15 +245,14 @@
 								m_IsMorpheme = false;
 							}
 
-							TreeNode node = m_root.createChild(translit);
-							// node = node.createChild(raw);
 							if (desc == null) desc = "";
-							node.createChild(desc);
 
+							m_Columns.add(new String[]{translit, desc});
+							
 							if (lastMorpheme && !m_IsLastWord)
 							{
 								// blank cell between words
-								m_root.createChild("");
+								m_Columns.add(new String[]{"",""});
 							}
 							
 							m_morphs.add(new MorphEdge(morphNode, 
@@ -268,7 +261,7 @@
 					}
 
 					HebrewFeatureConverter hfc = 
-						new HebrewFeatureConverter(root, word, hebrewText,
+						new HebrewFeatureConverter(columns, word, hebrewText,
 							morphEdges, isFirstWord,
 							!phrases.hasNext() && !words.hasNext());
 						
@@ -277,7 +270,7 @@
 					
 					if (!hfc.isMorpheme())
 					{				
-						hebrewText.append(" ");						
+						hebrewText.append(" ");
 					}
 					
 					if (psp.equals("verb"))
@@ -288,27 +281,47 @@
 				}
 			}
 			
-			root.setLabel("<span class=\"hebrew\">" +
-				HebrewConverter.toHtml(hebrewText.toString()) + 
-				"</span>");
-	
-			%><%= root.toHtml(rend) %><%
+			%>
+
+			<span class="hebrew"><%= 
+				HebrewConverter.toHtml(hebrewText.toString())
+			%></span>
+
+			<table> 
+				<% for (int row = 0; row < 2; row++) { %>
+				<tr>
+					<%
+					for (Iterator<String[]> i = columns.iterator();
+						i.hasNext();) 
+					{
+					%>
+						<% String [] rows = i.next(); %>
+						<td><%= rows[row] %></td>	
+					<%
+					}
+					%>
+				</tr>
+				<% } %>
+				<tr>
+					<td colspan="<%= columns.size() %>"><%
+					try
+					{
+						swordVerse = KJV.getVerse(emdros, selBook, selChapNum,
+							selVerseNum);
+						%><em><%= 
+							OSISUtil.getCanonicalText(swordVerse.getOsisFragment())
+						%></em><%
+					}
+					catch (Exception e)
+					{
+						%>KJV Gloss not found (<%= e %>)<%
+					}		
+					%></td>
+				</tr>	
+			</table>
+			<%
 		}
 
-		BookData swordVerse = null;
-		try
-		{
-			swordVerse = KJV.getVerse(emdros, selBook, selChapNum,
-				selVerseNum);
-			%><p><em><%= 
-				OSISUtil.getCanonicalText(swordVerse.getOsisFragment())
-			%></em></p><%
-		}
-		catch (Exception e)
-		{
-			%><p>KJV Gloss not found (<%= e %>)</p><%
-		}		
-			
 		%>
 		<p>Predicate text is: <%= 
 			predicate_text 
@@ -438,20 +451,6 @@
 			ewgId = Integer.parseInt(ewgString);
 		}
 
-		// "ewng" stands for "edit WordNet gloss"
-		String ewngString = request.getParameter("ewng");
-		int ewngId = -1;
-		if (ewngString != null) {
-			ewngId = Integer.parseInt(ewngString);
-		}
-
-		// "swns" stands for "select WordNet sense"
-		String swnsString = request.getParameter("swns");
-		int swnsId = -1;
-		if (swnsString != null) {
-			swnsId = Integer.parseInt(swnsString);
-		}
-		
 		for (int objectNum = 0; objectNum < object_types.length; 
 			objectNum++) 
 		{
@@ -538,217 +537,6 @@
 								}
 								glossCell.html = "<a href=\"clause.jsp?ewg=" + 
 									wid + "\">" + lexiconGloss + "</a>";
-							}
-						}
-
-						// wordnet gloss
-						{
-							String wordnetGloss = word
-								.getEMdFValue("wordnet_gloss")
-								.getString();
-							Long wordnetSynset = new Long(word
-								.getEMdFValue("wordnet_synset")
-								.getInt());
-								
-							if (wordnetGloss == null ||
-								wordnetGloss.equals(""))
-							{
-								OntologyDb.OntologyEntry entry = 
-									ontology.getWordByLexeme(
-										word.getEMdFValue("lexeme")
-										.getString());
-								if (entry != null)
-								{
-									wordnetGloss  = entry.m_EnglishGloss;
-								}
-								else
-								{
-									wordnetGloss  = null;
-								}
-								
-								if (entry != null && 
-									wordnetSynset.longValue() == 0)
-								{
-									wordnetSynset = entry.m_Synset;
-								}
-							}
-
-							if (ewngId == wid &&
-								request.getParameter("ewngs") != null) 
-							{
-								wordnetGloss = request.getParameter("gloss");
-								Change ch = emdros.createChange(
-										EmdrosChange.UPDATE, 
-										"word", new int[] {wid});
-								ch.setString("wordnet_gloss", wordnetGloss);
-								ch.execute();
-								ewngId = -1;
-							}
-							
-							POS wordnetPos = null;
-							
-							if (part_of_speech.equals("verb"))
-							{
-								wordnetPos = POS.VERB;
-							}
-							else if (part_of_speech.equals("noun"))
-							{
-								wordnetPos = POS.NOUN;
-							}
-							else if (part_of_speech.equals("adjective"))
-							{
-								wordnetPos = POS.ADJECTIVE;
-							}
-							else if (part_of_speech.equals("adverb"))
-							{
-								wordnetPos = POS.ADVERB;
-							}
-								
-							Synset [] senses = null;
-							if (wordnetPos != null && wordnetGloss != null)
-							{
-								senses = wordnet.getSenses(wordnetPos, 
-									wordnetGloss);
-							}
-							
-							Cell wordnetCell = new Cell();
-							cell.subcells.add(wordnetCell);
-							
-							if (wordnetPos == null)
-							{
-								wordnetCell.html = "";
-							}
-							else if (ewngId == wid && canWriteToWord) 
-							{
-								if (wordnetGloss == null)
-								{
-									wordnetGloss = "";
-								}
-								
-								wordnetCell.html = "<form method=\"post\">\n" +
-									"<input type=\"hidden\" name=\"ewng\"" +
-									" value=\"" + wid + "\">\n" +
-									"<input name=\"gloss\" size=\"10\" value=\"" +
-									wordnetGloss.replaceAll("<", "&lt;")
-										.replaceAll(">", "&gt;") +
-									"\">\n" +
-									"<input type=\"submit\" name=\"ewngs\""+
-									" value=\"Save\">\n" +
-									"</form>";
-							} 
-							else if (wordnetGloss == null)
-							{
-								wordnetCell.html = "[<a href=\"clause.jsp?" +
-									"ewng=" + wid + "\">Add</a>]";
-							}
-							else
-							{
-								wordnetCell.html = wordnetGloss + " [";
-								
-								if (canWriteToWord)
-								{
-									wordnetCell.html += 
-										"<a href=\"clause.jsp?" +
-										"ewng=" + wid + "\">edit</a>|";
-								}
-								
-								wordnetCell.html += "<a href=\"" +
-									"http://www.wordreference.com/definition/" +
-									URLEncoder.encode(wordnetGloss) +
-									"\">lookup</a>]";
-							}
-
-							if (swnsId == wid &&
-								request.getParameter("swnss") != null) 
-							{
-								wordnetSynset = new Long(
-									request.getParameter("wns"));
-								Change ch = emdros.createChange(
-										EmdrosChange.UPDATE, 
-										"word", new int[] {wid});
-								ch.setInt("wordnet_synset", 
-									wordnetSynset.longValue());
-								ch.execute();
-								swnsId = -1;
-							}
-
-							Cell glossCell = new Cell();
-							cell.subcells.add(glossCell);
-							
-							if (wordnetPos == null)
-							{
-								glossCell.html = "";
-							}
-							else if (wordnetGloss == null)
-							{	
-								glossCell.html = "(no word to look up in Wordnet)";
-							}
-							else if (senses == null)
-							{
-								glossCell.html = "(no match in Wordnet)";
-							}
-							else if (swnsId == wid && canWriteToWord)
-							{
-								glossCell.html = "<form method=\"post\">\n" +
-									"<input type=\"hidden\" name=\"swns\"" +
-									" value=\"" + wid + "\">\n";
-								
-								for (int i = 0; i < senses.length; i++)
-								{
-									Long key = (Long)(senses[i].getKey());
-									glossCell.html += 
-										"<input type=\"radio\" name=\"wns\"" +
-										" value=\"" + key.longValue() + "\"" +
-										(key.longValue() ==
-										wordnetSynset.longValue() ? " checked" : "") +
-										" />" +
-										senses[i].getGloss()
-											.replaceAll("<", "&lt;")
-											.replaceAll(">", "&gt;") +
-										"<br>\n";
-								}
-								
-								glossCell.html += 
-									"<input type=\"submit\" name=\"swnss\""+
-									" value=\"Save\">\n" +
-									"</form>";
-							}
-							else if (wordnetSynset == null)
-							{
-								glossCell.html = "(no Wordnet sense selected)";
-							}
-							else
-							{
-								Synset sense = null;
-								
-								for (int i = 0; i < senses.length; i++)
-								{
-									Long key = (Long)(senses[i].getKey());
-									if (key.longValue() ==
-										wordnetSynset.longValue())
-									{
-										sense = senses[i];
-										break;
-									}
-								}
-								
-								if (sense == null)
-								{
-									glossCell.html = 
-										"(invalid Wordnet sense selected)";
-								}
-								else
-								{
-									glossCell.html = sense.getGloss();
-								}
-							}
-							
-							if (wordnetPos != null && swnsId != wid && 
-								canWriteToWord)
-							{
-								glossCell.html += 
-										" [<a href=\"clause.jsp?swns=" + wid +
-										"\">change</a>]";
 							}
 						}
 
