@@ -321,11 +321,15 @@ public class EmdrosDatabase implements Database
         
         try
         {
-            if (!canWriteTo(objectType, id_ds))
+            if (changeType != EmdrosChange.CREATE)
             {
-                throw new DatabaseException("You do not have permission "+
-                    "to modify this object", changeType + " " + objectType +
-                    " " + objectIds);
+                if (id_ds != null && !canWriteTo(objectType, id_ds))
+                {
+                    throw new DatabaseException("You do not have permission "+
+                        "to modify this object", changeType + " " + objectType +
+                        " " + objectIds);
+                }
+                // must check access to monads later
             }
         }
         catch (Exception e)
@@ -451,8 +455,8 @@ public class EmdrosDatabase implements Database
         return canWriteTo(objectType, new int[]{objectId});
     }
     
-    public boolean canWriteTo(String objectType, int[] objectIds)
-    throws DatabaseException, EmdrosException
+    public SetOfMonads getObjectMonads(String type, int [] objectIds)
+    throws DatabaseException
     {
         String query = "GET MONADS FROM OBJECTS WITH ID_DS = ";
         
@@ -465,7 +469,7 @@ public class EmdrosDatabase implements Database
             }
         }
         
-        Table table = getTable(query + " ["+objectType+"]");
+        Table table = getTable(query + " ["+type+"]");
 
         TableIterator rows = table.iterator();
         SetOfMonads monads = new SetOfMonads();
@@ -480,25 +484,31 @@ public class EmdrosDatabase implements Database
                 monads.add(first, last);
             }
         }
-        catch (TableException e)
+        catch (EmdrosException e)
         {
             throw new DatabaseException("Failed to get monads from object", 
                 e, query);
         }
         
-        return canWriteTo(monads);
+        return monads;
+    }
+    
+    public boolean canWriteTo(String objectType, int[] objectIds)
+    throws DatabaseException
+    {
+        return canWriteTo(getObjectMonads(objectType, objectIds));
     }
 
-    private boolean canWriteTo(SetOfMonads monads)
+    public boolean canWriteTo(SetOfMonads monads)
     throws DatabaseException
     {
         PreparedStatement stmt = null;
         ResultSet rs = null;
         
         String query = "SELECT Monad_First, Monad_Last " +
-        "FROM   user_text_access " +
-        "WHERE  (User_Name = ? OR User_Name = 'anonymous') " +
-        "AND    Write_Access = '1'";
+            "FROM   user_text_access " +
+            "WHERE  (User_Name = ? OR User_Name = 'anonymous') " +
+            "AND    Write_Access = '1'";
         
         try
         {
@@ -514,6 +524,8 @@ public class EmdrosDatabase implements Database
         
         int first = 0;
         int last  = 0;
+        
+        SetOfMonads copy = new SetOfMonads(monads);
 
         try
         {
@@ -522,7 +534,7 @@ public class EmdrosDatabase implements Database
                 first = rs.getInt(1);
                 last  = rs.getInt(2);
                 MonadSetElement mse = new MonadSetElement(first, last);
-                monads.removeMSE(mse);
+                copy.removeMSE(mse);
             }
 
             stmt.close();
@@ -539,7 +551,7 @@ public class EmdrosDatabase implements Database
                 first + "-" + last, e);
         }
         
-        return monads.isEmpty();
+        return copy.isEmpty();
     }
     
     public void delete()
