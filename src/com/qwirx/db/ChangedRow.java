@@ -19,7 +19,8 @@ import java.util.Map;
  * TODO To change the template for this generated type comment go to
  * Window - Preferences - Java - Code Style - Code Templates
  */
-public class ChangedRow {
+public class ChangedRow
+{
 	private Map m_Values = new Hashtable();
 
     public ChangedRow() { }
@@ -31,7 +32,12 @@ public class ChangedRow {
             m_Values.put(values[i].getName(), values[i]);
         }
     }
-	
+
+    public ChangedRow(ChangedRow other)
+    {
+        m_Values = new Hashtable(other.m_Values);
+    }
+
 	public void put(ChangedValue change) {
 		m_Values.put(change.getName(), change);
 	}
