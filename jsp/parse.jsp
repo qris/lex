@@ -270,7 +270,8 @@
 		"                    graphical_verbal_ending, " +
 		"                    graphical_root_formation, " +
 		"                    graphical_nominal_ending, " +
-		"                    person, number, gender, state " +
+		"                    person, number, gender, state, " +
+		"                    suffix_person, suffix_number, suffix_gender " +
 		"          ]"+
 		"        ]"+
 		"      ]"

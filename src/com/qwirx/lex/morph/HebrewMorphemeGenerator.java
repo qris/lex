@@ -64,6 +64,9 @@ public class HebrewMorphemeGenerator
                 "lexeme",
                 "tense",
                 "stem",
+                "suffix_gender",
+                "suffix_number",
+                "suffix_person"
             }));
         }
         
@@ -81,7 +84,11 @@ public class HebrewMorphemeGenerator
             word.getEMdFValueIndex("phrase_dependent_part_of_speech"));
        
         String verbEnding = null;
-        String nounEnding = null; 
+        String nounEnding = null;
+
+        String suffixText = 
+            word.getEMdFValue("graphical_pron_suffix").getString();
+        String suffixGloss = null;
         
         if (generateGloss)
         {
@@ -120,6 +127,32 @@ public class HebrewMorphemeGenerator
             
             verbEnding = person + gender + number;
             nounEnding = gender + number + state;
+            
+            if (suffixText.equals(""))
+            {
+                suffixGloss = "SUFF";
+            }
+            else
+            {
+                String suffixGender = word.getFeatureAsString(
+                    word.getEMdFValueIndex("suffix_gender"));
+                if      (suffixGender.equals("masculine")) { suffixGender = "M"; }
+                else if (suffixGender.equals("feminine"))  { suffixGender = "F"; }
+                else if (suffixGender.equals("common"))    { suffixGender = "="; }
+
+                String suffixNumber = word.getFeatureAsString(
+                    word.getEMdFValueIndex("suffix_number"));
+                if      (suffixNumber.equals("singular")) { suffixNumber = "sg"; }
+                else if (suffixNumber.equals("plural"))   { suffixNumber = "pl"; }
+
+                String suffixPerson = word.getFeatureAsString(
+                    word.getEMdFValueIndex("suffix_person"));
+                if      (suffixPerson.equals("first_person"))  { suffixPerson = "1"; }
+                else if (suffixPerson.equals("second_person")) { suffixPerson = "2"; }
+                else if (suffixPerson.equals("third_person"))  { suffixPerson = "3"; }
+                
+                suffixGloss = suffixPerson + suffixGender + suffixNumber;
+            }
         }
         
         if (psp.equals("verb"))
@@ -159,7 +192,7 @@ public class HebrewMorphemeGenerator
             handler.convert("graphical_verbal_ending", false,
                 verbEnding, "V/PGN");
 
-            handler.convert("graphical_pron_suffix", true, "SUFF", "V/SFX");
+            handler.convert("graphical_pron_suffix", true, suffixGloss, "V/SFX");
         }
         else if (psp.equals("noun")
             || psp.equals("proper_noun"))
@@ -174,7 +207,7 @@ public class HebrewMorphemeGenerator
             handler.convert("graphical_lexeme", false, gloss, type);
             handler.convert("graphical_nominal_ending", false,
                 nounEnding, "MARK/N");
-            handler.convert("graphical_pron_suffix", true, "SUFF", "SFX/N");
+            handler.convert("graphical_pron_suffix", true, suffixGloss, "SFX/N");
         }
         else
         {
@@ -233,8 +266,15 @@ public class HebrewMorphemeGenerator
                 throw new IllegalArgumentException("Unknown " +
                     "part of speech: " + psp);
             }
+
+            boolean hasSuffix = !(suffixText.equals(""));
+            handler.convert("graphical_lexeme", !hasSuffix, type, type);
             
-            handler.convert("graphical_lexeme", true, type, type);
+            if (hasSuffix)
+            {
+                handler.convert("graphical_pron_suffix", true,
+                    suffixGloss, type + "/SFX");
+            }
         }   
 
     }

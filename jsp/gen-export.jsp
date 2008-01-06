@@ -36,7 +36,8 @@
             "            number, state, wordnet_gloss, lexeme, tense, stem, " +
             "            graphical_preformative, graphical_root_formation, " +
             "            graphical_lexeme, graphical_verbal_ending, " +
-            "            graphical_nominal_ending, graphical_pron_suffix]" +
+            "            graphical_nominal_ending, graphical_pron_suffix, " +
+		    "            suffix_person, suffix_number, suffix_gender] " +
             " ]"+
             "]"
         );
