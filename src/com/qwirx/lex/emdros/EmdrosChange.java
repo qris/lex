@@ -10,13 +10,18 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.Hashtable;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
-import java.util.Set;
-import java.util.TreeSet;
-import java.util.Vector;
 
+import jemdros.BadMonadsException;
+import jemdros.EmdrosException;
+import jemdros.FlatSheaf;
+import jemdros.FlatStrawConstIterator;
+import jemdros.MatchedObject;
+import jemdros.SetOfMonads;
 import jemdros.Table;
 import jemdros.TableException;
 import jemdros.TableIterator;
@@ -49,6 +54,11 @@ public final class EmdrosChange implements Change
             m_first = first;
             m_last  = last;
         }
+        public MonadSetEntry(int only)
+        {
+            m_first = only;
+            m_last  = only;
+        }
         public int first() { return m_first; }
         public int last()  { return m_last;  }
     }
@@ -60,8 +70,7 @@ public final class EmdrosChange implements Change
 	private Integer id;
 	private int [] objectIds;
 	private Connection logDb;
-    private Set    objectIdsToGetMonadsFrom = null;
-    private Set    monads = null;
+    private SetOfMonads monads = null;
     private static final Logger m_log = Logger.getLogger(EmdrosChange.class);
 	
 	public EmdrosChange(String username, String database, 
@@ -94,58 +103,40 @@ public final class EmdrosChange implements Change
     
 	public ChangeType getType() { return changeType; }
 	
-    public void setMonads(Set source)
+    public void setMonads(SetOfMonads source)
+    throws DatabaseException
     {
-        if (objectIdsToGetMonadsFrom != null)
+        if (objectIds != null)
         {
             throw new AssertionError("Cannot set monads directly " +
                     "and from objects");
         }
         
-        monads = new TreeSet(source);
+        if (!emdros.canWriteTo(source))
+        {
+            throw new DatabaseException("You do not have permission "+
+                "to modify this object", changeType + " " + objectType +
+                " " + objectIds);
+        }
+        
+        monads = new SetOfMonads(source);
     }
 
     public void setMonads(MonadSetEntry [] source)
+    throws BadMonadsException
     {
-        if (objectIdsToGetMonadsFrom != null)
+        if (objectIds != null)
         {
             throw new AssertionError("Cannot set monads directly " +
                     "and from objects");
         }
 
-        monads = new TreeSet();
+        monads = new SetOfMonads();
         
         for (int i = 0; i < source.length; i++)   
         {
             MonadSetEntry mse = source[i];
-            monads.add(mse);
-        }
-    }
-
-    public void setMonadsFromObjects(Set source)
-    {
-        if (monads != null)
-        {
-            throw new AssertionError("Cannot set monads directly " +
-                    "and from objects");
-        }
-        objectIdsToGetMonadsFrom = new TreeSet(source);
-    }
-
-    public void setMonadsFromObjects(int [] sources)
-    {
-        if (monads != null)
-        {
-            throw new AssertionError("Cannot set monads directly " +
-                    "and from objects");
-        }
-
-        objectIdsToGetMonadsFrom = new TreeSet();
-        
-        for (int i = 0; i < sources.length; i++)   
-        {
-            int ID_D = sources[i];
-            objectIdsToGetMonadsFrom.add(new Integer(ID_D));
+            monads.add(mse.first(), mse.last());
         }
     }
 
@@ -189,21 +180,26 @@ public final class EmdrosChange implements Change
 	}			
 
 	private void captureValues(boolean createRowChangeLogs, boolean storeAsNewValue) 
-	throws SQLException, DatabaseException, TableException
+	throws SQLException, DatabaseException, EmdrosException
     {
 		/*
 		System.out.println("Capturing values for "+type.toString()+" ("+
 				createRowChangeLogs+", "+storeAsNewValue+")");
 				*/
-		if (objectIds == null || objectIds.length == 0) {
+        
+        if (objectIds == null && monads == null)
+        {
+            throw new AssertionError("must have objectIds or monads");
+        }
+        
+		if (objectIds != null && objectIds.length == 0)
+        {
 			throw new AssertionError("objectIds must be a non-empty array");
 		}
 		
 		Table allFeatureNames = emdros.getTable(
 				"SELECT FEATURES FROM ["+objectType+"]");
-		Vector featureNames = new Vector();
-		
-		StringBuffer featureQuery = new StringBuffer("GET FEATURES ");
+		List<String> featureNames = new ArrayList<String>();
 		
 		for (TableIterator rows = allFeatureNames.iterator(); 
 			rows.hasNext(); ) 
@@ -212,40 +208,74 @@ public final class EmdrosChange implements Change
 			String   name     = row.getColumn(1);
 			String   computed = row.getColumn(4);
 			
-			if (computed.equals("true")) {
+			if (computed.equals("true"))
+            {
 				continue;
-			} else if (computed.equals("false")) {
-				if (featureNames.size() != 0) featureQuery.append(", ");
-				featureQuery.append(name);
+			}
+            else if (computed.equals("false"))
+            {
 				featureNames.add(name);
-			} else {
+			}
+            else
+            {
 				throw new AssertionError("feature computed column " +
 						"must be 'true' or 'false'");
 			}
 		}
 		
 		if (featureNames.size() == 0) return;
+
+        if (monads != null)
+        {
+            captureValuesByMonads(featureNames, createRowChangeLogs,
+                storeAsNewValue);
+        }
+        else
+        {
+            captureValuesByIds(featureNames, createRowChangeLogs,
+                storeAsNewValue);
+        }
+    }
+    
+    private void captureValuesByIds(List<String> features, 
+        boolean createRowChangeLogs, boolean storeAsNewValue)
+    throws DatabaseException, SQLException, TableException
+    {
+        StringBuffer fquery = new StringBuffer("GET FEATURES ");
+        
+        for (Iterator<String> i = features.iterator(); i.hasNext();)
+        {
+            fquery.append(i.next());
+            if (i.hasNext())
+            {
+                fquery.append(",");
+            }
+        }
+
+        fquery.append(" FROM OBJECTS WITH ID_DS = ");
 		
-		featureQuery.append(" FROM OBJECTS WITH ID_DS = ");
-		
-		for (int i = 0; i < objectIds.length; i++) {
+		for (int i = 0; i < objectIds.length; i++)
+        {
 			int id = objectIds[i];
-			featureQuery.append(id + "");
+            fquery.append(id + "");
 			if (i < objectIds.length - 1)
-				featureQuery.append(",");
+                fquery.append(",");
 		}
 		
-		featureQuery.append(" ["+objectType+"]");
+        fquery.append(" ["+objectType+"]");
 		
-		Table allFeatureValues = emdros.getTable(featureQuery.toString());
+		Table allFeatureValues = emdros.getTable(fquery.toString());
 		String destColName = storeAsNewValue ? "New_Value" :  "Old_Value";
 
         String cvsQuery;
-		if (createRowChangeLogs) {
+		if (createRowChangeLogs)
+        {
 			cvsQuery = 
 					"INSERT INTO changed_values SET "+destColName+" = ?, " +
 					"Row_ID = ?, Col_Name = ?";
-		} else {
+		}
+        else
+        {
 			cvsQuery = 
 					"UPDATE changed_values SET "+destColName+" = ? " +
 					"WHERE Row_ID = ? AND Col_Name = ?";
@@ -267,11 +297,11 @@ public final class EmdrosChange implements Change
 				logObjectEntryId = findObjectChangeLog(objectID_D);
 			}
 			
-			for (int i = 0; i < featureNames.size(); i++) 
+			for (int i = 0; i < features.size(); i++) 
             {
                 long startTime = System.currentTimeMillis();
                 
-				String featureName  = (String)( featureNames.elementAt(i) );
+				String featureName  = features.get(i);
 				String currentValue = row.getColumn(i + 2);
 				cvs.setString(1, currentValue);
 				cvs.setInt   (2, logObjectEntryId);
@@ -283,24 +313,100 @@ public final class EmdrosChange implements Change
                         currentValue+","+logObjectEntryId+","+featureName+")");
 			}
 
+            if (!createRowChangeLogs)
             {
-                long startTime = System.currentTimeMillis();
-
-                String query = "DELETE FROM changed_values " +
-                    "WHERE Row_ID = ? AND Old_Value = New_Value";                
-    			PreparedStatement stmt = prepareAndLogError(query);
-    			stmt.setInt(1, logObjectEntryId);
-    			stmt.executeUpdate();
-    			stmt.close();
-                
-                long totalTime = System.currentTimeMillis() - startTime;
-                m_log.info(totalTime+" ms to "+query+" ("+logObjectEntryId+")");
+                removeUnchangedLogEntries(logObjectEntryId);
             }
 		}
 
 		cvs.close();
 	}
-	
+
+    private void removeUnchangedLogEntries(int rowId)
+    throws SQLException
+    {
+        long startTime = System.currentTimeMillis();
+
+        String query = "DELETE FROM changed_values " +
+            "WHERE Row_ID = ? AND Old_Value = New_Value";                
+        PreparedStatement stmt = prepareAndLogError(query);
+        stmt.setInt(1, rowId);
+        stmt.executeUpdate();
+        stmt.close();
+        
+        long totalTime = System.currentTimeMillis() - startTime;
+        m_log.info(totalTime+" ms to "+query+" ("+rowId+")");
+    }
+    
+    private void captureValuesByMonads(List<String> features, 
+        boolean createRowChangeLogs, boolean storeAsNewValue)
+    throws DatabaseException, SQLException, EmdrosException
+    {
+        StringBuffer fquery = new StringBuffer("GET OBJECTS HAVING MONADS IN ");
+        fquery.append(monads.toString());
+        fquery.append("[").append(objectType).append(" GET ALL]");
+        
+        FlatSheaf sheaf = emdros.getFlatSheaf(fquery.toString());
+        String destColName = storeAsNewValue ? "New_Value" :  "Old_Value";
+
+        String cvsQuery;
+        if (createRowChangeLogs)
+        {
+            cvsQuery = 
+                    "INSERT INTO changed_values SET "+destColName+" = ?, " +
+                    "Row_ID = ?, Col_Name = ?";
+        }
+        else
+        {
+            cvsQuery = 
+                    "UPDATE changed_values SET "+destColName+" = ? " +
+                    "WHERE Row_ID = ? AND Col_Name = ?";
+        }
+
+        PreparedStatement cvs = prepareAndLogError(cvsQuery);
+
+        FlatStrawConstIterator fsci = 
+            sheaf.const_iterator().next().const_iterator();
+        
+        while (fsci.hasNext())
+        {
+            MatchedObject object = fsci.next();
+            int objectID_D = object.getID_D();
+            
+            int logObjectEntryId;
+            
+            if (createRowChangeLogs)
+            {
+                logObjectEntryId = insertObjectChangeLog(objectID_D);
+            }
+            else
+            { 
+                logObjectEntryId = findObjectChangeLog(objectID_D);
+            }
+            
+            for (int i = 0; i < features.size(); i++) 
+            {
+                long startTime = System.currentTimeMillis();
+                
+                String featureName  = features.get(i);
+                String currentValue = object.getFeatureAsString(
+                    object.getEMdFValueIndex(featureName));
+                cvs.setString(1, currentValue);
+                cvs.setInt   (2, logObjectEntryId);
+                cvs.setString(3, featureName);
+                cvs.executeUpdate();
+                
+                long totalTime = System.currentTimeMillis() - startTime;
+                m_log.info(totalTime+" ms to "+cvsQuery+" ("+
+                        currentValue+","+logObjectEntryId+","+featureName+")");
+            }
+
+            removeUnchangedLogEntries(logObjectEntryId);
+        }
+
+        cvs.close();
+    }
+
 	private PreparedStatement prepareAndLogError(String query) 
 	throws SQLException 
     {
@@ -330,7 +436,7 @@ public final class EmdrosChange implements Change
 	}
 	
 	private void captureOldValues() 
-	throws DatabaseException, SQLException, TableException
+	throws DatabaseException, SQLException, EmdrosException
     {
 		if (changeType != UPDATE && changeType != DELETE)
 			throw new AssertionError("this method can only be used "+
@@ -340,7 +446,7 @@ public final class EmdrosChange implements Change
 	}
 	
 	private void captureNewValues() 
-	throws SQLException, DatabaseException, TableException
+	throws SQLException, DatabaseException, EmdrosException
 	{
 		if (changeType != CREATE && changeType != UPDATE)
 			throw new AssertionError("this method can only be used "+
@@ -357,7 +463,7 @@ public final class EmdrosChange implements Change
     {
         long startTime = System.currentTimeMillis();
         
-		if (changeType != CREATE && objectIds.length == 0) 
+		if (changeType != CREATE && objectIds != null && objectIds.length == 0) 
         {
 			throw new AssertionError("objectIds must be a non-empty array");
 		}
@@ -395,70 +501,42 @@ public final class EmdrosChange implements Change
 			
 			if (changeType == CREATE) 
             {
-				sb.append("CREATE OBJECT ");
-
-                if (monads != null)
-                {
-                    sb.append("FROM MONADS = { ");
-                    
-                    for (Iterator i = monads.iterator(); 
-                        i.hasNext(); )
-                    {
-                        MonadSetEntry mse = (MonadSetEntry)( i.next() );
-                        sb.append(mse.first() + "-" + mse.last());
-                        if (i.hasNext())
-                        {
-                            sb.append(",");
-                        }
-                    }
-
-                    sb.append("}");
-                }
-                else if (objectIdsToGetMonadsFrom != null)
-                {
-                    sb.append("FROM ID_DS = ");
-                    
-                    for (Iterator i = objectIdsToGetMonadsFrom.iterator(); 
-                        i.hasNext(); )
-                    {
-                        Integer id = (Integer)( i.next() );
-                        sb.append(id.toString());
-                        if (i.hasNext())
-                        {
-                            sb.append(",");
-                        }
-                    }
-                }
-                else
-                {
-                    throw new IllegalStateException("You must first call "+
-                            "setMonads() or setMonadsFromObjects() to set "+
-                            "the monad range for the object to be created");
-                }                
+				sb.append("CREATE OBJECT FROM ");
 			} 
             else if (changeType == UPDATE) 
             {
-				sb.append("UPDATE OBJECT ");
+				sb.append("UPDATE OBJECT BY ");
             }
             else if (changeType == DELETE)
             {
-                sb.append("DELETE OBJECT ");
+                sb.append("DELETE OBJECT BY ");
             }
             else 
             {
                 throw new AssertionError("Unsupported change type "+changeType);
             }
             
-            if (changeType == UPDATE || changeType == DELETE)
+            if (monads != null)
             {
-                sb.append("BY ID_DS = ");
-				for (int i = 0; i < objectIds.length; i++) 
-                {
-					sb.append(objectIds[i]+"");
-					if (i < objectIds.length - 1)
-						sb.append(",");
-				}
+                sb.append("MONADS = ");
+                sb.append(monads.toString());
             }
+            else if (objectIds != null)
+            {
+                sb.append("ID_DS = ");
+                for (int i = 0; i < objectIds.length; i++) 
+                {
+                    sb.append(objectIds[i]+"");
+                    if (i < objectIds.length - 1)
+                        sb.append(",");
+                }
+            }
+            else
+            {
+                throw new IllegalStateException("You must pass object IDs " +
+                    "or call setMonads() to set the monad range for the " +
+                    "object to be created");
+            }                
 
             sb.append(" ["+objectType);
             
@@ -520,7 +598,7 @@ public final class EmdrosChange implements Change
 			throw new DatabaseException("Failed to insert new values into " +
 			    "change tracking tables", e, sb.toString());
 		}
-        catch (TableException e) 
+        catch (EmdrosException e) 
         {
             m_log.error(sb.toString(), e);
             throw new DatabaseException("Failed to execute query or to " +
