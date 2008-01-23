@@ -37,7 +37,7 @@ import com.qwirx.db.DatabaseException;
 public final class SqlChange implements Change
 {
 	private Type   type;
-	private Map    fields;
+	private Map<String, Object> fields;
 	private String username, database, table, conditions;
 	private Connection conn;
 	private Integer id;
@@ -54,7 +54,7 @@ public final class SqlChange implements Change
 		this.type       = type;
 		this.table      = table;
 		this.conditions = conditions;
-		this.fields     = new HashMap();
+		this.fields     = new HashMap<String, Object>();
 		this.conn       = conn;
 	}
 
@@ -206,7 +206,7 @@ public final class SqlChange implements Change
 	        }
 
 	        PreparedStatement cvs = prepareAndLogError(query);
-	        List changedRowIds = new ArrayList();
+	        List<Object> changedRowIds = new ArrayList<Object>();
 		
   			while (rs.next())
   			{
@@ -488,6 +488,10 @@ public final class SqlChange implements Change
                     {
                         stmt.setNull(++i, Types.VARCHAR);
                     }
+                    else
+                    {
+                    	stmt.setObject(++i, value);
+                    }
     			}
     		}
     		
@@ -527,6 +531,11 @@ public final class SqlChange implements Change
 	}
 
 	public void setString(String column, String value)
+	{
+		fields.put(column, value);
+	}
+
+	public void setObject(String column, Object value)
 	{
 		fields.put(column, value);
 	}
@@ -594,7 +603,7 @@ public final class SqlChange implements Change
 			
 			int oldRowId = -1;
 			ChangedRow cr = null;
-			List results = new ArrayList();
+			List<ChangedRow> results = new ArrayList<ChangedRow>();
 			
 			while (rs.next())
 			{
@@ -602,7 +611,7 @@ public final class SqlChange implements Change
 				
 				if (rowId != oldRowId)
 				{
-					cr = new ChangedRow();
+					cr = new ChangedRow(rs.getInt("Unique_ID"));
 					results.add(cr);
 					oldRowId = rowId;
 				}
@@ -624,22 +633,66 @@ public final class SqlChange implements Change
 	}
 	
 	/**
-	 * Returns a new SqlChange which, if executed, would undo the
-	 * changes made by this one. If the same SqlChange is executed
+	 * Returns a List of new SqlChanges which, if executed, would undo
+	 * the changes made by this one. If the same SqlChange is executed
 	 * multiple times, then the reverse change will undo only the
 	 * last one.
+	 * 
+	 * One SqlChange may require many to reverse it, as it may affect many
+	 * rows in different ways, for example replacing a number of different
+	 * values of a particular column with the same value, which cannot
+	 * easily be undone with a single SQL statement.
+	 * 
 	 * @return the reverse SqlChange
 	 * @throws UnsupportedOperationException if the change cannot be
 	 * reversed (because the code hasn't been written yet)
 	 */
-	public SqlChange reverse()
+	public SqlChange[] reverse() throws DatabaseException
 	{
 		if (type == SqlChange.INSERT)
 		{
-			return new SqlChange(username, database, SqlChange.DELETE,
-					table, conditions, conn);
+			return new SqlChange[]{
+				new SqlChange(username, database, SqlChange.DELETE,
+						table, conditions, conn)
+			};
 		}
-		
+		else if (type == SqlChange.UPDATE || type == SqlChange.DELETE)
+		{
+			List changedRows = getChangedRows();
+			List<SqlChange> reverseChanges = new ArrayList<SqlChange>();
+			
+			for (Iterator i = changedRows.iterator(); i.hasNext();)
+			{
+				ChangedRow cr = (ChangedRow)i.next();
+				SqlChange rev = null;
+				
+				if (type == SqlChange.UPDATE)
+				{
+					rev = new SqlChange(username, database, SqlChange.UPDATE,
+						table, "ID = " + cr.getUniqueID(), conn);
+				}
+				else if (type == SqlChange.DELETE)
+				{
+					rev = new SqlChange(username, database, SqlChange.INSERT,
+							table, null, conn);
+				}
+
+				for (Iterator j = cr.iterator(); j.hasNext();)
+				{
+					ChangedValue cv = (ChangedValue)j.next();
+					rev.setObject(cv.getName(), cv.getOldValue());
+				}
+				
+				reverseChanges.add(rev);
+			}
+			
+			SqlChange [] revs = new SqlChange [reverseChanges.size()];
+			return (SqlChange[])reverseChanges.toArray(revs);
+		}
+		else if (type == SqlChange.DELETE)
+		{
+			
+		}
 		throw new UnsupportedOperationException(type + 
 				" cannot be reversed yet");	
 	}

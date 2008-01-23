@@ -21,12 +21,19 @@ import java.util.Map;
  */
 public class ChangedRow
 {
-	private Map m_Values = new Hashtable();
+	private int m_UniqueID;
+	private Map<String, ChangedValue> m_Values = 
+		new Hashtable<String, ChangedValue>();
 
-    public ChangedRow() { }
-
-    public ChangedRow(ChangedValue[] values)
+    public ChangedRow(int uniqueID)
     {
+    	m_UniqueID = uniqueID;
+    }
+
+    public ChangedRow(int uniqueID, ChangedValue[] values)
+    {
+    	this(uniqueID);
+    	
         for (int i = 0; i < values.length; i++)
         {
             m_Values.put(values[i].getName(), values[i]);
@@ -35,41 +42,63 @@ public class ChangedRow
 
     public ChangedRow(ChangedRow other)
     {
-        m_Values = new Hashtable(other.m_Values);
+    	this(other.m_UniqueID);
+        m_Values = new Hashtable<String, ChangedValue>(other.m_Values);
     }
+    
+    public int getUniqueID() { return m_UniqueID; }
 
-	public void put(ChangedValue change) {
+	/*
+	public ChangedRow(Integer ID, Integer uniqueID, Integer logID)
+	{
+		m_ID = ID;
+		m_UniqueID = uniqueID;
+		m_LogID = logID;
+	}
+	*/
+	
+	public void put(ChangedValue change) 
+	{
 		m_Values.put(change.getName(), change);
 	}
 	
-	public ChangedValue get(String columnName) {
+	public ChangedValue get(String columnName)
+	{
 		return (ChangedValue)( m_Values.get(columnName) );
 	}
     
-    public List getColumns()
+    public List<String> getColumns()
     {
-        return new ArrayList(m_Values.keySet());
+        return new ArrayList<String>(m_Values.keySet());
     }
     
-    public List getValues()
+    public List<ChangedValue> getValues()
     {
-        return new ArrayList(m_Values.values());
+        return new ArrayList<ChangedValue>(m_Values.values());
     }
 	
 	public Iterator iterator() {
 		return m_Values.values().iterator();
 	}
 	
-	public void remove(String columnName) {
+	public void remove(String columnName)
+	{
 		m_Values.remove(columnName);
 	}
 	
-	public ChangedRow reverse() {
-		ChangedRow reverse = new ChangedRow();
+	public ChangedRow reverse()
+	{
+		ChangedRow reverse = new ChangedRow(m_UniqueID);
 		for (Iterator i = iterator(); i.hasNext(); ) {
 			ChangedValue orig = (ChangedValue)( i.next() );
 			reverse.put(orig.reverse());
 		}
 		return reverse;
 	}
+	
+	public String toString()
+	{
+		return m_Values.values().toString();
+	}
+
 }

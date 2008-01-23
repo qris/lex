@@ -81,6 +81,22 @@ public class SqlDatabaseTest extends TestCase
 
 	public void tearDown() throws Exception 
 	{
+		db.prepareSelect("SELECT * FROM logtest");
+		ResultSet rs = db.select();
+		
+		if (rs.next())
+		{
+			assertEquals("1", rs.getString("ID"));
+			assertEquals("1234", rs.getString("t_int"));
+			assertEquals("Hello World", rs.getString("t_str"));
+			assertEquals("A somewhat longer string", rs.getString("t_txt"));
+			assertEquals("3.14", rs.getString("t_flt"));
+			assertEquals("1979-01-07", rs.getString("t_dat"));
+			assertEquals("1979-01-07 06:35:00.0", rs.getString("t_dtm"));
+			assertEquals("0000-00-00", db.getString("t_dat2"));
+			assertFalse(rs.next());
+		}
+		
 		db.executeDirect("DROP TABLE logtest");
 	}
 	
@@ -228,17 +244,23 @@ public class SqlDatabaseTest extends TestCase
 			String valB = rowB.get(colName).getOldValue();
 			if (valA != null && valB == null)
 			{
-				assertEquals(colName, valA, "null");
+				assertEquals(colName + " old value", valA, "null");
 			}
-			assertEquals(colName, valA, valB);
+			else
+			{
+				assertEquals(colName + " old value", valA, valB);
+			}
 
 			valA = rowA.get(colName).getNewValue();
 			valB = rowB.get(colName).getNewValue();
 			if (valA != null && valB == null)
 			{
-				assertEquals(colName, valA, "null");
+				assertEquals(colName + " new value", valA, "null");
 			}
-			assertEquals(colName, valA, valB);
+			else
+			{
+				assertEquals(colName + " new value", valA, valB);
+			}
 			
 			fieldsA.remove(colName);
 		}
@@ -265,7 +287,7 @@ public class SqlDatabaseTest extends TestCase
 		}
 		db.finish();
 		
-		ChangedRow expectedRowChange = new ChangedRow(new ChangedValue[]{
+		ChangedRow expectedRowChange = new ChangedRow(1, new ChangedValue[]{
 			new ChangedValue("ID",     null, "1"),
 			new ChangedValue("t_int",  null, "1234"),
 			new ChangedValue("t_str",  null, "Hello World"),
@@ -284,15 +306,16 @@ public class SqlDatabaseTest extends TestCase
 		expectedRowChange = (ChangedRow)rows.get(0);
 		assertChangeLogUpdated(rowLogId, expectedRowChange);
 		
-		SqlChange delete = insert.reverse();
-		assertEquals(SqlChange.DELETE, delete.getType());
-		assertEquals("ID = 1", delete.getConditions());
-		delete.execute();
-		rows = delete.getChangedRows();
+		SqlChange[] delete = insert.reverse();
+		assertEquals(1, delete.length);
+		assertEquals(SqlChange.DELETE, delete[0].getType());
+		assertEquals("ID = 1", delete[0].getConditions());
+		delete[0].execute();
+		rows = delete[0].getChangedRows();
 		assertEquals(1, rows.size());
 		ChangedRow actualReverseRowChange = (ChangedRow)rows.get(0);
 		
-		ChangedRow expectedReverseRowChange = new ChangedRow(
+		ChangedRow expectedReverseRowChange = new ChangedRow(1,
 				new ChangedValue[]{
 			new ChangedValue("ID",     "1", null),
 			new ChangedValue("t_int",  "1234", null),
@@ -313,8 +336,8 @@ public class SqlDatabaseTest extends TestCase
 		SqlChange testInsert = insertTestRecord();
 		int testId = testInsert.getInsertedRowId();
 
-		Change testUpdate = db.createChange(SqlChange.UPDATE, 
-				"logtest", "t_int = 1234");
+		SqlChange testUpdate = (SqlChange)db.createChange(
+				SqlChange.UPDATE, "logtest", "t_int = 1234");
 		testUpdate.setInt   ("t_int", 23456);
 		testUpdate.setString("t_str", "Hello Again");
 		testUpdate.setString("t_txt", "Another longer string");
@@ -349,7 +372,7 @@ public class SqlDatabaseTest extends TestCase
 		assertFalse("too many rows added to changed_rows table", rs.next());
 		db.finish();
 
-		ChangedRow expectedRowChange = new ChangedRow();
+		ChangedRow expectedRowChange = new ChangedRow(testId);
 		expectedRowChange.put(new ChangedValue("t_int", 
 				"1234",                     
 				"23456"));
@@ -367,24 +390,51 @@ public class SqlDatabaseTest extends TestCase
 
 		assertCurrentValues("SELECT * FROM logtest", expectedRowChange);
 		assertChangeLogUpdated(rowLogId, expectedRowChange);
+
+		SqlChange[] testReverse = testUpdate.reverse();
+		assertEquals(1, testReverse.length);
+		assertEquals(SqlChange.UPDATE, testReverse[0].getType());
+		assertEquals("ID = " + testId, testReverse[0].getConditions());
+		testReverse[0].execute();
+		List changedRows = testReverse[0].getChangedRows();
+		assertEquals(1, changedRows.size());
+		ChangedRow actualReverseRowChange = (ChangedRow)changedRows.get(0);
+		
+		ChangedRow expectedReverseRowChange = new ChangedRow(
+			testId,
+			new ChangedValue[]{
+				new ChangedValue("t_int", "23456", "1234"),
+				new ChangedValue("t_str", "Hello Again", "Hello World"),
+				new ChangedValue("t_txt", 
+					"Another longer string",
+					"A somewhat longer string"),
+		        new ChangedValue("t_flt", "2.82", "3.14"),
+				new ChangedValue("t_dat", "1980-10-15", "1979-01-07"),
+				new ChangedValue("t_dtm", 
+					"1980-10-15 12:34:56.0", "1979-01-07 06:35:00.0"),
+		});
+		assertEquals(expectedReverseRowChange, expectedRowChange.reverse());
+        assertEquals(expectedReverseRowChange, actualReverseRowChange);
+        assertEquals(1, db.getSingleInteger("SELECT COUNT(1) FROM logtest"));
 	}
 
 	public void testDelete() throws Exception
 	{
-		insertTestRecord();
+		SqlChange insert = insertTestRecord();
+		int uniqueId = insert.getInsertedRowId();
 
-		Change ch = db.createChange(SqlChange.DELETE, 
+		SqlChange delete = (SqlChange)db.createChange(SqlChange.DELETE, 
 				"logtest", null);
-		ch.execute();
+		delete.execute();
 		
-		getChangeTypeAndId(ch.getId().intValue());
+		getChangeTypeAndId(delete.getId().intValue());
 		assertEquals("DELETE", changeType);
 
 		PreparedStatement stmt = db.prepareSelect(
 				"SELECT ID FROM changed_rows " +
 				"WHERE Log_ID = ? AND Unique_ID = ?");
 		stmt.setInt(1, logRecordId);
-		stmt.setInt(2, 1); // unique ID of only row in "logtest" table.
+		stmt.setInt(2, uniqueId);
 		ResultSet rs = db.select();
 		
 		int rowLogId;
@@ -406,7 +456,7 @@ public class SqlDatabaseTest extends TestCase
 		}
 		db.finish();
 
-		ChangedRow cr = new ChangedRow();
+		ChangedRow cr = new ChangedRow(1);
 		cr.put(new ChangedValue("ID",     "1",	                      null));
 		cr.put(new ChangedValue("t_int",  "1234",	                  null));
 		cr.put(new ChangedValue("t_str",  "Hello World",              null));
@@ -422,13 +472,22 @@ public class SqlDatabaseTest extends TestCase
 		db.finish();
 		
 		assertChangeLogUpdated(rowLogId, cr);
+		
+		SqlChange [] reinsert = delete.reverse();
+		for (int i = 0; i < reinsert.length; i++)
+		{
+			reinsert[i].execute();
+		}
+
+		assertEquals(1, db.getSingleInteger("SELECT COUNT(1) FROM logtest"));
 	}
 
 	public void testUpdateWhichChangesFoundSet() throws Exception
 	{
-	    insertTestRecord();
+	    SqlChange ch = insertTestRecord();
+	    int uniqueId = ch.getInsertedRowId();
 
-	    Change ch = db.createChange(SqlChange.UPDATE, 
+	    ch = (SqlChange)db.createChange(SqlChange.UPDATE, 
 	        "logtest", null);
 	    ch.setInt   ("t_int", 23456);
 	    ch.setString("t_str", "Hello Again");
@@ -440,12 +499,13 @@ public class SqlDatabaseTest extends TestCase
 
 	    getChangeTypeAndId(ch.getId().intValue());
 	    assertEquals("UPDATE", changeType);
+	    assertEquals("ID = " + uniqueId, ch.getConditions());
 
 	    PreparedStatement stmt = db.prepareSelect(
 	        "SELECT ID FROM changed_rows " +
-	    "WHERE Log_ID = ? AND Unique_ID = ?");
+	    	"WHERE Log_ID = ? AND Unique_ID = ?");
 	    stmt.setInt(1, logRecordId);
-	    stmt.setInt(2, 1); // unique ID of only row in "logtest" table.
+	    stmt.setInt(2, uniqueId); // unique ID of only row in "logtest" table.
 	    ResultSet rs = db.select();
 
 	    int rowLogId;
@@ -464,24 +524,25 @@ public class SqlDatabaseTest extends TestCase
 	    assertFalse("too many rows added to changed_rows table", rs.next());
 	    db.finish();
 
-	    ChangedRow cr = new ChangedRow();
-	    cr.put(new ChangedValue("t_int", 
-	        "1234",                     
-	    "23456"));
-	    cr.put(new ChangedValue("t_str", 
-	        "Hello World",
-	    "Hello Again"));
+	    ChangedRow cr = new ChangedRow(uniqueId);
+	    cr.put(new ChangedValue("t_int", "1234", "23456"));
+	    cr.put(new ChangedValue("t_str", "Hello World", "Hello Again"));
 	    cr.put(new ChangedValue("t_txt", 
 	        "A somewhat longer string",
-	    "Another longer string"));
+	    	"Another longer string"));
 	    cr.put(new ChangedValue("t_flt", "3.14", "2.82"));
-	    cr.put(new ChangedValue("t_dat", 
-	        "1979-01-07", "1980-10-15"));
+	    cr.put(new ChangedValue("t_dat", "1979-01-07", "1980-10-15"));
 	    cr.put(new ChangedValue("t_dtm", 
 	        "1979-01-07 06:35:00.0", "1980-10-15 12:34:56.0"));
 
 	    assertCurrentValues("SELECT * FROM logtest", cr);
 	    assertChangeLogUpdated(rowLogId, cr);
+	    
+	    SqlChange [] chs = ch.reverse();
+	    for (int i = 0; i < chs.length; i++)
+	    {
+	    	chs[i].execute();
+	    }
 	}
 	
 	public void testConnectorCannotReadZeroDateAsString() throws Exception
