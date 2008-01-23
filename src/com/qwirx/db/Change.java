@@ -14,4 +14,5 @@ public interface Change
 	public void setConstant(String column, String value);
 	public Integer getId();
 	public ChangeType getType();
+	public Object getConditions();
 }
