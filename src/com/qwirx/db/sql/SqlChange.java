@@ -58,6 +58,19 @@ public final class SqlChange implements Change
 		this.conn       = conn;
 	}
 
+	public static SqlChange load(int id, Connection conn, String username)
+	throws SQLException
+	{
+		PreparedStatement stmt = conn.prepareStatement("SELECT " +
+			"DB_Name, Cmd_Type, Table_Name FROM change_log " +
+			"WHERE id = " + id);
+		ResultSet rs = stmt.executeQuery();
+		return new SqlChange(username,
+			rs.getString(1),
+			lookup(rs.getString(2)), 
+			rs.getString(3), null, conn);
+	}
+	
 	final static class Type implements ChangeType
 	{
 		private String name;
@@ -76,6 +89,24 @@ public final class SqlChange implements Change
 		INSERT = new Type("INSERT"),
 		UPDATE = new Type("UPDATE"),
 		DELETE = new Type("DELETE");
+	
+	public static final Type lookup(String typeName)
+	{
+		if (typeName.equals("INSERT"))
+		{
+			return INSERT;
+		}
+		if (typeName.equals("UPDATE"))
+		{
+			return UPDATE;
+		}
+		if (typeName.equals("DELETE"))
+		{
+			return DELETE;
+		}
+		
+		throw new IllegalArgumentException("Unknown change type " + typeName);
+	}
 	
 	public ChangeType getType() { return type; }
 	
@@ -255,12 +286,20 @@ public final class SqlChange implements Change
   			        cvs.executeUpdate();
   			    }
 
-  			    stmt = prepareAndLogError("DELETE FROM changed_values " +
-  			        "WHERE Row_ID = ? AND ((Old_Value = New_Value) OR " +
-  			        "(Old_Value IS NULL AND New_Value IS NULL))");
-
-  			    stmt.setInt(1, logRowEntryId);
-  			    stmt.executeUpdate();
+  			    // It's never safe to delete row logs when storing old values,
+  			    // as either it's an UPDATE (where we don't yet know what the
+  			    // new values will be, and we need the rows to exist) or a 
+  			    // DELETE (where we want to know the original value, even
+  			    // if it's NULL).
+  			    
+  			    if (storeAsNewValue)
+  			    {
+	  			    stmt = prepareAndLogError("DELETE FROM changed_values " +
+	  			        "WHERE Row_ID = ? AND ((Old_Value = New_Value) OR " +
+	  			        "(Old_Value IS NULL AND New_Value IS NULL))");
+	  			    stmt.setInt(1, logRowEntryId);
+	  			    stmt.executeUpdate();
+  			    }
   			}
 
   			cvs.close();

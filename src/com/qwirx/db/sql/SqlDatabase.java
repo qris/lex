@@ -191,6 +191,18 @@ public class SqlDatabase implements Database
 			(SqlChange.Type)type, table, (String)conditions, m_Connection);
 	}
 	
+	public SqlChange loadChange(int id) throws DatabaseException
+	{
+		try
+		{
+			return SqlChange.load(id, m_Connection, username);
+		}
+		catch (SQLException e)
+		{
+			throw new DatabaseException("Failed to reload SqlChange record", e);
+		}
+	}
+	
 	public void close() throws SQLException
 	{
 		m_Connection.close();

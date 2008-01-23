@@ -89,7 +89,8 @@ public class ChangedRow
 	public ChangedRow reverse()
 	{
 		ChangedRow reverse = new ChangedRow(m_UniqueID);
-		for (Iterator i = iterator(); i.hasNext(); ) {
+		for (Iterator i = iterator(); i.hasNext(); ) 
+		{
 			ChangedValue orig = (ChangedValue)( i.next() );
 			reverse.put(orig.reverse());
 		}
