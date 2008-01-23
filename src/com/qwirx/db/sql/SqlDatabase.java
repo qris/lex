@@ -441,4 +441,22 @@ public class SqlDatabase implements Database
         
         return value;
     }
+    
+    public Object getObject(String colName) throws SQLException
+    {
+    	try
+    	{
+    		return rs.getObject(colName);
+        }
+        catch (SQLException e)
+        {
+            if (e.getMessage().equals("Value '0000-00-00' " +
+                "can not be represented as java.sql.Date"))
+            {
+                return "0000-00-00";
+            }
+           
+            throw e;
+        }
+    }
 }
