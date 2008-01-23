@@ -12,10 +12,12 @@ package com.qwirx.db;
  * TODO To change the template for this generated type comment go to
  * Window - Preferences - Java - Code Style - Code Templates
  */
-public class ChangedValue {
+public class ChangedValue 
+{
 	private String name, oldValue, newValue;
 	
-	public ChangedValue(String columnName, String oldValue, String newValue) {
+	public ChangedValue(String columnName, String oldValue, String newValue)
+	{
 		this.name     = columnName;
 		this.oldValue = oldValue;
 		this.newValue = newValue;
@@ -27,5 +29,10 @@ public class ChangedValue {
 	
 	public ChangedValue reverse() {
 		return new ChangedValue(name, newValue, oldValue);
+	}
+	
+	public String toString()
+	{
+		return name + " {" + oldValue + " => " + newValue + "}";
 	}
 }
