@@ -643,4 +643,14 @@ public final class EmdrosChange implements Change
         }
 		return objectIds[0];
 	}
+	
+	/**
+	 * Returns the array of object IDs to which this change was applied.
+	 */
+	public Object getConditions()
+	{
+		int [] result = new int [objectIds.length];
+		System.arraycopy(objectIds, 0, result, 0, objectIds.length);
+		return result;
+	}
 }
