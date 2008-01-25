@@ -65,10 +65,18 @@ public final class SqlChange implements Change
 			"DB_Name, Cmd_Type, Table_Name FROM change_log " +
 			"WHERE id = " + id);
 		ResultSet rs = stmt.executeQuery();
-		return new SqlChange(username,
-			rs.getString(1),
-			lookup(rs.getString(2)), 
-			rs.getString(3), null, conn);
+		if (!rs.next())
+		{
+			throw new IllegalArgumentException("No such changelog entry: " + 
+				id);
+		}
+		String databaseName = rs.getString(1);
+		String commandType  = rs.getString(2);
+		String tableName    = rs.getString(3);
+		SqlChange ch = new SqlChange(username, databaseName,
+			lookup(commandType), tableName, null, conn);
+		ch.id = id;
+		return ch;
 	}
 	
 	final static class Type implements ChangeType
@@ -688,14 +696,9 @@ public final class SqlChange implements Change
 	 */
 	public SqlChange[] reverse() throws DatabaseException
 	{
-		if (type == SqlChange.INSERT)
-		{
-			return new SqlChange[]{
-				new SqlChange(username, database, SqlChange.DELETE,
-						table, conditions, conn)
-			};
-		}
-		else if (type == SqlChange.UPDATE || type == SqlChange.DELETE)
+		if (type == SqlChange.INSERT || 
+			type == SqlChange.UPDATE || 
+			type == SqlChange.DELETE)
 		{
 			List changedRows = getChangedRows();
 			List<SqlChange> reverseChanges = new ArrayList<SqlChange>();
@@ -705,7 +708,12 @@ public final class SqlChange implements Change
 				ChangedRow cr = (ChangedRow)i.next();
 				SqlChange rev = null;
 				
-				if (type == SqlChange.UPDATE)
+				if (type == SqlChange.INSERT)
+				{
+					rev = new SqlChange(username, database, SqlChange.DELETE,
+						table, "ID = " + cr.getUniqueID(), conn);
+				}
+				else if (type == SqlChange.UPDATE)
 				{
 					rev = new SqlChange(username, database, SqlChange.UPDATE,
 						table, "ID = " + cr.getUniqueID(), conn);
@@ -716,10 +724,13 @@ public final class SqlChange implements Change
 							table, null, conn);
 				}
 
-				for (Iterator j = cr.iterator(); j.hasNext();)
+				if (rev.getType() != SqlChange.DELETE)
 				{
-					ChangedValue cv = (ChangedValue)j.next();
-					rev.setObject(cv.getName(), cv.getOldValue());
+					for (Iterator j = cr.iterator(); j.hasNext();)
+					{
+						ChangedValue cv = (ChangedValue)j.next();
+						rev.setObject(cv.getName(), cv.getOldValue());
+					}
 				}
 				
 				reverseChanges.add(rev);
@@ -734,5 +745,18 @@ public final class SqlChange implements Change
 		}
 		throw new UnsupportedOperationException(type + 
 				" cannot be reversed yet");	
+	}
+	
+	/**
+	 * Executes the reverse SqlChanges to undo the effects of executing()
+	 * this change.
+	 */
+	public void undo() throws DatabaseException
+	{
+		SqlChange [] revs = reverse();
+		for (int i = 0; i < revs.length; i++)
+		{
+			revs[i].execute();
+		}
 	}
 }
