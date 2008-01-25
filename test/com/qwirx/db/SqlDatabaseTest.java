@@ -73,30 +73,33 @@ public class SqlDatabaseTest extends TestCase
 				"t_str varchar(40)," +
 				"t_txt mediumtext," + 
 				"t_flt decimal(10,2)," + // not supported by JDBC?
-				"t_dat date, "+
-				"t_dtm datetime, "+
-                "t_dat2 DATE NOT NULL"+
+				"t_dat date, " +
+				"t_dtm datetime, " +
+                "t_dat2 DATE NOT NULL, " +
+                "t_txt2 varchar(40)" +
 				")");
 	}		
-
-	public void tearDown() throws Exception 
+	
+	public void assertOldValues() throws Exception
 	{
 		db.prepareSelect("SELECT * FROM logtest");
 		ResultSet rs = db.select();
 		
-		if (rs.next())
-		{
-			assertEquals("1", rs.getString("ID"));
-			assertEquals("1234", rs.getString("t_int"));
-			assertEquals("Hello World", rs.getString("t_str"));
-			assertEquals("A somewhat longer string", rs.getString("t_txt"));
-			assertEquals("3.14", rs.getString("t_flt"));
-			assertEquals("1979-01-07", rs.getString("t_dat"));
-			assertEquals("1979-01-07 06:35:00.0", rs.getString("t_dtm"));
-			assertEquals("0000-00-00", db.getString("t_dat2"));
-			assertFalse(rs.next());
-		}
-		
+		assertTrue(rs.next());
+		assertEquals("1", rs.getString("ID"));
+		assertEquals("1234", rs.getString("t_int"));
+		assertEquals("Hello World", rs.getString("t_str"));
+		assertEquals("A somewhat longer string", rs.getString("t_txt"));
+		assertEquals("3.14", rs.getString("t_flt"));
+		assertEquals("1979-01-07", rs.getString("t_dat"));
+		assertEquals("1979-01-07 06:35:00.0", rs.getString("t_dtm"));
+		assertEquals("0000-00-00", db.getString("t_dat2"));
+		assertFalse(rs.next());
+	}
+	
+	public void tearDown() throws Exception
+	{
+		db.finish();
 		db.executeDirect("DROP TABLE logtest");
 	}
 	
@@ -233,15 +236,17 @@ public class SqlDatabaseTest extends TestCase
 		return ch;
 	}
 	
-	private void assertEquals(ChangedRow rowA, ChangedRow rowB)
+	private void assertEquals(ChangedRow expected, ChangedRow actual)
 	{
-		List fieldsA = rowA.getColumns();
+		List fieldsA = expected.getValues();
 		
-		for (Iterator i = rowB.getColumns().iterator(); i.hasNext();)
+		for (Iterator i = actual.getColumns().iterator(); i.hasNext();)
 		{
 			String colName = (String)i.next();
-			String valA = rowA.get(colName).getOldValue();
-			String valB = rowB.get(colName).getOldValue();
+			assertNotNull(colName + " should have an expected value", 
+				expected.get(colName));
+			String valA = expected.get(colName).getOldValue();
+			String valB = actual.get(colName).getOldValue();
 			if (valA != null && valB == null)
 			{
 				assertEquals(colName + " old value", valA, "null");
@@ -251,8 +256,8 @@ public class SqlDatabaseTest extends TestCase
 				assertEquals(colName + " old value", valA, valB);
 			}
 
-			valA = rowA.get(colName).getNewValue();
-			valB = rowB.get(colName).getNewValue();
+			valA = expected.get(colName).getNewValue();
+			valB = actual.get(colName).getNewValue();
 			if (valA != null && valB == null)
 			{
 				assertEquals(colName + " new value", valA, "null");
@@ -262,7 +267,7 @@ public class SqlDatabaseTest extends TestCase
 				assertEquals(colName + " new value", valA, valB);
 			}
 			
-			fieldsA.remove(colName);
+			fieldsA.remove(expected.get(colName));
 		}
 		
 		assertEquals(fieldsA.toString(), 0, fieldsA.size());
@@ -327,10 +332,25 @@ public class SqlDatabaseTest extends TestCase
 	        new ChangedValue("t_dat2", "0000-00-00", null),
 		});
 		assertEquals(expectedReverseRowChange, expectedRowChange.reverse());
-        assertEquals(expectedReverseRowChange, actualReverseRowChange);
+		expectedReverseRowChange.put(new ChangedValue("t_txt2", null, null));
+		assertEquals(expectedReverseRowChange, actualReverseRowChange);
         assertEquals(0, db.getSingleInteger("SELECT COUNT(1) FROM logtest"));
 	}
-	
+
+	public void testInsert2() throws Exception 
+	{
+		SqlChange insert1 = insertTestRecord();
+		SqlChange insert2 = insertTestRecord();
+		SqlChange insert3 = insertTestRecord();
+		assertEquals(3, db.getSingleInteger("SELECT COUNT(1) FROM logtest"));
+		db.loadChange(insert3.getId()).undo();
+		assertEquals(2, db.getSingleInteger("SELECT COUNT(1) FROM logtest"));
+		insert1.undo();
+		assertEquals(1, db.getSingleInteger("SELECT COUNT(1) FROM logtest"));
+		insert2.undo();
+		assertEquals(0, db.getSingleInteger("SELECT COUNT(1) FROM logtest"));
+	}
+
 	public void testUpdate() throws Exception
 	{
 		SqlChange testInsert = insertTestRecord();
@@ -344,6 +364,7 @@ public class SqlDatabaseTest extends TestCase
 		testUpdate.setString("t_flt", "2.81718"); // will be truncated
 		testUpdate.setString("t_dat", "1980-10-15"); // happy birthday
 		testUpdate.setString("t_dtm", "1980-10-15 12:34:56.0");
+		testUpdate.setString("t_txt2", "This value was null");
 		testUpdate.execute();
 		
 		getChangeTypeAndId(testUpdate.getId().intValue());
@@ -387,6 +408,8 @@ public class SqlDatabaseTest extends TestCase
 				"1979-01-07", "1980-10-15"));
 		expectedRowChange.put(new ChangedValue("t_dtm", 
 				"1979-01-07 06:35:00.0", "1980-10-15 12:34:56.0"));
+		expectedRowChange.put(new ChangedValue("t_txt2",
+				null, "This value was null"));
 
 		assertCurrentValues("SELECT * FROM logtest", expectedRowChange);
 		assertChangeLogUpdated(rowLogId, expectedRowChange);
@@ -412,10 +435,12 @@ public class SqlDatabaseTest extends TestCase
 				new ChangedValue("t_dat", "1980-10-15", "1979-01-07"),
 				new ChangedValue("t_dtm", 
 					"1980-10-15 12:34:56.0", "1979-01-07 06:35:00.0"),
+				new ChangedValue("t_txt2", "This value was null", null),
 		});
 		assertEquals(expectedReverseRowChange, expectedRowChange.reverse());
         assertEquals(expectedReverseRowChange, actualReverseRowChange);
         assertEquals(1, db.getSingleInteger("SELECT COUNT(1) FROM logtest"));
+        assertOldValues();
 	}
 
 	public void testDelete() throws Exception
@@ -465,6 +490,7 @@ public class SqlDatabaseTest extends TestCase
 		cr.put(new ChangedValue("t_dat",  "1979-01-07",               null));
 		cr.put(new ChangedValue("t_dtm",  "1979-01-07 06:35:00.0",    null));
         cr.put(new ChangedValue("t_dat2", "0000-00-00",               null));
+        cr.put(new ChangedValue("t_txt2", null,                       null));
 
 		stmt = db.prepareSelect("SELECT * FROM logtest");
 		rs = stmt.executeQuery();
@@ -480,6 +506,7 @@ public class SqlDatabaseTest extends TestCase
 		}
 
 		assertEquals(1, db.getSingleInteger("SELECT COUNT(1) FROM logtest"));
+		assertOldValues();
 	}
 
 	public void testUpdateWhichChangesFoundSet() throws Exception
