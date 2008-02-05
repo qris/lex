@@ -22,7 +22,6 @@ public class DatabaseException extends Exception
     public DatabaseException(String message, Exception original, String query) 
     {
         super(message, original);
-        LOG.error(message, original);
 
         if (original != null)
         {
@@ -30,6 +29,8 @@ public class DatabaseException extends Exception
         }
 
         this.query = query;
+
+        LOG.error(toString(), original);
     }
 
     public DatabaseException(String message, Exception original) 
