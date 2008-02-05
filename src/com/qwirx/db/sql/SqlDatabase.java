@@ -112,6 +112,23 @@ public class SqlDatabase implements Database
 		}
 	}
 
+	public PreparedStatement prepareSelectIndependent(String sql) 
+	throws DatabaseException 
+    {
+		PreparedStatement istmt;
+		
+		try 
+        {
+			istmt = m_Connection.prepareStatement(sql);
+		} 
+        catch (SQLException e) 
+        {
+			throw new DatabaseException("Failed to prepare query", e, sql);
+		}
+		
+		return istmt;
+	}
+
 	public PreparedStatement prepareSelect(String sql) 
 	throws DatabaseException 
     {
