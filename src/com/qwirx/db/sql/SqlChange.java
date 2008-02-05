@@ -553,7 +553,8 @@ public final class SqlChange implements Change
                 "and values", e, sb.toString());
         }
 
-		if (type == INSERT || type == UPDATE) {
+		if (type == INSERT || type == UPDATE)
+		{
 			captureNewValues();
 		}
 		
