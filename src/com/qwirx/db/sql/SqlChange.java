@@ -44,6 +44,7 @@ public final class SqlChange implements Change
 	private int    insertedRowId = -1;
     private static final Logger m_LOG = Logger.getLogger(SqlChange.class);
     private String m_PrimaryKeyField = "ID";
+    private String changeQuery = null;
 	
 	public SqlChange(String username, String database, 
 			Type type, String table, String conditions,
@@ -205,13 +206,14 @@ public final class SqlChange implements Change
 		    if (storeAsNewValue)
 		    {
 	            throw new DatabaseException("Failed to capture new values " +
-                    "of rows. You may not have an ID column in the table.", e);
+                    "of rows. You may not have an ID column in the table.", e,
+                    sb.toString());
 		    }
 		    else
 		    {
     		    throw new DatabaseException("Failed to capture old values " +
     		    		"of rows. You may have an error in your conditions: " +
-    		    		conditions, e);
+    		    		conditions, e, sb.toString());
 		    }
 		}
 
@@ -330,7 +332,16 @@ public final class SqlChange implements Change
   			    }
   			}
   			
-  			this.conditions = newConditions.toString();
+  			String newCond = newConditions.toString();
+  			if (newCond.length() > 0)
+  			{
+  				this.conditions = newCond;
+  			}
+  			else if (type != SqlChange.DELETE)
+  			{
+  				throw new DatabaseException("No records created or updated", 
+  					changeQuery);
+  			}
         }
         catch (SQLException e)
         {
@@ -390,22 +401,29 @@ public final class SqlChange implements Change
 		
 		if (type == INSERT)
 		{
-		    try
-		    {
-    			PreparedStatement stmt = prepareAndLogError(
-    					"SELECT LAST_INSERT_ID()");
-    			ResultSet rs = executeQueryAndLogError(stmt);
-    			rs.next();
-    			insertedRowId = rs.getInt(1);
-    			rs.close();
-    			stmt.close();
-		    }
-		    catch (SQLException e)
-		    {
-		        throw new DatabaseException("Failed to get the ID " +
-		        		"of the last inserted row", e);
-		    }
-		    
+			if (fields.containsKey("ID"))
+			{
+				insertedRowId = Integer.parseInt(fields.get("ID").toString());
+			}
+			else
+			{
+			    try
+			    {
+	    			PreparedStatement stmt = prepareAndLogError(
+	    					"SELECT LAST_INSERT_ID()");
+	    			ResultSet rs = executeQueryAndLogError(stmt);
+	    			rs.next();
+	    			insertedRowId = rs.getInt(1);
+	    			rs.close();
+	    			stmt.close();
+			    }
+			    catch (SQLException e)
+			    {
+			        throw new DatabaseException("Failed to get the ID " +
+			        		"of the last inserted row", e);
+			    }
+			}
+			
 			conditions = m_PrimaryKeyField + " = " + insertedRowId;
 
 			captureValues(true, true);
@@ -517,7 +535,8 @@ public final class SqlChange implements Change
 		
         try
         {
-    		PreparedStatement stmt = prepareAndLogError(sb.toString());
+        	changeQuery = sb.toString();
+    		PreparedStatement stmt = prepareAndLogError(changeQuery);
     			
     		if (type == INSERT || type == UPDATE)
     		{
@@ -548,6 +567,7 @@ public final class SqlChange implements Change
         }
         catch (SQLException e) 
         {
+        	changeQuery = null;
             throw new DatabaseException("Failed to execute " +
                 "the requested operation. Please check your field names " +
                 "and values", e, sb.toString());
@@ -557,7 +577,9 @@ public final class SqlChange implements Change
 		{
 			captureNewValues();
 		}
-		
+
+    	changeQuery = null;
+
         try
         {
     		conn.commit();
