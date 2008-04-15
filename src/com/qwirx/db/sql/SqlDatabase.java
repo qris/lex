@@ -488,4 +488,69 @@ public class SqlDatabase implements Database
             throw e;
         }
     }
+    
+    /**
+     * Ugly hack replacement for ResultSet.getString() because
+     * getString() doesn't work for 0000-00-00 values, and 
+     * noDatetimeStringSync=true returns empty string instead of
+     * 0000-00-00 contrary to the docs. 
+     * @param columnNum
+     * @return
+     * @throws SQLException
+     */
+    public static Object getObject(int columnNum,
+    		ResultSet rs)
+    throws SQLException
+    {
+    	// FIXME date 0000-00-00 in a MySQL database causes
+    	// an exception when we call getString() on it
+
+    	try
+    	{
+    		return rs.getObject(columnNum);
+    	}
+    	catch (SQLException e)
+    	{
+    		if (e.getMessage().equals("Value '0000-00-00' " +
+    		"can not be represented as java.sql.Date"))
+    		{
+    			return "0000-00-00";
+    		}
+
+    		throw e;
+    	}
+    }
+
+    /**
+     * Ugly hack replacement for ResultSet.getString() because
+     * getString() doesn't work for 0000-00-00 values, and 
+     * noDatetimeStringSync=true returns empty string instead of
+     * 0000-00-00 contrary to the docs. 
+     * @param columnName
+     * @param rs
+     * @return
+     * @throws SQLException
+     */
+    public static Object getObject(String columnName,
+    		ResultSet rs)
+    throws SQLException
+    {
+    	// FIXME date 0000-00-00 in a MySQL database causes
+    	// an exception when we call getString() on it
+
+    	try
+    	{
+    		return rs.getObject(columnName);
+    	}
+    	catch (SQLException e)
+    	{
+    		if (e.getMessage().equals("Value '0000-00-00' " +
+    		"can not be represented as java.sql.Date"))
+    		{
+    			return "0000-00-00";
+    		}
+
+    		throw e;
+    	}
+    }
 }
