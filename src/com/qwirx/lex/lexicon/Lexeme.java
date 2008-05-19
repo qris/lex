@@ -260,33 +260,41 @@ public class Lexeme implements Comparable
     }
 
     private static Lexeme load(SqlDatabase sqldb, ResultSet rs) 
-    throws SQLException
+    throws DatabaseException
     {
-        Lexeme l = new Lexeme(sqldb);
-        
-        l.id       = rs.getInt("ID");
-        l.surface  = rs.getString("Lexeme");
-        l.m_Gloss    = rs.getString("Gloss");
-        l.label    = rs.getString("Domain_Label");
-        l.desc     = rs.getString("Domain_Desc");
-        l.parentId = rs.getInt("Domain_Parent_ID");
-        l.numSyntacticArgs = rs.getInt("Syntactic_Args");
-
-        l.setCaused         (rs.getInt("Caused")           == 1);
-        l.setPunctual       (rs.getInt("Punctual")         == 1);
-        l.setHasResultState (rs.getInt("Has_Result_State") == 1);
-        l.setTelic          (rs.getInt("Telic")            == 1);
-        l.setDynamic        (rs.getInt("Dynamic")          == 1);
-        l.setHasEndpoint    (rs.getInt("Has_Endpoint")     == 1);
-
-        l.setPredicate      (rs.getString("Predicate"));
-        l.setResultPredicate(rs.getString("Result_Predicate"));
-        l.setResultPredicateArg(rs.getString("Result_Predicate_Arg"));
-        
-        l.setThematicRelation(ThematicRelation.get(
-            rs.getString("Thematic_Relation")));
-        
-        return l;
+        try
+        {
+            Lexeme l = new Lexeme(sqldb);
+            
+            l.id       = rs.getInt("ID");
+            l.surface  = rs.getString("Lexeme");
+            l.m_Gloss    = rs.getString("Gloss");
+            l.label    = rs.getString("Domain_Label");
+            l.desc     = rs.getString("Domain_Desc");
+            l.parentId = rs.getInt("Domain_Parent_ID");
+            l.numSyntacticArgs = rs.getInt("Syntactic_Args");
+    
+            l.setCaused         (rs.getInt("Caused")           == 1);
+            l.setPunctual       (rs.getInt("Punctual")         == 1);
+            l.setHasResultState (rs.getInt("Has_Result_State") == 1);
+            l.setTelic          (rs.getInt("Telic")            == 1);
+            l.setDynamic        (rs.getInt("Dynamic")          == 1);
+            l.setHasEndpoint    (rs.getInt("Has_Endpoint")     == 1);
+    
+            l.setPredicate      (rs.getString("Predicate"));
+            l.setResultPredicate(rs.getString("Result_Predicate"));
+            l.setResultPredicateArg(rs.getString("Result_Predicate_Arg"));
+            
+            l.setThematicRelation(ThematicRelation.get(
+                rs.getString("Thematic_Relation")));
+            
+            return l;
+        }
+        catch (SQLException e)
+        {
+            throw new DatabaseException("Failed to load lexeme from ResultSet",
+                e);
+        }
     }
     
     private static String getColumnList() 
@@ -299,7 +307,7 @@ public class Lexeme implements Comparable
     }
 
     public static Lexeme load(SqlDatabase sqldb, int id)
-    throws DatabaseException, SQLException
+    throws DatabaseException
     {
         Lexeme result = null;
         
@@ -318,6 +326,10 @@ public class Lexeme implements Comparable
             
             result = load(sqldb, rs);
         } 
+        catch (SQLException e)
+        {
+            throw new DatabaseException("Failed to load lexeme", e);
+        }
         finally 
         {
             sqldb.finish();
