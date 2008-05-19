@@ -234,12 +234,12 @@ public class SearchTest extends TestCase
         
         i.assertStart("h1");
         i.assertText("Lex");
-        i.assertStart("font", 
+        i.assertStart("span", 
             new Attributes().style("font-size: medium"));
         i.assertText("by");
         i.assertSimple("a", "Chris Wilson", 
             new Attributes().href("http://www.qwirx.com"));
-        i.assertEnd("font");
+        i.assertEnd("span");
         i.assertEnd("h1");
         
         i.assertStart("h2");
@@ -269,6 +269,8 @@ public class SearchTest extends TestCase
         i.assertSimple("a", "Database Dump", 
             new Attributes().clazz("dump_jsp").href("dump.jsp"));
         */
+        i.assertSimple("a", "Wordnet", 
+            new Attributes().clazz("wordnet_jsp").href("wordnet.jsp"));
         i.assertSimple("a", "Login", 
             new Attributes().clazz("login_jsp").href("login.jsp?next=search.jsp"));
         i.assertEmpty("div", new Attributes().clazz("clearer"));
@@ -277,12 +279,27 @@ public class SearchTest extends TestCase
         i.assertEmpty("script", new Attributes().type("text/javascript"));
         
         i.assertStart("form", new Attributes().method("GET").clazz("bigborder"));
-        i.assertSimple("p", "Search for Hebrew word by root " +
-                "(surface consonants):");
+        i.assertSimple("p", "Simple search (enter surface consonants " +
+                "for a Hebrew word):");
         i.assertStart("p");
         i.assertEmpty("input", new Attributes().name("q"));
         i.assertEmpty("input", new Attributes().type("submit").value("Search"));
         i.assertEnd("p");
+        
+        i.assertEmpty("hr");
+        
+        i.assertSimple("p", "Advanced search (enter an MQL query to nest " +
+            "within [clause]):"); 
+        i.assertStart("p");
+        i.assertEmpty("input", new Attributes().name("aq").add("size", "40"));
+        i.assertSubmit("advanced", "Search");
+        i.assertEnd("p");
+        
+        i.assertEmpty("hr");
+        
+        i.assertStart("div", 
+            new Attributes().add("id", "simple_adv_div").clazz("advanced"));
+        
         i.assertStart("p");
         i.assertEmpty("input", new Attributes().type("checkbox")
             .name("limit_loc").value("1")
@@ -319,23 +336,32 @@ public class SearchTest extends TestCase
         
         i.assertStart("tr");
         i.assertSimple("th", "Hebrew");
-        for (int j = 0; j < hebrew.length(); j++)
+        for (int j = 0; j < latin.length(); j++)
         {
-            String c = hebrew.substring(j, j + 1);
-            i.assertSimple("td", c);
+            String c = latin.substring(j, j + 1);
+            String h = HebrewConverter.toHebrew(c);
+            i.assertSimple("td", h, new Attributes().clazz("hebrew"));
         }
         i.assertEnd("tr");
 
         i.assertStart("tr");
         i.assertSimple("th", "Transliteration");
-        for (int j = 0; j < trans.length(); j++)
+        for (int j = 0; j < latin.length(); j++)
         {
-            String c = trans.substring(j, j + 1);
-            i.assertSimple("td", c);
+            String c = latin.substring(j, j + 1);
+            String h = HebrewConverter.toTranslit(c);
+            i.assertSimple("td", h);
         }
         i.assertEnd("tr");
 
         i.assertEnd("table");
+        i.assertEnd("div", new Attributes().clazz("advanced"));
+        
+        i.assertStart("div");
+        i.assertInput("simple_adv_btn", "Advanced Options ")
+            .assertAttribute("type", "button")
+            .assertAttribute("onclick", "toggle(this, 'simple_adv_div')");
+        i.assertEnd("div");
         i.assertEnd("form");
         
         i.assertEmpty("script", new Attributes().type("text/javascript"));
@@ -345,7 +371,7 @@ public class SearchTest extends TestCase
         i.assertText("&copy;");
         i.assertSimple("a", "Lex Project", 
             new Attributes().href("http://rrg.qwirx.com/trac/lex"));
-        i.assertText("2005-2007.");
+        i.assertText("2005-2008.");
         i.assertEnd("p");
         i.assertEnd("body");
         i.assertEnd("html");

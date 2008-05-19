@@ -143,15 +143,12 @@ function toggle(button, divid)
 		Three Latin consonants are expected, in upper or lower case,
 		from the set:
 	</p>
-	<%
-		String latin  = ">BGDHWZXVJKLMNS<PYQRFCT";
-		String hebrew = HebrewConverter.toHebrew(latin);
-		String trans  = HebrewConverter.toTranslit(latin);
-	%>
 	<table class="grid">
 		<tr>
 			<th>Consonants</th>
 			<%
+				String latin  = ">BGDHWZXVJKLMNS<PYQRFCT";
+				
 				for (int i = 0; i < latin.length()	; i++)
 				{
 					String c = latin.substring(i, i + 1).replaceAll("<", "&lt;");
@@ -164,11 +161,12 @@ function toggle(button, divid)
 		<tr>
 			<th>Hebrew</th>
 			<%
-				for (int i = 0; i < hebrew.length(); i++)
+				for (int i = 0; i < latin.length()	; i++)
 				{
-					String c = hebrew.substring(i, i + 1);
+					String c = latin.substring(i, i + 1);
+					String h = HebrewConverter.toHebrew(c);
 					%>
-					<td class="hebrew"><%= c %></td>
+					<td class="hebrew"><%= h %></td>
 					<%
 				}
 			%>
@@ -176,11 +174,12 @@ function toggle(button, divid)
 		<tr>
 			<th>Transliteration</th>
 			<%
-				for (int i = 0; i < trans.length(); i++)
+				for (int i = 0; i < latin.length()	; i++)
 				{
-					String c = trans.substring(i, i + 1);
+					String c = latin.substring(i, i + 1);
+					String h = HebrewConverter.toTranslit(c);
 					%>
-					<td><%= c %></td>
+					<td><%= h %></td>
 					<%
 				}
 			%>
