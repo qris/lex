@@ -209,6 +209,11 @@ public class HebrewMorphemeGenerator
                 nounEnding, "MARK/N");
             handler.convert("graphical_pron_suffix", true, suffixGloss, "SFX/N");
         }
+        else if (psp.equals("none"))
+        {
+            // hack for LexemeTest
+            handler.convert("lexeme", true, "none", "none");
+        }
         else
         {
             String type;
