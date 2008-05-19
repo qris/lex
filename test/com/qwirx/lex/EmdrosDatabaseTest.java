@@ -252,8 +252,7 @@ public class EmdrosDatabaseTest extends TestCase
 		}
 	}
 	
-	private int applyChanges(int objectID_D, String objectType, 
-			ChangedRow cr, boolean byMonads) 
+	private int applyChanges(String objectType, ChangedRow cr, boolean byMonads) 
 	throws DatabaseException
     {
 		EmdrosChange ch;
@@ -263,12 +262,12 @@ public class EmdrosDatabaseTest extends TestCase
             ch = (EmdrosChange)emdros.createChange(EmdrosChange.UPDATE,
                 objectType, null);
             ch.setMonads(emdros.getObjectMonads(objectType, 
-                new int[]{objectID_D}));
+                new int[]{cr.getUniqueID()}));
         }
         else
         {
             ch = (EmdrosChange)emdros.createChange(EmdrosChange.UPDATE,
-				objectType, new int[]{objectID_D});
+				objectType, new int[]{cr.getUniqueID()});
         }
         
 		for (Iterator i = cr.iterator(); i.hasNext(); )
@@ -309,7 +308,7 @@ public class EmdrosDatabaseTest extends TestCase
 
         try
         {
-    		ChangedRow forward = new ChangedRow();
+    		ChangedRow forward = new ChangedRow(testPhraseId);
     		forward.put(new ChangedValueString("argument_name", "x", "foobar"));
     		forward.put(new ChangedValue("determination", "determined", "indetermined"));
     		forward.put(new ChangedValue("phrase_function", "PreC", "Time"));
@@ -318,30 +317,30 @@ public class EmdrosDatabaseTest extends TestCase
     		forward.put(new ChangedValue("phrase_type", "NP", "VP"));
     		ChangedRow reverse = forward.reverse();
     		
-    		applyChanges(testPhraseId, "phrase", reverse, false);
+    		applyChanges("phrase", reverse, false);
     		
     		// check current values of reversed change, before making changes,
     		// to ensure that the values now are the same as the ones we will
     		// replace later by reversing the change.
     		assertCurrentValues    (testPhraseId, "phrase", reverse);
     		
-    		int fid = applyChanges(testPhraseId, "phrase", forward, false);
+    		int fid = applyChanges("phrase", forward, false);
     		assertCurrentValues   (testPhraseId, "phrase", forward);
     		int flr = getFirstChangedRowLogId(fid);
     		assertChanges (flr, forward);
     		
-    		int rid = applyChanges(testPhraseId, "phrase", reverse, false);
+    		int rid = applyChanges("phrase", reverse, false);
     		assertCurrentValues   (testPhraseId, "phrase", reverse);
     		int rlr = getFirstChangedRowLogId(rid);
     		assertChanges (rlr, reverse);
     
             // now do the same using update by monads
-            fid = applyChanges (testPhraseId, "phrase", forward, true);
+            fid = applyChanges ("phrase", forward, true);
             assertCurrentValues(testPhraseId, "phrase", forward);
             flr = getFirstChangedRowLogId(fid);
             assertChanges (flr, forward);
             
-            rid = applyChanges (testPhraseId, "phrase", reverse, true);
+            rid = applyChanges ("phrase", reverse, true);
             assertCurrentValues(testPhraseId, "phrase", reverse);
             rlr = getFirstChangedRowLogId(rid);
             assertChanges (rlr, reverse);
