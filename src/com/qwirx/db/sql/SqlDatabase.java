@@ -457,7 +457,7 @@ public class SqlDatabase implements Database
             throw e;
         }
     }
-    
+	
     public String getStringNotNull(String colName, String defaultValue)
     throws SQLException
     {
@@ -470,12 +470,15 @@ public class SqlDatabase implements Database
         
         return value;
     }
-    
-    public Object getObject(String colName) throws SQLException
+	
+    public Object getObject(String columnName) throws SQLException
     {
-    	try
-    	{
-    		return rs.getObject(colName);
+        // FIXME date 0000-00-00 in a MySQL database causes
+        // an exception when we call getString() on it
+        
+        try
+        {
+            return rs.getObject(columnName);
         }
         catch (SQLException e)
         {
@@ -488,7 +491,7 @@ public class SqlDatabase implements Database
             throw e;
         }
     }
-    
+	
     /**
      * Ugly hack replacement for ResultSet.getString() because
      * getString() doesn't work for 0000-00-00 values, and 
