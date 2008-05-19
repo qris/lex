@@ -405,40 +405,53 @@ public class EmdrosDatabase implements Database
                 "["+objectType+"]");
         }
     }
-
+    
     public SetOfMonads getVisibleMonads()
-    throws SQLException, EmdrosException
+    throws DatabaseException
     {
-        PreparedStatement stmt = m_LogDatabase.prepareStatement
-        (
-            "SELECT Monad_First, Monad_Last " +
-            "FROM   user_text_access " +
-            "WHERE  (User_Name = ? OR User_Name = 'anonymous')"
-        );
-        stmt.setString(1, username);
-        
         SetOfMonads result = new SetOfMonads();
         
-        ResultSet rs = stmt.executeQuery();
-        boolean haveMonads = false;
-        
-        while (rs.next()) 
+        try
         {
-            haveMonads = true;
-            int first = rs.getInt(1);
-            int last  = rs.getInt(2);
-            result.add(first, last);
+            PreparedStatement stmt = m_LogDatabase.prepareStatement
+            (
+                "SELECT Monad_First, Monad_Last " +
+                "FROM   user_text_access " +
+                "WHERE  (User_Name = ? OR User_Name = 'anonymous')"
+            );
+            stmt.setString(1, username);
+            
+            ResultSet rs = stmt.executeQuery();
+            boolean haveMonads = false;
+            
+            while (rs.next()) 
+            {
+                haveMonads = true;
+                int first = rs.getInt(1);
+                int last  = rs.getInt(2);
+                result.add(first, last);
+            }
+            
+            stmt.close();
+            rs.close();
+        
+            if (!haveMonads)
+            {
+                return null;
+            }
+            
+            return result;
         }
-        
-        stmt.close();
-        rs.close();
-        
-        if (!haveMonads)
+        catch (SQLException e)
         {
-            return null;
+            throw new DatabaseException("Failed to get monad " +
+                    "access control data", e);
         }
-        
-        return result;
+        catch (BadMonadsException e)
+        {
+            throw new DatabaseException("Failed to get monad " +
+                "access control: invalid data in access table", e);
+        }
     }
 
     public boolean canWriteTo(MatchedObject object)
