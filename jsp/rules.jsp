@@ -51,7 +51,8 @@
     sql.prepareSelect
     	("SELECT ID,Symbol,Lexeme FROM lexicon_entries " +
          "WHERE Symbol IS NOT NULL " +
-         "AND   Lexeme IS NOT NULL");
+         "AND   Lexeme IS NOT NULL " +
+         "ORDER BY Symbol, Lexeme");
          
     ResultSet rs = sql.select();
     
