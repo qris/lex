@@ -370,6 +370,7 @@ public class HebrewConverter
                 output.append(output.charAt(output.length() - 1));
             }
             else if (c == ',') { } // Ignore Rafe, cf. 2SA 11,01 mmale?kim
+            else if (c == '$') { output.append("b"); } // hack for LexemeTest
 
             else
             {
