@@ -138,6 +138,11 @@ public class WordEdge extends EdgeBase
         this.m_Position == w.m_Position;
     }
     
+    public boolean uses(Rule rule)
+    {
+        return false;
+    }
+    
     public String getHtmlLabel()
     {
         return surface;

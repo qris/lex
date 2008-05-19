@@ -89,10 +89,18 @@ public class Parser
                     System.out.println("boo");
                 }
 				*/
+                
+                // Don't re-use a rule that's already been used
+                // somewhere in this edge. That could lead to
+                // infinite recursion and should not be necessary.
 
                 Rule rule = rules[r];
-                List newEdges = rule.applyTo(chart, i);
-                inputCopy.addAll(i + 1, newEdges);
+
+                if (!inputEdge.uses(rule))
+                {
+                    List newEdges = rule.applyTo(chart, i);
+                    inputCopy.addAll(i + 1, newEdges);
+                }                
 			}
 		}
 

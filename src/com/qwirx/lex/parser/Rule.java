@@ -687,7 +687,7 @@ public class Rule
         m_PartBindingLists[partIndex].remove(edge);
     }
 
-    private void continueParseWithNextPart(List newEdges)
+    private void continueParseWithNextPart(List<Edge> newEdges)
     {
         boolean foundUnfinishedPart = false;
         
@@ -718,8 +718,8 @@ public class Rule
         // base case: we end up here when all parts have been used,
         // and we should be ready to create a new edge.
         
-        // don't create new edges which don't contain any other edges:
-        // we could keep doing that forever.
+        // don't create new edges which don't contain any other edges
+        // (all parts optional and skipped): we could keep doing that forever.
         
         int numEdges = 0;
         

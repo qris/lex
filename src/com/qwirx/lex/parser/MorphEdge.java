@@ -145,6 +145,11 @@ public class MorphEdge extends EdgeBase
             this.m_Position == m.m_Position;
     }
     
+    public boolean uses(Rule rule)
+    {
+        return false;
+    }
+    
     public String getHtmlLabel()
     {
         return m_Symbol.replaceAll("/(.*)", "<sub>$1</sub>");

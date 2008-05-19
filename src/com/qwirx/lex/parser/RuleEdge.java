@@ -458,7 +458,26 @@ public class RuleEdge extends EdgeBase implements Cloneable
         
         return false;
     }
+
+    public boolean uses(Rule rule)
+    {
+        if (this.rule == rule)
+        {
+            return true;
+        }
+        
+        for (int i = 0; i < parts.length; i++)
+        {
+            if (parts[i].uses(rule))
+            {
+                return true;
+            }
+        }
+        
+        return false;
+    }
     
+
     public void getLeavesInto(List leaves)
     {
         for (int i = 0; i < parts.length; i++)

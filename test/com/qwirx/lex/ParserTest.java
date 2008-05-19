@@ -2005,6 +2005,34 @@ public class ParserTest extends TestCase
         
     }
 
+    public void testInfiniteLoop() throws Exception 
+    {
+        Rule[] rules = new Rule[]{
+                Rule.makeFromString2(1, "C", "{B}"),
+                Rule.makeFromString2(2, "B", "x"),
+                Rule.makeFromString2(3, "B", "{A}"),
+                Rule.makeFromString2(4, "A", "{B}"),
+        };
+        
+        Parser p = new Parser(rules);
+        p.setVerbose(true);
+
+        List results = p.parseFor("x", "C");
+        assertEquals(2, results.size());
+
+        Edge C = (Edge)(results.get(1));
+        assertEquals("C", C.symbol());
+        assertEquals("B", C.part(0).symbol());
+        assertEquals("x", C.part(0).part(0).symbol());
+
+        C = (Edge)(results.get(0));
+        assertEquals("C", C.symbol());
+        assertEquals("B", C.part(0).symbol());
+        assertEquals("A", C.part(0).part(0).symbol());
+        assertEquals("B", C.part(0).part(0).part(0).symbol());
+        assertEquals("x", C.part(0).part(0).part(0).part(0).symbol());
+    }
+
 	public static void main(String[] args) 
     {
 		junit.textui.TestRunner.run(ParserTest.class);

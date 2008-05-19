@@ -40,6 +40,7 @@ public interface Edge
     
     boolean isAt(int pos);
     boolean includes(Edge other);
+    boolean uses(Rule rule);
     TreeNode toTree();
     String getHtmlLabel();
     
