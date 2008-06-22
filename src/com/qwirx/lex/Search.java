@@ -13,6 +13,7 @@ import jemdros.FlatSheafConstIterator;
 import jemdros.FlatStraw;
 import jemdros.FlatStrawConstIterator;
 import jemdros.MatchedObject;
+import jemdros.MonadSetElement;
 import jemdros.SetOfMonads;
 import jemdros.Sheaf;
 import jemdros.SheafConstIterator;
@@ -91,65 +92,117 @@ public class Search
     {    
         HebrewMorphemeGenerator generator = 
             new HebrewMorphemeGenerator();
+
+        SetOfMonads visible = m_Emdros.getVisibleMonads();
         
+        // First pass to find matching clauses
         Sheaf sheaf = m_Emdros.getSheaf
         (
-            "SELECT ALL OBJECTS IN " +
-            m_Emdros.getVisibleMonads().toString() + " " +
-            "WHERE [verse GET book, chapter, verse, verse_label " +
-            "       [clause " + query + " ]]"
+            "SELECT ALL OBJECTS IN " + visible.toString() + " " +
+            "WHERE [clause " + query + " ]"
         );
         
-        List<ResultBase> resultBases = new ArrayList<ResultBase>();
-        SetOfMonads powerSet = new SetOfMonads();
-        SetOfMonads matchSet = new SetOfMonads();
         SheafConstIterator sci = sheaf.const_iterator();
-        
+        SetOfMonads clauseMonads = new SetOfMonads();
+        List<ResultBase> resultBases = new ArrayList<ResultBase>();
+        SetOfMonads matchSet = new SetOfMonads();
         Map<Integer,ResultBase> clauseIdToBase =
             new HashMap<Integer,ResultBase>();
-        
-        m_ResultCount = 0;
         
         while (sci.hasNext())
         {
             Straw straw = sci.next();
-            MatchedObject verse = straw.const_iterator().next();
-            
-            SheafConstIterator clause_iter =
-                verse.getSheaf().const_iterator();
-                
-            while (clause_iter.hasNext())
-            {
-                MatchedObject clause =
-                    clause_iter.next().const_iterator().next();
+            MatchedObject clause = straw.const_iterator().next();
 
-                m_ResultCount++;
-                if (m_ResultCount > m_MaxResults) continue; // just count them
-                
-                ResultBase base = new ResultBase();
-                base.monads = clause.getMonads();
-                base.location = verse.getFeatureAsString(
-                    verse.getEMdFValueIndex("verse_label"));
-                base.url = "clause.jsp?book=" + 
-                    m_Emdros.getEnumConstNameFromValue("book_name_e",
-                        verse.getEMdFValue("book").getInt()) +
-                    "&amp;chapter=" + verse.getEMdFValue("chapter") +
-                    "&amp;verse="   + verse.getEMdFValue("verse") +
-                    "&amp;clause="  + clause.getID_D();
-                base.clause = clause;
-                resultBases.add(base);
-                powerSet.unionWith(base.monads);
-                addToMonadSet(clause.getSheaf(), matchSet);
-                
-                clauseIdToBase.put(new Integer(clause.getID_D()), base);
-            }
+            m_ResultCount++;
+            if (m_ResultCount > m_MaxResults) continue; // just count them
+
+            ResultBase base = new ResultBase();
+            base.monads = clause.getMonads();
+            base.clause = clause;
+            resultBases.add(base);
+            
+            clauseIdToBase.put(new Integer(clause.getID_D()), base);
+            clauseMonads.unionWith(base.monads);
+            addToMonadSet(clause.getSheaf(), matchSet);
         }
-        
+
         List<SearchResult> results = new ArrayList<SearchResult>();
 
-        if (powerSet.isEmpty())
+        if (clauseMonads.isEmpty())
         {
             return results;
+        }
+
+        // now retrieve the verses
+        
+        Table table = m_Emdros.getTable("SELECT OBJECTS " +
+            "HAVING MONADS IN " + clauseMonads + " [verse]");
+        StringBuffer verseIdList = new StringBuffer();
+        
+        for (TableIterator ti = table.iterator(); ti.hasNext();)
+        {
+            TableRow tr = ti.next();
+            
+            verseIdList.append(tr.getColumn(3));
+
+            if (ti.hasNext())
+            {
+                verseIdList.append(",");
+            }
+        }
+
+        StringBuffer verseMonadsQuery = new StringBuffer("GET MONADS " +
+            "FROM OBJECTS WITH ID_DS = ");
+        verseMonadsQuery.append(verseIdList);
+        verseMonadsQuery.append(" [verse]");
+        
+        table = m_Emdros.getTable(verseMonadsQuery.toString());
+        Map<Integer,SetOfMonads> verseIdToMonadsMap =
+            new HashMap<Integer,SetOfMonads>();
+        
+        for (TableIterator ti = table.iterator(); ti.hasNext();)
+        {
+            TableRow tr = ti.next();
+            int ID_D = Integer.parseInt(tr.getColumn(1));
+            
+            SetOfMonads som = verseIdToMonadsMap.get(new Integer(ID_D));
+            if (som == null)
+            {
+                som = new SetOfMonads();
+                verseIdToMonadsMap.put(new Integer(ID_D), som);
+            }
+            
+            som.add(Integer.parseInt(tr.getColumn(2)),
+                Integer.parseInt(tr.getColumn(3)));
+        }
+
+        StringBuffer verseFeaturesQuery = new StringBuffer("GET FEATURES " +
+            "book, chapter, verse, verse_label FROM OBJECTS WITH ID_DS = ");
+        verseFeaturesQuery.append(verseIdList);
+        verseFeaturesQuery.append(" [verse]");
+        
+        table = m_Emdros.getTable(verseFeaturesQuery.toString());
+
+        for (TableIterator ti = table.iterator(); ti.hasNext();)
+        {
+            TableRow tr = ti.next();
+            int ID_D = Integer.parseInt(tr.getColumn(1));
+            SetOfMonads monads = verseIdToMonadsMap.get(new Integer(ID_D));
+            
+            // TODO fix horribly slow algorithm
+            for (Iterator<ResultBase> i = resultBases.iterator(); i.hasNext();)
+            {
+                ResultBase base = i.next();
+                if (base.monads.part_of(monads))
+                {
+                    base.location = tr.getColumn(5);
+                    base.url = "clause.jsp?book=" + tr.getColumn(2) +
+                        "&amp;chapter=" + tr.getColumn(3) +
+                        "&amp;verse="   + tr.getColumn(4) +
+                        "&amp;clause="  + base.clause.getID_D();
+                }
+            }
         }
         
         {
@@ -165,7 +218,7 @@ public class Search
                 }
             }
             mql += " [clause]";
-            Table table = m_Emdros.getTable(mql);
+            table = m_Emdros.getTable(mql);
             for (TableIterator ti = table.iterator(); ti.hasNext();)
             {
                 TableRow tr = ti.next();
@@ -177,7 +230,7 @@ public class Search
 
         FlatSheaf flat = m_Emdros.getFlatSheaf(
             "GET OBJECTS HAVING MONADS IN " +
-            powerSet.toString() + 
+            clauseMonads.toString() + 
             "[word GET " +
             " lexeme, " +
             " phrase_dependent_part_of_speech, " +
