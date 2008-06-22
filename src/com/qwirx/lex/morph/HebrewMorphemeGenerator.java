@@ -164,7 +164,7 @@ public class HebrewMorphemeGenerator
             {
                 tense = word.getFeatureAsString(word.getEMdFValueIndex("tense"));
                 if      (tense.equals("imperfect"))  { tense = "IMPF"; }
-                else if (tense.equals("perfect"))    { tense = "PRFV"; }
+                else if (tense.equals("perfect"))    { tense = "PERF"; }
                 else if (tense.equals("imperative")) { tense = "IMP"; }
                 else if (tense.equals("infinitive_construct")) { tense = "INF"; }
                 else if (tense.equals("infinitive_absolute"))  { tense = "EMPH"; }
