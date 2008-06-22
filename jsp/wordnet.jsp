@@ -117,7 +117,8 @@
 		"                    graphical_root_formation, " +
 		"                    graphical_nominal_ending, " +
 		"                    person, number, gender, state, " +
-		"                    surface_consonants " +
+		"                    surface_consonants, " +
+		"                    suffix_gender, suffix_number, suffix_person " +
 		"          ]"+
 		"        ]"+
 		"      ]"
@@ -1370,9 +1371,8 @@
 			
 			EmdrosChange ch = (EmdrosChange)(
 				emdros.createChange(EmdrosChange.CREATE,
-					"note", null));
+					"note", new int[]{selClauseId}));
 			ch.setString("text", newNoteText);
-			ch.setMonadsFromObjects(new int[]{selClauseId});
 			ch.execute();
 		}
 	
