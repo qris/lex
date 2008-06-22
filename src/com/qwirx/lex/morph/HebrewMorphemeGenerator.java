@@ -181,23 +181,24 @@ public class HebrewMorphemeGenerator
                 else if (stem.equals("hofal"))   { stem = "Ho"; }
             }
             
-            handler.convert("graphical_preformative", false, tense, "V/TNS");
+            handler.convert("graphical_preformative", false, tense, "V/TAM");
             
             // String stemNum = word.getEMdFValue("verbal_stem").toString();
             handler.convert("graphical_root_formation", false,
                 stem, "V/STM");
             
-            handler.convert("graphical_lexeme", false, gloss, "V/LEX");
+            handler.convert("graphical_lexeme", false, gloss, "V/NUC");
             
             handler.convert("graphical_verbal_ending", false,
-                verbEnding, "V/PGN");
+                verbEnding, "AG/PSA");
 
-            handler.convert("graphical_pron_suffix", true, suffixGloss, "V/SFX");
+            handler.convert("graphical_pron_suffix", true, suffixGloss,
+                "PRON/DCA");
         }
         else if (psp.equals("noun")
             || psp.equals("proper_noun"))
         {
-            String type = "HEAD/NCOM";
+            String type = "N/NUC";
             
             if (psp.equals("proper_noun"))
             {
@@ -206,8 +207,9 @@ public class HebrewMorphemeGenerator
             
             handler.convert("graphical_lexeme", false, gloss, type);
             handler.convert("graphical_nominal_ending", false,
-                nounEnding, "MARK/N");
-            handler.convert("graphical_pron_suffix", true, suffixGloss, "SFX/N");
+                nounEnding, "N/PNS");
+            handler.convert("graphical_pron_suffix", true, suffixGloss,
+                "N/POS");
         }
         else if (psp.equals("none"))
         {
