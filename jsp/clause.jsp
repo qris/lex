@@ -151,7 +151,7 @@
 	{
 		String predicate_text = "";
 		StringBuffer hebrewText = new StringBuffer();
-		List morphEdges = new ArrayList();
+		List<MorphEdge> morphEdges = new ArrayList<MorphEdge>();
 		HebrewMorphemeGenerator generator = new HebrewMorphemeGenerator();
 		BookData swordVerse = null;
 		
@@ -181,95 +181,16 @@
 						word.getEMdFValue("phrase_dependent_part_of_speech").toString()) 
 					);
 						
-					class HebrewFeatureConverter implements MorphemeHandler
-					{
-						private List<String[]> m_Columns;
-						private MatchedObject m_word;
-						private StringBuffer m_hebrew;
-						private List m_morphs;
-						boolean m_IsFirstWord, m_IsLastWord;
-						boolean m_IsMorpheme;
-						
-						public HebrewFeatureConverter(List<String[]> columns,
-							MatchedObject word, StringBuffer hebrew,
-							List morphs, boolean isFirstWord,
-							boolean isLastWord)
-						{
-							m_Columns = columns;
-							m_word   = word;
-							m_hebrew = hebrew;
-							m_morphs = morphs;
-							m_IsFirstWord = isFirstWord;
-							m_IsLastWord  = isLastWord;
-						}
-						
-						public boolean isMorpheme()
-						{
-							return m_IsMorpheme;
-						}
-						
-						public void convert(String surface, 
-							boolean lastMorpheme, String desc,
-							String morphNode)
-						{
-							String raw = m_word.getEMdFValue(surface).getString();
-
-							String hebrew = HebrewConverter.toHebrew(raw);
-							m_hebrew.append(hebrew);
-
-							String translit = HebrewConverter.toTranslit(raw);
-							translit = HebrewConverter.toHtml(translit);
-							if (translit.equals("")) translit = "&Oslash;";
-							
-							if (desc != null && desc.equals("CONJ"))
-							{
-								if (m_IsFirstWord) { desc = "CLM"; }
-								else               { desc = "CR"; }
-							}
-							
-							// desc += ":" + lastMorpheme + ":" + m_IsLastWord;
-							
-							if (!lastMorpheme)
-							{
-								translit += "-";
-								desc += "-";
-								m_IsMorpheme = true;
-							}
-							else if (translit.endsWith("-"))
-							{
-								desc += "-";
-								lastMorpheme = false;
-								m_IsMorpheme = true;
-							}
-							else
-							{
-								m_IsMorpheme = false;
-							}
-
-							if (desc == null) desc = "";
-
-							m_Columns.add(new String[]{translit, desc});
-							
-							if (lastMorpheme && !m_IsLastWord)
-							{
-								// blank cell between words
-								m_Columns.add(new String[]{"",""});
-							}
-							
-							m_morphs.add(new MorphEdge(morphNode, 
-								translit, m_morphs.size()));
-						}
-					}
-
-					HebrewFeatureConverter hfc = 
-						new HebrewFeatureConverter(columns, word, hebrewText,
+					HebrewGlossTableGeneratingMorphemeHandler hmh = 
+						new HebrewGlossTableGeneratingMorphemeHandler(
+							columns, word, hebrewText,
 							morphEdges, isFirstWord,
 							!phrases.hasNext() && !words.hasNext());
 						
-					generator.parse(word, hfc, true, sql);
+					generator.parse(word, hmh, true, sql);
 					isFirstWord = false;
 					
-					if (!hfc.isMorpheme())
+					if (!hmh.isMorpheme())
 					{				
 						hebrewText.append(" ");
 					}
