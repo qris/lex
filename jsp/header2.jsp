@@ -26,7 +26,7 @@
 <h1>Lex <span style="font-size: medium">by 
 	<a href="http://www.qwirx.com">Chris Wilson</a></span></h1>
 <h2>RLM for BH: 
-	<a href="http://www.winthernielsen.dk">Nicolai Winther-Nielsen</a></h2>
+	<a href="http://3bm.dk/index.php?p=3">Nicolai Winther-Nielsen</a></h2>
 <div class="topmenu">
 	<a 	class="index_jsp"   href="index.jsp"   >Home</a><a 
 		class="db_jsp"                         >Databases</a><a 
