@@ -22,8 +22,10 @@ public class HebrewConverterTest extends TestCase
     public void testToTranslit()
     {
         assertEquals("nākərîî", HebrewConverter.toTranslit("N@K:RIJ."));
-        assertEquals("jiśśāskār", HebrewConverter.toTranslit("JIF.@#K@R"));
+        assertEquals("yiśśāskār", HebrewConverter.toTranslit("JIF.@#K@R"));
         assertEquals("rē?šî", HebrewConverter.toTranslit("R;>CI73J"));
+        assertEquals("y", HebrewConverter.toTranslit("J"));
+        assertEquals("yy", HebrewConverter.toTranslit("J."));
         assertEquals("îm", HebrewConverter.toTranslit("I92Jm"));
     }
     

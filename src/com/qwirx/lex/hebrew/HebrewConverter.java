@@ -308,10 +308,12 @@ public class HebrewConverter
             else if (c == 'C') { output.append("š"); }
             else if (c == '#') { output.append("s"); } // ?? guess ??
             else if (c == '@') { output.append("ā"); }
-            else if (c == 'D' || c == 'G' || c == 'H' || 
-                c == 'J' || c == 'K' || c == 'L' || c == 'M' ||
-                c == 'N' || c == 'Q' || c == 'R' || c == 'S' || 
-                c == 'T' || c == 'W' || c == 'Z')
+            else if (c == 'J') { output.append("y"); }
+            else if (
+                c == 'D' || c == 'G' || c == 'H' || c == 'K' ||
+                c == 'L' || c == 'M' || c == 'N' || c == 'Q' ||
+                c == 'R' || c == 'S' || c == 'T' || c == 'W' ||
+                c == 'Z')
             {
                 output.append(("" + c).toLowerCase());
             }
