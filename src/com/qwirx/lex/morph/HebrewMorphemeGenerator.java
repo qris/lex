@@ -207,7 +207,7 @@ public class HebrewMorphemeGenerator
             
             handler.convert("graphical_lexeme", false, gloss, type);
             handler.convert("graphical_nominal_ending", false,
-                nounEnding, "N/PNS");
+                nounEnding, "N/GNS");
             handler.convert("graphical_pron_suffix", true, suffixGloss,
                 "N/POS");
         }

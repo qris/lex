@@ -199,7 +199,7 @@ public class HebrewConverterTest extends TestCase
         assertEquals("PRON/DCA", morphEdges.get(5).symbol());
         assertEquals("P",        morphEdges.get(6).symbol());
         assertEquals("N/NUC",    morphEdges.get(7).symbol());
-        assertEquals("N/PNS",    morphEdges.get(8).symbol());
+        assertEquals("N/GNS",    morphEdges.get(8).symbol());
         assertEquals("N/POS",    morphEdges.get(9).symbol());
     }
     
