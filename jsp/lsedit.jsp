@@ -741,8 +741,7 @@ else
 						<%= current.isPunctual() ? "CHECKED" : "" %>
 						/>
 				</td>
-				<td>
-					<p>This must be done in an instant (punctual)</p>
+				<td>This must be done in an instant (punctual)
 				</td>
 			</tr>
 			<tr>
@@ -887,6 +886,11 @@ else
 						current.getResultPredicateArg().equals("y") 
 						? "SELECTED " : ""
 					%>>&lt;y&gt;</option>
+					<option value="x,y" <%= 
+						current.getResultPredicateArg() != null &&
+						current.getResultPredicateArg().equals("x,y") 
+						? "SELECTED " : ""
+					%>>&lt;x&gt;, &lt;y&gt;</option>
 					</select>
 				</td>
 			</tr>

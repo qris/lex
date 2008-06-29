@@ -82,8 +82,17 @@ function getLS(prefix)
 
 		if (f.ls_endpoint[1].checked)
 		{
-			ls += " & INGR " + f.ls_pred_2.value + 
-				"(<" + selected(f.ls_arg_2).value + ">)";
+			ls += " & INGR " + f.ls_pred_2.value + "(";
+			var args = selected(f.ls_arg_2).value.split(",")
+			for (var i = 0; i < args.length; i++)
+			{
+				ls += "<" + args[i] + ">";
+				if (i < args.length - 1)
+				{
+					ls += ", ";
+				}
+			}
+			ls += ")";
 		}
 	}
 	
