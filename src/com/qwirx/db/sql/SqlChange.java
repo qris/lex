@@ -212,8 +212,8 @@ public final class SqlChange implements Change
 		    else
 		    {
     		    throw new DatabaseException("Failed to capture old values " +
-    		    		"of rows. You may have an error in your conditions: " +
-    		    		conditions, e, sb.toString());
+    		    		"of rows. You may have an error in your table name " +
+                        "or conditions (" + conditions + ")", e, sb.toString());
 		    }
 		}
 
