@@ -22,14 +22,7 @@ public class DatabaseException extends Exception
     public DatabaseException(String message, Exception original, String query) 
     {
         super(message, original);
-
-        if (original != null)
-        {
-            setStackTrace(original.getStackTrace());
-        }
-
         this.query = query;
-
         LOG.error(toString(), original);
     }
 
