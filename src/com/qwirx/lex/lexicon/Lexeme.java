@@ -111,7 +111,20 @@ public class Lexeme implements Comparable
                     ls += m_resultPredicate;
                 }
                 
-                ls += "(<" + m_resultPredicateArg + ">)";
+                if (m_resultPredicateArg != null)
+                {
+                    String [] args = m_resultPredicateArg.split(",");
+                    ls += "(";
+                    for (int i = 0; i < args.length; i++)
+                    {
+                        ls += "<" + args[i] + ">";
+                        if (i < args.length - 1)
+                        {
+                            ls += ", ";
+                        }
+                    }
+                    ls += ")";
+                }
             }
         }
 
@@ -337,7 +350,36 @@ public class Lexeme implements Comparable
         
         return result;
     }
-    
+
+    public static Lexeme load(SqlDatabase sqldb, String predicate)
+    throws DatabaseException, SQLException
+    {
+        Lexeme result = null;
+        
+        try 
+        {
+            PreparedStatement stmt = sqldb.prepareSelect
+                ("SELECT " + getColumnList() + " " +
+                 "FROM lexicon_entries " +
+                 "WHERE Lexeme = ?");
+            stmt.setString(1, predicate);
+            ResultSet rs = sqldb.select();
+            
+            if (!rs.next()) 
+            {
+                return null;
+            }
+            
+            result = load(sqldb, rs);
+        } 
+        finally 
+        {
+            sqldb.finish();
+        }
+        
+        return result;
+    }
+
     private MatchedObject m_WordObject = null;
 
     public static Lexeme load(SqlDatabase sqldb, MatchedObject word)
@@ -394,8 +436,8 @@ public class Lexeme implements Comparable
         try 
         {
             // PreparedStatement stmt = 
-            sqldb.prepareSelect
-                ("SELECT " + getColumnList() + " FROM lexicon_entries");
+            sqldb.prepareSelect("SELECT " + getColumnList() +
+                " FROM lexicon_entries ORDER BY Domain_Label + 0");
             ResultSet rs = sqldb.select();
             
             while (rs.next()) 
