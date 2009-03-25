@@ -123,7 +123,15 @@
 	
 	%><p><em><%
 	
-	if (request.getParameter("savecopy") != null)
+	if (request.getParameter("createnew") != null)
+	{
+		SqlChange ch = (SqlChange)sql.createChange(SqlChange.INSERT,
+			"lexicon_entries", null);
+		ch.setString("Domain_Desc",      "New Entry");
+		ch.execute();
+		lsId = ch.getInsertedRowId();
+	}
+	else if (request.getParameter("savecopy") != null)
 	{
 		throw new AssertionError("broken");
 		/*
@@ -157,7 +165,8 @@
 	}
 	else if (request.getParameter("delrepl") != null)
 	{
-		try {
+		try
+		{
 			int newLsId = Integer.parseInt(request.getParameter("newlsid"));
 			
 			Sheaf sheaf = emdros.getSheaf
@@ -424,12 +433,6 @@
 	finder.visit();
 	Lexeme current = finder.getFoundLexeme();
 	root.sortInPlace();	
-	
-	if (current == null) 
-	{
-		current = new Lexeme(sql);
-		current.surface = request.getParameter("surface");
-	}
 %>
 
 <script type="text/javascript"><!--
@@ -478,17 +481,27 @@
 //--></script>
 
 <%
-if (request.getParameter("lsid") == null)
+if (lsId == -1)
 {
 	%>
 	<p>Please select a lexicon entry from the list above.</p>
 	<%
 }
-else if (lsId <= 0)
+else if (lsId == 0)
+{
+	%>
+	<p>You cannot edit the root lexeme. Please select another lexicon entry
+		from the list above.</p>
+	<%
+}
+else if (current == null)
 {
 	%>
 	<p>The selected lexicon entry does not exist or is invalid.</p>
 	<%
+		
+	current = new Lexeme(sql);
+	current.surface = request.getParameter("surface");
 }
 else
 {
@@ -1064,5 +1077,13 @@ else
 	<%
 } // end if (lsId <= 0)
 %>
+
+<form name="addform" method="POST" action="lsedit.jsp">
+	<h2 style="color: red">Create</h2>
+	<p>
+		Create a new lexicon entry:
+		<input type="submit" name="createnew" value="Create" />
+	</p>
+</form>
 
 <%@ include file="footer.jsp" %>
