@@ -4,12 +4,12 @@ public class TableRenderer
 {
     public String getTable(String contents)
     {
-        return "<table>" + contents + "</table>\n";
+        return "<table>\n" + contents + "</table>\n";
     }
 
     public String getRow(String contents)
     {
-        return "  <tr>" + contents + "</tr>\n";
+        return "  <tr>\n" + contents + "  </tr>\n";
     }
     
     public String getCell(String contents, String clazz, int width, int height)

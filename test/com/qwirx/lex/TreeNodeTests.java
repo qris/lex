@@ -518,65 +518,81 @@ public class TreeNodeTests extends TestCase {
      */
     public final void testToHtml() 
     {
-        assertEquals("<table><tr><td>root</td></tr></table>", root.toHtml());
+        assertEquals("<table>\n" +
+                "  <tr>\n" +
+                "    <td>root</td>\n" +
+                "  </tr>\n" +
+                "</table>\n", root.toHtml());
 
         root.add(child1);
-        assertEquals("<table>" +
-                "<tr><td>root</td></tr>" +
-                "<tr><td>child1</td></tr>" +
-                "</table>", root.toHtml());
+        assertEquals("<table>\n" +
+                "  <tr>\n" +
+                "    <td>root</td>\n" +
+                "  </tr>\n" +
+                "  <tr>\n" +
+                "    <td>child1</td>\n" +
+                "  </tr>\n" +
+                "</table>\n", root.toHtml());
 
         root.add(child2);
-        assertEquals("<table>" +
-                "<tr><td colspan=\"2\">root</td></tr>" +
-                "<tr>" +
-                "<td>child1</td>" +
-                "<td>child2</td>" +
-                "</tr>" +
-                "</table>", root.toHtml());
+        assertEquals("<table>\n" +
+                "  <tr>\n" +
+                "    <td colspan=\"2\">root</td>\n" +
+                "  </tr>\n" +
+                "  <tr>\n" +
+                "    <td>child1</td>\n" +
+                "    <td>child2</td>\n" +
+                "  </tr>\n" +
+                "</table>\n", root.toHtml());
 
         root.add(child2);
-        assertEquals("<table>" +
-                "<tr><td colspan=\"3\">root</td></tr>" +
-                "<tr>" +
-                "<td>child1</td>" +
-                "<td>child2</td>" +
-                "<td>child2</td>" +
-                "</tr>" +
-                "</table>", root.toHtml());
+        assertEquals("<table>\n" +
+                "  <tr>\n" +
+                "    <td colspan=\"3\">root</td>\n" +
+                "  </tr>\n" +
+                "  <tr>\n" +
+                "    <td>child1</td>\n" +
+                "    <td>child2</td>\n" +
+                "    <td>child2</td>\n" +
+                "  </tr>\n" +
+                "</table>\n", root.toHtml());
 
         child1.add(child3);
-        assertEquals("<table>" +
-                "<tr><td colspan=\"3\">root</td></tr>" +
-                "<tr>" +
-                "<td>child1</td>" +
-                "<td>child2</td>" +
-                "<td>child2</td>" +
-                "</tr>" +
-                "<tr>" +
-                "<td>child3</td>" +
-                "<td></td>" +
-                "<td></td>" +
-                "</tr>" +
-                "</table>", root.toHtml());
+        assertEquals("<table>\n" +
+                "  <tr>\n" +
+                "    <td colspan=\"3\">root</td>\n" +
+                "  </tr>\n" +
+                "  <tr>\n" +
+                "    <td>child1</td>\n" +
+                "    <td>child2</td>\n" +
+                "    <td>child2</td>\n" +
+                "  </tr>\n" +
+                "  <tr>\n" +
+                "    <td>child3</td>\n" +
+                "    <td></td>\n" +
+                "    <td></td>\n" +
+                "  </tr>\n" +
+                "</table>\n", root.toHtml());
 
         child3.add(new TreeNode("child4"));
-        assertEquals("<table>" +
-                "<tr><td colspan=\"3\">root</td></tr>" +
-                "<tr>" +
-                "<td>child1</td>" +
-                "<td>child2</td>" +
-                "<td>child2</td>" +
-                "</tr>" +
-                "<tr>" +
-                "<td>child3</td>" +
-                "<td rowspan=\"2\"></td>" +
-                "<td rowspan=\"2\"></td>" +
-                "</tr>" +
-                "<tr>" +
-                "<td>child4</td>" +
-                "</tr>" +
-                "</table>", root.toHtml());
+        assertEquals("<table>\n" +
+                "  <tr>\n" +
+                "    <td colspan=\"3\">root</td>\n" +
+                "  </tr>\n" +
+                "  <tr>\n" +
+                "    <td>child1</td>\n" +
+                "    <td>child2</td>\n" +
+                "    <td>child2</td>\n" +
+                "  </tr>\n" +
+                "  <tr>\n" +
+                "    <td>child3</td>\n" +
+                "    <td rowspan=\"2\"></td>\n" +
+                "    <td rowspan=\"2\"></td>\n" +
+                "  </tr>\n" +
+                "  <tr>\n" +
+                "    <td>child4</td>\n" +
+                "  </tr>\n" +
+                "</table>\n", root.toHtml());
 
         /*
         root.add(child1);
