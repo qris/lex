@@ -1,0 +1,78 @@
+\wordfield morpheme
+\glossfield gloss
+\tagfield tag
+\lemmafield lemma
+\recordend re
+\foreignfont SILIPAManuscriptL
+\glossfont Times New Roman
+\transliterationfont SILIPADoulosL
+\lefttoright
+\wordfieldisUTF8
+\transliterationfieldisUTF8
+
+\morpheme bə-
+\tag tag
+\gloss P
+\lemma lemma
+\re
+
+\morpheme rē?šît
+\tag tag
+\gloss beginning
+\lemma lemma
+\re
+
+\morpheme bārā?
+\tag tag
+\gloss create
+\lemma lemma
+\re
+
+\morpheme ?ĕlōhîm
+\tag tag
+\gloss God
+\lemma lemma
+\re
+
+\morpheme ?ēt
+\tag tag
+\gloss P
+\lemma lemma
+\re
+
+\morpheme ha-
+\tag tag
+\gloss ART
+\lemma lemma
+\re
+
+\morpheme ššāmayim
+\tag tag
+\gloss sky
+\lemma lemma
+\re
+
+\morpheme wə-
+\tag tag
+\gloss CONJ
+\lemma lemma
+\re
+
+\morpheme ?ēt
+\tag tag
+\gloss P
+\lemma lemma
+\re
+
+\morpheme hā-
+\tag tag
+\gloss ART
+\lemma lemma
+\re
+
+\morpheme ?ārec
+\tag tag
+\gloss earth
+\lemma lemma
+\re
+

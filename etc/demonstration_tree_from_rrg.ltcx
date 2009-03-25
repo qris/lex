@@ -1,0 +1,601 @@
+<?xml version='1.0' encoding='utf-8' ?>
+<!-- This is a DTD for the TIGER XML corpus description language,
+     or rather, of a subset of it.
+     We have only included the parts that are relevant to LTC.
+     We have also extended the set of attributes (as allowed in the 
+     TIGER XML specification).
+     We have, in addition, added some elements to the header,
+     thereby making this format incompatible with TIGER-XML.
+ -->
+<!DOCTYPE corpus [
+
+  <!ELEMENT corpus ((head)?,body) >
+  <!ATTLIST corpus
+            id          ID      #REQUIRED
+            version     CDATA   #IMPLIED >
+
+  <!ELEMENT head   ((meta)?, (annotation)?) >
+  <!ELEMENT meta   ((name)?, (author)?, (date)?, (description)?, (format)?, (history)?, (display) ) >
+  <!ELEMENT name         (#PCDATA)  >
+  <!ELEMENT author       (#PCDATA)  >
+  <!ELEMENT date         (#PCDATA)  >
+  <!ELEMENT description  (#PCDATA)  >
+  <!ELEMENT format       (#PCDATA)  >
+  <!ELEMENT history      (#PCDATA)  >
+
+  <!-- The display element is not part of the TIGER-XML specification,
+       but is added to LTC for the purpose of being able to save
+       information about the state of the display, such as fonts,
+       interlinear lines state, magnification, and direction.
+    -->
+  <!ELEMENT display      ((interlinearline)+, (magnification), (direction)) >
+
+  <!ELEMENT interlinearline EMPTY >
+  <!-- The interlinearline element provides information about one
+       interlinear line.  There are always five interlinearline elements,
+       corresponding to the five interlinear lines, starting with line 1.
+
+       The 'on' attribute shows whether the line in question was turned
+       on (true) or off (false).
+
+       The fontname attribute shows the name of the font.
+    -->
+  <!ATTLIST interlinearline
+            on           (true|false) #REQUIRED
+            fontname     CDATA        #REQUIRED >
+
+  <!ELEMENT magnification EMPTY >
+  <!-- The magnification element provides information about the 
+       magnification of the display.  The 'percent' attribute
+       must be an integer.  The number will be rounded to the nearest
+       one supported by LTC.
+    -->
+  <!ATTLIST magnification
+            percent      CDATA        #REQUIRED >
+
+  <!ELEMENT direction EMPTY >
+  <!-- The 'direction' element shows whether the file is left-to-right
+       or right-to-left.
+    -->
+  <!ATTLIST direction
+            direction    (lefttoright|righttoleft)   #REQUIRED >
+
+  <!ELEMENT annotation    ((feature)+, (edgelabel)?, (secedgelabel)?) >
+
+  <!-- A 'feature' element is part of the 'annotation' element
+       of the 'head' element. It shows what features are present
+       for the particular domain.
+
+       In LTC, the following are used for the following domains:
+
+       - domain 'T':
+
+         - monad
+         - line1
+         - line2
+         - line3
+         - line4
+         - line5
+
+         (See the "t" element below for an explanation.)
+
+       - domain 'NT':
+
+         - treestate (values: COLLAPSED, EXPANDED)
+         - cat (values: Whatever were present in the user's configuration files: All of them.)
+  -->
+
+
+  <!ELEMENT feature       (value)* >
+  <!-- domain means as follows:
+       T    : Terminals
+       NT   : Nonterminals
+       FREC : May belong to both terminals and nonterminals.
+
+       FREC is not used.
+   -->
+  <!ATTLIST feature
+            name          CDATA   #REQUIRED
+            domain        (T|NT|FREC) #REQUIRED > 
+
+  <!ELEMENT edgelabel          (value)* >
+
+  <!ELEMENT secedgelabel       (value)* >
+
+   <!-- The PCDATA is documentation, and can be ignored at will.
+
+        The 'name' attribute gives the actual value.
+
+        The 'value' element occurs inside the following elements:
+
+        - feature
+        - edgelabel
+        - secedgelabel
+
+   -->
+  <!ELEMENT value             (#PCDATA) 
+  >
+  <!ATTLIST value
+            name               CDATA  #REQUIRED >
+
+  <!-- the body element consists of the 'sentences' (s'es).
+       The 's' elements contain the immediate children of the 
+       "Pericope" (or "Text") node in the tree.
+
+       The "Pericope" is thus implicit in the structure of the body,
+       and is never expressed explicitly.
+
+       Note that an 's' element may or may not correspond to an 
+       actual linguistic unit called a 'sentence'.  This is entirely
+       dependent on the analysis.
+  -->
+  <!ELEMENT body   (s)* >
+
+  <!-- the 's' element contains all children of the pericope (aka
+       "Text") node in the tree.
+
+       The 's' element consists of a 'graph' whose 'root' is the
+       pericope.
+
+       The 's' element itself is never shown.  Only the 'root' and its
+       children.
+    -->
+  <!ELEMENT s      (graph)? >
+  <!-- 
+       The 'id' attreibute is of the form "s<id_d>", for example, "s10232",
+       where the id_d is the internal, unique ID.
+    -->
+  <!ATTLIST s     
+            id             ID     #REQUIRED >
+
+  <!ELEMENT graph  (terminals, nonterminals) >
+            <!-- root:
+		 refers to the pericope node within the graph. 
+
+		 discontinuous:
+                 true: The graph is discontiguous. 
+                 false: It is not.
+
+                 The pericope is never discontiguous, so this is always
+                 false.
+             -->
+  <!ATTLIST graph
+            root           IDREF         #REQUIRED   
+            discontinuous  (true|false)  #REQUIRED >  
+  
+  <!ELEMENT terminals      (t)+ >
+  
+  <!ELEMENT t              (secedge)*  >
+  <!-- There is no treestate for the t element,
+       simply because Word objects are always 'FIXED'
+       for the treestate, never 'COLLAPSED' or 'EXPANDED'.
+       This is because of their nature as being terminals.
+
+       The 'id' attribute is of the form "t<id_d>", for example,
+       "t10242", where the id_d is the internal, unique ID.
+
+       The 'symbol' attribute, when present, specifies what kind of
+       symbol should be displayed instead of lines 1-5. Currently,
+       only a 'null element' is supported.
+
+       The 'monad' attribute is the placement of the terminal
+       in the logical, sequential reading order.  A monad is
+       an integer. The monads start at 0 and increase from there, 
+       one monad per terminal.
+
+       Lines 1-5 are the interlinear lines for the terminal.
+    -->
+  <!ATTLIST t
+            id             ID     #REQUIRED
+            symbol         (nullelement) # IMPLIED
+            monad          CDATA  #REQUIRED
+            line1          CDATA  #REQUIRED
+            line2          CDATA  #REQUIRED
+            line3          CDATA  #REQUIRED
+            line4          CDATA  #REQUIRED
+            line5          CDATA  #REQUIRED
+  >
+
+
+  <!ELEMENT nonterminals      (nt)* >
+  
+  <!ELEMENT nt              ((edge)*,(secedge)*)  >
+        <!--
+	    The 'id' attribute is of the form "nt<id_d>", for
+	    example, "nt10254", where the id_d is the internal, unique
+	    ID.
+
+            The 'treestate' attribute shows the state of the node in
+            the tree at last save, whether it was 'COLLAPSED' or
+            'EXPANDED'.
+                 
+            Words are handled by the 't' element.
+
+            All non-terminals are handled by the 'nt' element.
+
+            Each nonterminal node has a 'cat', which is always of the
+            form "LongName:DisplayName"
+
+            Both LongName and DisplayName must be C identifiers,
+            that is, they must conform to the regular expression
+            "[A-Za-z_][A-Za-z_]*".
+	    
+            For the special 'Phrase' object type, the 'cat' is of
+            the form 'Phrase:<phrasetype>', for example,
+            'Phrase:NP'.
+	    
+            For the special 'RRG' object type, the 'cat' is
+            of the form 'RRG:<RRG-node-type>."
+	    
+            For the special 'XBar' object type, the 'cat' is
+            of the form 'XBar:<XBar-node-type>."
+	    
+            When reading old .ltc files, the following conversions
+            apply:
+	    
+            - 'Clause': 
+               - 'cat'    = 'Clause:Cl', 
+
+            - 'ClauseCluster': 
+               - 'cat'    = 'ClauseCluster:CCl',
+
+            - 'ASLO':
+               - 'cat'    = <the ASLO's LONG_LABEL>:<the ASLO's SHORT_LABEL>
+               for example: "SENTENCE:S"
+
+         -->
+  <!ATTLIST nt
+            id             ID     #REQUIRED
+            treestate      (COLLAPSED|EXPANDED) #REQUIRED
+            cat                CDATA  #REQUIRED
+  >
+            
+
+  <!ELEMENT edge           EMPTY >
+            <!-- The idref of the edge points to the *child* of the
+                 non-terminal in whose context this edge element occurs.
+             -->
+            <!-- 
+
+		 The 'label' attribute contains the |-separated
+                 (pipe-separated) label set of this edge's child.
+
+                 Each member is of the form LabelGroup:Label.
+
+                 For example: "Function:Adju|Function:Pred".
+
+                 Both the LabelGroup and the Label are required to
+                 be C identifiers.  That is, they must conform to the
+                 regular expression [A-Za-z_][A-Za-z_]*.
+            -->
+  <!ATTLIST edge
+            idref          IDREF  #REQUIRED
+            label          CDATA  #IMPLIED 
+  >
+
+  <!-- secedges are currently not used. -->
+  <!ELEMENT secedge        EMPTY >
+  <!ATTLIST secedge
+            idref          IDREF  #REQUIRED 
+            label          CDATA  #IMPLIED >
+]>
+<corpus id="_home_chris_workspace_lex_etc_demonstration_tree_from_rrg.ltcx">
+<head>
+<meta>
+<date>23-Mar-2009</date>
+<format>3.0</format>
+<display>
+<interlinearline on="true" fontname="SILIPAManuscriptL"/>
+<interlinearline on="false" fontname="SILIPADoulosL"/>
+<interlinearline on="false" fontname="Arial"/>
+<interlinearline on="false" fontname="Times New Roman"/>
+<interlinearline on="false" fontname="SILIPAManuscriptL"/>
+<magnification percent="130"/>
+<direction direction="lefttoright"/>
+</display>
+</meta>
+<annotation>
+<feature name="symbol" domain="T">
+  <value name="nullelement">Zero (null) element</value>
+</feature><feature name="monad" domain="T"/>
+<feature name="line1" domain="T"/>
+<feature name="line2" domain="T"/>
+<feature name="line3" domain="T"/>
+<feature name="line4" domain="T"/>
+<feature name="line5" domain="T"/>
+<feature name="treestate" domain="NT">
+  <value name="COLLAPSED">Collapsed node</value>
+  <value name="EXPANDED">Expanded node</value>
+</feature>
+<feature name="cat" domain="NT">
+  <value name="Word:Word">Object type, long name='Word', short name ='Word'</value>
+  <value name="Phrase:Unknown">Phrase of type 'Unknown'</value>
+  <value name="Phrase:VP">Phrase of type 'VP'</value>
+  <value name="Phrase:NP">Phrase of type 'NP'</value>
+  <value name="Phrase:AP">Phrase of type 'AP'</value>
+  <value name="Phrase:PP">Phrase of type 'PP'</value>
+  <value name="Phrase:AdvP">Phrase of type 'AdvP'</value>
+  <value name="Phrase:PtcP">Phrase of type 'PtcP'</value>
+  <value name="Phrase:InfP">Phrase of type 'InfP'</value>
+  <value name="Phrase:CjP">Phrase of type 'CjP'</value>
+  <value name="Phrase:IjP">Phrase of type 'IjP'</value>
+  <value name="Phrase:PartP">Phrase of type 'PartP'</value>
+  <value name="XBar:XBar">Object type, long name='XBar', short name ='XBar'</value>
+  <value name="RRG:RRG">Object type, long name='RRG', short name ='RRG'</value>
+  <value name="Text:Text">Object type, long name='Text', short name ='Text'</value>
+  <value name="Clause:Cl">Object type, long name='Clause', short name ='Cl'</value>
+  <value name="Sentence:S">Object type, long name='Sentence', short name ='S'</value>
+  <value name="Paragraph:Par">Object type, long name='Paragraph', short name ='Par'</value>
+</feature>
+<edgelabel>
+<value name="Function:Pred">Label set:'Function', label='Pred'</value>
+<value name="Function:PreC">Label set:'Function', label='PreC'</value>
+<value name="Function:Subj">Label set:'Function', label='Subj'</value>
+<value name="Function:Objc">Label set:'Function', label='Objc'</value>
+<value name="Function:IndO">Label set:'Function', label='IndO'</value>
+<value name="Function:Cmpl">Label set:'Function', label='Cmpl'</value>
+<value name="Function:Adju">Label set:'Function', label='Adju'</value>
+<value name="Function:Rela">Label set:'Function', label='Rela'</value>
+<value name="Function:Voca">Label set:'Function', label='Voca'</value>
+<value name="Function:Nega">Label set:'Function', label='Nega'</value>
+<value name="Function:Ques">Label set:'Function', label='Ques'</value>
+<value name="Function:Intj">Label set:'Function', label='Intj'</value>
+<value name="Function:Conj">Label set:'Function', label='Conj'</value>
+<value name="Function:Modi">Label set:'Function', label='Modi'</value>
+<value name="Function:Time">Label set:'Function', label='Time'</value>
+<value name="Function:Loca">Label set:'Function', label='Loca'</value>
+<value name="LSC:SENTENCE">Label set:'LSC', label='SENTENCE'</value>
+<value name="LSC:CLAUSE">Label set:'LSC', label='CLAUSE'</value>
+<value name="LSC:LDP">Label set:'LSC', label='LDP'</value>
+<value name="LSC:PrCS">Label set:'LSC', label='PrCS'</value>
+<value name="LSC:CORE">Label set:'LSC', label='CORE'</value>
+<value name="LSC:PERIPHERY">Label set:'LSC', label='PERIPHERY'</value>
+<value name="LSC:ARG">Label set:'LSC', label='ARG'</value>
+<value name="LSC:NUC">Label set:'LSC', label='NUC'</value>
+<value name="LSC:PRED">Label set:'LSC', label='PRED'</value>
+<value name="LSC:PoCS">Label set:'LSC', label='PoCS'</value>
+<value name="LSC:RDP">Label set:'LSC', label='RDP'</value>
+<value name="LSNP:NPIP">Label set:'LSNP', label='NPIP'</value>
+<value name="LSNP:CORE">Label set:'LSNP', label='CORE'</value>
+<value name="LSNP:PERIPHERY">Label set:'LSNP', label='PERIPHERY'</value>
+<value name="LSNP:ARG">Label set:'LSNP', label='ARG'</value>
+<value name="LSNP:REF">Label set:'LSNP', label='REF'</value>
+<value name="Junct_Nex:Nuc_Coord">Label set:'Junct_Nex', label='Nuc_Coord'</value>
+<value name="Junct_Nex:Nuc_Subord">Label set:'Junct_Nex', label='Nuc_Subord'</value>
+<value name="Junct_Nex:Nuc_Cosubord">Label set:'Junct_Nex', label='Nuc_Cosubord'</value>
+<value name="Junct_Nex:Core_Coord">Label set:'Junct_Nex', label='Core_Coord'</value>
+<value name="Junct_Nex:Core_Subord">Label set:'Junct_Nex', label='Core_Subord'</value>
+<value name="Junct_Nex:Core_Cosubord">Label set:'Junct_Nex', label='Core_Cosubord'</value>
+<value name="Junct_Nex:Cl_Coord">Label set:'Junct_Nex', label='Cl_Coord'</value>
+<value name="Junct_Nex:Cl_Subord">Label set:'Junct_Nex', label='Cl_Subord'</value>
+<value name="Junct_Nex:Cl_Cosubord">Label set:'Junct_Nex', label='Cl_Cosubord'</value>
+<value name="OP:ASP">Label set:'OP', label='ASP'</value>
+<value name="OP:DIR">Label set:'OP', label='DIR'</value>
+<value name="OP:MOD">Label set:'OP', label='MOD'</value>
+<value name="OP:NEG">Label set:'OP', label='NEG'</value>
+<value name="OP:STA">Label set:'OP', label='STA'</value>
+<value name="OP:TNS">Label set:'OP', label='TNS'</value>
+<value name="OP:EVID">Label set:'OP', label='EVID'</value>
+<value name="OP:IF">Label set:'OP', label='IF'</value>
+<value name="OPN:ADJ_N">Label set:'OPN', label='ADJ_N'</value>
+<value name="OPN:NASP">Label set:'OPN', label='NASP'</value>
+<value name="OPN:NUM">Label set:'OPN', label='NUM'</value>
+<value name="OPN:QNT">Label set:'OPN', label='QNT'</value>
+<value name="OPN:NEG">Label set:'OPN', label='NEG'</value>
+<value name="OPN:DEF">Label set:'OPN', label='DEF'</value>
+<value name="OPN:DEIC">Label set:'OPN', label='DEIC'</value>
+<value name="RC:restrictive">Label set:'RC', label='restrictive'</value>
+<value name="RC:non_restrictive">Label set:'RC', label='non_restrictive'</value>
+<value name="RC:appositional">Label set:'RC', label='appositional'</value>
+<value name="RC:continuative">Label set:'RC', label='continuative'</value>
+<value name="RC:prenominal">Label set:'RC', label='prenominal'</value>
+<value name="RC:postnominal">Label set:'RC', label='postnominal'</value>
+<value name="RC:headless">Label set:'RC', label='headless'</value>
+<value name="RC:head_incorporating">Label set:'RC', label='head_incorporating'</value>
+<value name="cl_coord:conjunction">Label set:'cl_coord', label='conjunction'</value>
+<value name="cl_coord:contrast">Label set:'cl_coord', label='contrast'</value>
+<value name="cl_coord:disjunction">Label set:'cl_coord', label='disjunction'</value>
+<value name="cl_coord:joint">Label set:'cl_coord', label='joint'</value>
+<value name="cl_coord:list">Label set:'cl_coord', label='list'</value>
+<value name="cl_coord:restatement">Label set:'cl_coord', label='restatement'</value>
+<value name="cl_coord:sequence">Label set:'cl_coord', label='sequence'</value>
+<value name="cl_subord:Antithesis">Label set:'cl_subord', label='Antithesis'</value>
+<value name="cl_subord:Background">Label set:'cl_subord', label='Background'</value>
+<value name="cl_subord:Circumstance">Label set:'cl_subord', label='Circumstance'</value>
+<value name="cl_subord:Concession">Label set:'cl_subord', label='Concession'</value>
+<value name="cl_subord:Condition">Label set:'cl_subord', label='Condition'</value>
+<value name="cl_subord:Elaboration">Label set:'cl_subord', label='Elaboration'</value>
+<value name="cl_subord:Enablement">Label set:'cl_subord', label='Enablement'</value>
+<value name="cl_subord:Evaluation">Label set:'cl_subord', label='Evaluation'</value>
+<value name="cl_subord:Evidence">Label set:'cl_subord', label='Evidence'</value>
+<value name="cl_subord:Interpretation">Label set:'cl_subord', label='Interpretation'</value>
+<value name="cl_subord:Justify">Label set:'cl_subord', label='Justify'</value>
+<value name="cl_subord:Means">Label set:'cl_subord', label='Means'</value>
+<value name="cl_subord:Motivation">Label set:'cl_subord', label='Motivation'</value>
+<value name="cl_subord:Nonvolitional_cause">Label set:'cl_subord', label='Nonvolitional_cause'</value>
+<value name="cl_subord:Nonvolitional_result">Label set:'cl_subord', label='Nonvolitional_result'</value>
+<value name="cl_subord:Otherwise">Label set:'cl_subord', label='Otherwise'</value>
+<value name="cl_subord:Preparation">Label set:'cl_subord', label='Preparation'</value>
+<value name="cl_subord:Purpose">Label set:'cl_subord', label='Purpose'</value>
+<value name="cl_subord:Restatement">Label set:'cl_subord', label='Restatement'</value>
+<value name="cl_subord:Solutionhood">Label set:'cl_subord', label='Solutionhood'</value>
+<value name="cl_subord:Summary">Label set:'cl_subord', label='Summary'</value>
+<value name="cl_subord:Unconditional">Label set:'cl_subord', label='Unconditional'</value>
+<value name="cl_subord:Unless">Label set:'cl_subord', label='Unless'</value>
+<value name="cl_subord:Unstated_relation">Label set:'cl_subord', label='Unstated_relation'</value>
+<value name="cl_subord:Volitional_cause">Label set:'cl_subord', label='Volitional_cause'</value>
+<value name="cl_subord:Volitional_result">Label set:'cl_subord', label='Volitional_result'</value>
+<value name="cl_cosubord:Antithesis">Label set:'cl_cosubord', label='Antithesis'</value>
+<value name="cl_cosubord:Background">Label set:'cl_cosubord', label='Background'</value>
+<value name="cl_cosubord:Circumstance">Label set:'cl_cosubord', label='Circumstance'</value>
+<value name="cl_cosubord:Concession">Label set:'cl_cosubord', label='Concession'</value>
+<value name="cl_cosubord:Condition">Label set:'cl_cosubord', label='Condition'</value>
+<value name="cl_cosubord:Elaboration">Label set:'cl_cosubord', label='Elaboration'</value>
+<value name="cl_cosubord:Enablement">Label set:'cl_cosubord', label='Enablement'</value>
+<value name="cl_cosubord:Evaluation">Label set:'cl_cosubord', label='Evaluation'</value>
+<value name="cl_cosubord:Evidence">Label set:'cl_cosubord', label='Evidence'</value>
+<value name="cl_cosubord:Interpretation">Label set:'cl_cosubord', label='Interpretation'</value>
+<value name="cl_cosubord:Justify">Label set:'cl_cosubord', label='Justify'</value>
+<value name="cl_cosubord:Means">Label set:'cl_cosubord', label='Means'</value>
+<value name="cl_cosubord:Motivation">Label set:'cl_cosubord', label='Motivation'</value>
+<value name="cl_cosubord:Nonvolitional_cause">Label set:'cl_cosubord', label='Nonvolitional_cause'</value>
+<value name="cl_cosubord:Nonvolitional_result">Label set:'cl_cosubord', label='Nonvolitional_result'</value>
+<value name="cl_cosubord:Otherwise">Label set:'cl_cosubord', label='Otherwise'</value>
+<value name="cl_cosubord:Preparation">Label set:'cl_cosubord', label='Preparation'</value>
+<value name="cl_cosubord:Purpose">Label set:'cl_cosubord', label='Purpose'</value>
+<value name="cl_cosubord:Restatement">Label set:'cl_cosubord', label='Restatement'</value>
+<value name="cl_cosubord:Solutionhood">Label set:'cl_cosubord', label='Solutionhood'</value>
+<value name="cl_cosubord:Summary">Label set:'cl_cosubord', label='Summary'</value>
+<value name="cl_cosubord:Unconditional">Label set:'cl_cosubord', label='Unconditional'</value>
+<value name="cl_cosubord:Unless">Label set:'cl_cosubord', label='Unless'</value>
+<value name="cl_cosubord:Unstated_relation">Label set:'cl_cosubord', label='Unstated_relation'</value>
+<value name="cl_cosubord:Volitional_cause">Label set:'cl_cosubord', label='Volitional_cause'</value>
+<value name="cl_cosubord:Volitional_result">Label set:'cl_cosubord', label='Volitional_result'</value>
+</edgelabel>
+</annotation>
+</head>
+<body>
+<s id="s10008">
+<graph root="nt10008" discontinuous="false">
+<terminals>
+<t id="t10009" monad="0" line1="bə-" line2="" line3="tag" line4="P" line5="lemma" />
+<t id="t10010" monad="1" line1="rē?šî-" line2="" line3="tag" line4="beginning" line5="lemma" />
+<t id="t10011" monad="2" line1="t-" line2="" line3="tag" line4="FsgAB" line5="lemma" />
+<t id="t10012" monad="3" line1="Ø" line2="" line3="tag" line4="SUFF" line5="lemma" />
+<t id="t10013" monad="4" line1="Ø-" line2="" line3="tag" line4="PERF" line5="lemma" />
+<t id="t10014" monad="5" line1="Ø-" line2="" line3="tag" line4="Qa" line5="lemma" />
+<t id="t10015" monad="6" line1="bārā?-" line2="" line3="tag" line4="create" line5="lemma" />
+<t id="t10016" monad="7" line1="Ø-" line2="" line3="tag" line4="3Msg" line5="lemma" />
+<t id="t10017" monad="8" line1="Ø" line2="" line3="tag" line4="SUFF" line5="lemma" />
+<t id="t10018" monad="9" line1="?ĕlōh-" line2="" line3="tag" line4="God" line5="lemma" />
+<t id="t10019" monad="10" line1="îm-" line2="" line3="tag" line4="MplAB" line5="lemma" />
+<t id="t10020" monad="11" line1="Ø" line2="" line3="tag" line4="SUFF" line5="lemma" />
+<t id="t10021" monad="12" line1="?ēt" line2="" line3="tag" line4="P" line5="lemma" />
+<t id="t10022" monad="13" line1="ha-" line2="" line3="tag" line4="ART" line5="lemma" />
+<t id="t10023" monad="14" line1="ššām-" line2="" line3="tag" line4="sky" line5="lemma" />
+<t id="t10024" monad="15" line1="ayim-" line2="" line3="tag" line4="MplAB" line5="lemma" />
+<t id="t10025" monad="16" line1="Ø" line2="" line3="tag" line4="SUFF" line5="lemma" />
+<t id="t10026" monad="17" line1="wə-" line2="" line3="tag" line4="CONJ" line5="lemma" />
+<t id="t10027" monad="18" line1="?ēt" line2="" line3="tag" line4="P" line5="lemma" />
+<t id="t10028" monad="19" line1="hā-" line2="" line3="tag" line4="ART" line5="lemma" />
+<t id="t10029" monad="20" line1="?ārec-" line2="" line3="tag" line4="earth" line5="lemma" />
+<t id="t10030" monad="21" line1="Ø-" line2="" line3="tag" line4="sgAB" line5="lemma" />
+<t id="t10031" monad="22" line1="Ø" line2="" line3="tag" line4="SUFF" line5="lemma" />
+</terminals>
+<nonterminals>
+<nt id="nt10008" treestate="EXPANDED" cat="Text:Text">
+  <edge idref="nt10062"/>
+</nt>
+<nt id="nt10062" treestate="EXPANDED" cat="RRG:CLAUSE">
+  <edge idref="nt10061"/>
+  <edge idref="nt10060"/>
+</nt>
+<nt id="nt10061" treestate="COLLAPSED" cat="RRG:PrCS">
+  <edge idref="nt10059"/>
+</nt>
+<nt id="nt10059" treestate="COLLAPSED" cat="Phrase:PP">
+  <edge idref="nt10033"/>
+  <edge idref="nt10058"/>
+</nt>
+<nt id="nt10033" treestate="COLLAPSED" cat="XBar:P">
+  <edge idref="t10009"/>
+</nt>
+<nt id="nt10058" treestate="COLLAPSED" cat="Phrase:NP">
+  <edge idref="nt10057"/>
+</nt>
+<nt id="nt10057" treestate="COLLAPSED" cat="RRG:COREN">
+  <edge idref="nt10056"/>
+</nt>
+<nt id="nt10056" treestate="COLLAPSED" cat="RRG:NUCN">
+  <edge idref="nt10032"/>
+</nt>
+<nt id="nt10032" treestate="COLLAPSED" cat="XBar:N">
+  <edge idref="t10010"/>
+  <edge idref="t10011"/>
+  <edge idref="t10012"/>
+</nt>
+<nt id="nt10060" treestate="EXPANDED" cat="RRG:CORE">
+  <edge idref="nt10055"/>
+  <edge idref="nt10046"/>
+  <edge idref="nt10043"/>
+</nt>
+<nt id="nt10055" treestate="COLLAPSED" cat="RRG:NUC">
+  <edge idref="nt10054"/>
+</nt>
+<nt id="nt10054" treestate="EXPANDED" cat="RRG:PRED">
+  <edge idref="nt10035"/>
+</nt>
+<nt id="nt10035" treestate="COLLAPSED" cat="XBar:V">
+  <edge idref="t10013"/>
+  <edge idref="t10014"/>
+  <edge idref="t10015"/>
+  <edge idref="t10016"/>
+  <edge idref="t10017"/>
+</nt>
+<nt id="nt10046" treestate="COLLAPSED" cat="Phrase:NP">
+  <edge idref="nt10045"/>
+</nt>
+<nt id="nt10045" treestate="COLLAPSED" cat="RRG:COREN">
+  <edge idref="nt10044"/>
+</nt>
+<nt id="nt10044" treestate="COLLAPSED" cat="RRG:NUCN">
+  <edge idref="nt10036"/>
+</nt>
+<nt id="nt10036" treestate="COLLAPSED" cat="XBar:N">
+  <edge idref="t10018"/>
+  <edge idref="t10019"/>
+  <edge idref="t10020"/>
+</nt>
+<nt id="nt10043" treestate="EXPANDED" cat="Phrase:PP">
+  <edge idref="nt10041"/>
+  <edge idref="t10026" label="Function:Conj"/>
+  <edge idref="nt10042"/>
+</nt>
+<nt id="nt10041" treestate="EXPANDED" cat="Phrase:PP">
+  <edge idref="nt10037"/>
+  <edge idref="nt10049"/>
+</nt>
+<nt id="nt10037" treestate="COLLAPSED" cat="XBar:P">
+  <edge idref="t10021"/>
+</nt>
+<nt id="nt10049" treestate="EXPANDED" cat="Phrase:NP">
+  <edge idref="nt10048"/>
+</nt>
+<nt id="nt10048" treestate="EXPANDED" cat="RRG:COREN">
+  <edge idref="nt10047"/>
+</nt>
+<nt id="nt10047" treestate="EXPANDED" cat="RRG:NUCN">
+  <edge idref="nt10038"/>
+</nt>
+<nt id="nt10038" treestate="EXPANDED" cat="XBar:N">
+  <edge idref="t10022"/>
+  <edge idref="t10023"/>
+  <edge idref="t10024"/>
+  <edge idref="t10025"/>
+</nt>
+<nt id="nt10042" treestate="EXPANDED" cat="Phrase:PP">
+  <edge idref="nt10039"/>
+  <edge idref="nt10052"/>
+</nt>
+<nt id="nt10039" treestate="COLLAPSED" cat="XBar:P">
+  <edge idref="t10027"/>
+</nt>
+<nt id="nt10052" treestate="COLLAPSED" cat="Phrase:NP">
+  <edge idref="nt10051"/>
+</nt>
+<nt id="nt10051" treestate="COLLAPSED" cat="RRG:COREN">
+  <edge idref="nt10050"/>
+</nt>
+<nt id="nt10050" treestate="COLLAPSED" cat="RRG:NUCN">
+  <edge idref="nt10040"/>
+</nt>
+<nt id="nt10040" treestate="COLLAPSED" cat="XBar:N">
+  <edge idref="t10028"/>
+  <edge idref="t10029"/>
+  <edge idref="t10030"/>
+  <edge idref="t10031"/>
+</nt>
+</nonterminals>
+</graph>
+</s>
+</body></corpus>
