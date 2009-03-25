@@ -27,7 +27,10 @@ import com.qwirx.db.sql.DbTable;
 import com.qwirx.db.sql.SqlDatabase;
 import com.qwirx.jemdros.Preloader;
 import com.qwirx.lex.emdros.EmdrosDatabase;
+import com.qwirx.lex.lexicon.Lexicon;
 import com.qwirx.lex.ontology.OntologyDb;
+import com.qwirx.lex.parser.Parser;
+import com.qwirx.lex.translit.DatabaseTransliterator;
 
 /**
  * @author chris
@@ -38,12 +41,18 @@ import com.qwirx.lex.ontology.OntologyDb;
 public class Lex 
 {
     private static final Logger m_LOG = Logger.getLogger(Lex.class);
-    
-	public static final SqlDatabase getSqlDatabase(String user) 
+
+    public static final SqlDatabase getSqlDatabase(String user) 
+    throws Exception 
+    {
+        return getSqlDatabase(user, "lex");
+    }
+
+	public static final SqlDatabase getSqlDatabase(String user, String database) 
 	throws Exception 
     {
 		loadLibrary();
-		return new SqlDatabase(getSqlConnection(), user, "lex");
+		return new SqlDatabase(getSqlConnection(), user, database);
 	}
 
 	public static final OntologyDb getOntologyDb() 
@@ -215,12 +224,16 @@ public class Lex
 
     	String dsn = "jdbc:mysql://localhost:3306/lex?user=emdf" +
             "&password=changeme&useServerPrepStmts=false" +
-            "&jdbcCompliantTruncation=false";
+            "&jdbcCompliantTruncation=false" +
+            "&characterEncoding=utf8";
     	Connection dbconn;
     	
-		try {
+		try
+        {
 			dbconn = new Driver().connect(dsn, new Properties());
+            dbconn.prepareStatement("SET NAMES utf8").executeUpdate();
 
+            /*
 			new DbTable("object_types",
 				new DbColumn[]{
 					new DbColumn("ID",           "INT(11)",     false, 
@@ -229,75 +242,15 @@ public class Lex
 					new DbColumn("Supertype_ID", "INT(11)",     false),
 				}
 			).check(dbconn, true);
+            */
 			
-			new DbTable("lexicon_entries",
-				new DbColumn[]{
-					new DbColumn("ID",        "INT(11)",     false, 
-							true, true),
-					new DbColumn("Lexeme",    "VARCHAR(40)", true),
-					new DbColumn("Structure", "VARCHAR(160)", true),
-					new DbColumn("Domain_Parent_ID", "INT(11)",
-							true),
-					new DbColumn("Domain_Label", "VARCHAR(40)", 
-							true),
-					new DbColumn("Domain_Desc", "VARCHAR(160)", 
-							true),
-					new DbColumn("Symbol",      "VARCHAR(40)", true),
-					new DbColumn("Gloss",       "VARCHAR(40)", true),
-                    new DbColumn("Syntactic_Args", "INT(11)",  false),
-                    new DbColumn("Aktionsart",  
-                            "ENUM('NONE','INGR','SEML','BECOME')", false),
-                    new DbColumn("Active",      "ENUM('0','1')", false),
-                    new DbColumn("Pred_Enable", "ENUM('0','1')", false),
-                    new DbColumn("Predicate",   "VARCHAR(40)", true),
-                    new DbColumn("Arguments",   "ENUM('','X','XY')", false),
-                    new DbColumn("Become",      "ENUM('0','1')", false),
-                    new DbColumn("Become_Pred", "VARCHAR(40)", false),
-                    new DbColumn("Become_Args", "ENUM('','Y','ZX')", false),
-                    new DbColumn("Caused",      "ENUM('0','1')", false),
-                    new DbColumn("Caused_Aktionsart",  
-                            "ENUM('NONE','INGR','SEML','BECOME')", false),
-                    new DbColumn("Caused_Active",      "ENUM('0','1')", false),
-                    new DbColumn("Caused_Pred_Enable", "ENUM('0','1')", false),
-                    new DbColumn("Caused_Predicate",   "VARCHAR(40)", false),
-                    new DbColumn("Caused_Arguments",   "ENUM('','X','XY')", false),
-                    new DbColumn("Caused_Become",      "ENUM('0','1')", false),
-                    new DbColumn("Caused_Become_Pred", "VARCHAR(40)", false),
-                    new DbColumn("Caused_Become_Args", "ENUM('','Y','ZX')", false),
-                    new DbColumn("Punctual",           "ENUM('0','1')", false),
-                    new DbColumn("Has_Result_State",   "ENUM('0','1')", false),
-                    new DbColumn("Telic",              "ENUM('0','1')", false),
-                    new DbColumn("Thematic_Relation",  "VARCHAR(11)", true),
-                    new DbColumn("Dynamic",            "ENUM('0','1')", false),
-                    new DbColumn("Has_Endpoint",       "ENUM('0','1')", false),
-                    new DbColumn("Result_Predicate",   "VARCHAR(40)", true),
-                    new DbColumn("Result_Predicate_Arg",
-                            "ENUM('x','y','x,y')", true),
-				}
-			).check(dbconn, true);
-
-			new DbTable("lexical_rules",
-				new DbColumn[]{
-					new DbColumn("ID",        "INT(11)",     false, 
-							true, true),
-					new DbColumn("Symbol",    "VARCHAR(40)", true),
-					new DbColumn("Structure", "VARCHAR(80)", true),
-				}
-			).check(dbconn, true);
-
-			new DbTable("lexicon_variables",
-				new DbColumn[]{
-					new DbColumn("ID",        "INT(11)", false, 
-							true, true),
-					new DbColumn("Lexeme_ID", "INT(11)", false),
-					new DbColumn("Name",  "VARCHAR(20)", false),
-					new DbColumn("Value", "VARCHAR(40)", false),
-				}
-			).check(dbconn, true);
-
+            Lexicon.checkDatabase(dbconn);
+            Parser.checkDatabase(dbconn);
+            DatabaseTransliterator.checkDatabase(dbconn);
+            
             new DbTable
             (
-                "user_text_access",
+                "user_text_access", "utf8",
                 new DbColumn[]
                 {
                     new DbColumn("ID",           "INT(11)", false, 
@@ -324,6 +277,12 @@ public class Lex
     		throw new DatabaseException("Failed to connect to database: " + 
     		    dsn, ex);
     	}
+        catch (Exception ex)
+        {
+            System.err.println(ex);
+            throw new DatabaseException("Database check failed: " + 
+                dsn, ex);
+        }
 
 		return dbconn;
     }

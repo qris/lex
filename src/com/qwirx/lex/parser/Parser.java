@@ -6,12 +6,15 @@
  */
 package com.qwirx.lex.parser;
 
+import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
 import com.qwirx.db.DatabaseException;
+import com.qwirx.db.sql.DbColumn;
+import com.qwirx.db.sql.DbTable;
 import com.qwirx.db.sql.SqlDatabase;
 
 /**
@@ -24,6 +27,19 @@ public class Parser
 {
 	private Rule [] rules;
     private MorphRule [] m_Morph;
+    
+    public static void checkDatabase(Connection dbconn)
+    throws Exception
+    {
+        new DbTable("lexical_rules", "utf8",
+            new DbColumn[]{
+                new DbColumn("ID",        "INT(11)",     false, 
+                        true, true),
+                new DbColumn("Symbol",    "VARCHAR(40)", true),
+                new DbColumn("Structure", "VARCHAR(80)", true),
+            }
+        ).check(dbconn, true);
+    }
 	
 	public Parser(SqlDatabase db) throws DatabaseException, SQLException 
     {

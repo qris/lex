@@ -47,7 +47,7 @@ public class SqlDatabase implements Database
 		
 		try
 		{
-			new DbTable("change_log",
+			new DbTable("change_log", "utf8",
 				new DbColumn[]{
 					new DbColumn("ID",         "INT(11)", false, 
 							true, true),
@@ -62,7 +62,7 @@ public class SqlDatabase implements Database
 				}
 			).check(conn, true);
 
-			new DbTable("changed_rows",
+			new DbTable("changed_rows", "utf8",
 				new DbColumn[]{
 					new DbColumn("ID",        "INT(11)", false, 
 							true, true),
@@ -71,7 +71,7 @@ public class SqlDatabase implements Database
 				}
 			).check(conn, true);
 
-			new DbTable("changed_values",
+			new DbTable("changed_values", "utf8",
 				new DbColumn[]{
 					new DbColumn("ID",        "INT(11)", false, 
 							true, true),
@@ -261,7 +261,7 @@ public class SqlDatabase implements Database
         return value;
     }
 
-    public List getTableAsList(String query)
+    public List<String[]> getTableAsList(String query)
 	throws DatabaseException
 	{
     	try

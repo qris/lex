@@ -15,13 +15,14 @@ import org.apache.log4j.Logger;
 
 public class DbTable 
 {
-	String name;
-	DbColumn [] columns;
+	private String name, m_Charset;
+	private DbColumn [] columns;
     private static final Logger m_LOG = Logger.getLogger(DbTable.class);
 
-	public DbTable(String name, DbColumn [] columns) 
+	public DbTable(String name, String charset, DbColumn [] columns) 
     {
 		this.name    = name;
+        this.m_Charset = charset;
 		this.columns = columns;
 	}
 
@@ -34,7 +35,7 @@ public class DbTable
     public void check(Connection conn, boolean addMissingColumns) 
     throws SQLException, IllegalStateException 
     {
-		Statement stmt = null;
+		PreparedStatement stmt = null;
 		ResultSet rs = null;
 		String sql = null;
         
@@ -42,7 +43,7 @@ public class DbTable
 		{
 			stmt = conn.prepareStatement
 				("SHOW TABLES");
-			rs = ((PreparedStatement)stmt).executeQuery();
+			rs = stmt.executeQuery();
 			
 			while (rs.next()) 
 			{
@@ -52,7 +53,7 @@ public class DbTable
 					cleanUpSql(stmt, rs);
                     sql = "DESCRIBE " + name;
 					stmt = conn.prepareStatement(sql);
-					rs = ((PreparedStatement)stmt).executeQuery();
+					rs = stmt.executeQuery();
 					Iterator tci = Arrays.asList(columns)
 						.iterator();
 					while (rs.next()) {
@@ -109,13 +110,36 @@ public class DbTable
                         }
                         
 						if (! passed)
+                        {
 							throw new IllegalStateException
 								("Table "+name+
 								" column "+currentColumnName+
 								" should"+(expectedNull ? "" : " not")+
 								" allow NULL ("+actualNull+")");
+                        }
 					}
+                    
+                    rs.close();
+                    stmt.close();
 					
+                    stmt = conn.prepareStatement("SHOW CREATE TABLE " +
+                        this.name);
+                    rs = stmt.executeQuery();
+                    rs.next();
+                    String charset = rs.getString(2);
+                    rs.close();
+                    stmt.close();
+                    
+                    charset = charset.replaceFirst("(?s).* DEFAULT CHARSET=", "");
+                    charset = charset.replaceFirst(" .*", "");
+                    
+                    if (! charset.equals(m_Charset))
+                    {
+                        throw new IllegalStateException("Table " + name + " " +
+                            "has wrong character set " + charset + " " +
+                            "instead of " + m_Charset);
+                    }
+                    
                     if (!tci.hasNext())
                     {
                         return;
@@ -129,7 +153,7 @@ public class DbTable
                             sql = "ALTER TABLE "+name+" ADD COLUMN "+
                             missing.getSpec();
                             stmt = conn.prepareStatement(sql);
-                            ((PreparedStatement)stmt).executeUpdate();
+                            stmt.executeUpdate();
                         }
                     }
                     else
@@ -139,10 +163,9 @@ public class DbTable
                             ("Table "+name+" missing column "+missing.name+
                             " " + missing.getSpec());
                     }
-					
+                    
 					return;
 				}
-					
 			}
 			
 			sql = "CREATE TABLE "+name+ " (";
@@ -154,10 +177,10 @@ public class DbTable
 					sql += ", ";
 			}
 			
-			sql += ")";
+			sql += ") CHARACTER SET " + m_Charset;
 			
-			stmt = conn.createStatement();
-			stmt.executeUpdate(sql);
+			stmt = conn.prepareStatement(sql);
+			stmt.executeUpdate();
         } 
         catch (SQLException e)
         {
