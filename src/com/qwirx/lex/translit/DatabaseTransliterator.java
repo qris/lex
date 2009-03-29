@@ -100,7 +100,18 @@ public class DatabaseTransliterator
         }
     }
     
-    public String transliterate(String input)
+    /**
+     * Because we transliterate morphemes, we don't necessarily know
+     * whether this morpheme is at the beginning of a word or not.
+     * But we need to, because regexp rules containing ^ and $ will
+     * match start and end of morphemes if we're not careful.
+     * @param input
+     * @param startOfWord
+     * @param endOfWord
+     * @return
+     */
+    public String transliterate(String input, boolean startOfWord,
+        boolean endOfWord)
     {
         StringBuffer output = new StringBuffer();
         
@@ -108,6 +119,17 @@ public class DatabaseTransliterator
         {
             String before = input.substring(0, pos);
             String after = input.substring(pos);
+            
+            if (! startOfWord)
+            {
+                before = " " + before; /* magic space to prevent ^ matching */
+            }
+            
+            if (! endOfWord)
+            {
+                after = after + " "; /* magic space to prevent $ matching */
+            }
+            
             String consumed = null, result = null;
 
             for (Iterator<Rule> i = m_Rules.iterator(); i.hasNext();)

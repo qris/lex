@@ -537,7 +537,7 @@ public class TransliteratorTest extends TestCase
     
     public void addTest(String input, String output)
     {
-        assertEquals(output, m_trans.transliterate(input));
+        assertEquals(output, m_trans.transliterate(input, true, true));
     }
     
     public static void main(String[] args)
