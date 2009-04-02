@@ -1,9 +1,9 @@
 package com.qwirx.lex;
 
+import java.sql.PreparedStatement;
+
 import junit.framework.TestCase;
 
-import com.qwirx.db.Change;
-import com.qwirx.db.sql.SqlChange;
 import com.qwirx.db.sql.SqlDatabase;
 import com.qwirx.lex.translit.DatabaseTransliterator;
 import com.qwirx.lex.translit.DatabaseTransliterator.Rule;
@@ -24,14 +24,15 @@ public class TransliteratorTest extends TestCase
         /* pattern syntax check */
         Rule r = new DatabaseTransliterator.Rule(precedent, original,
             succeedent, replacement);
-        
-        Change ch = m_sql.createChange(SqlChange.INSERT, "translit_rules",
-            null);
-        ch.setString("Precedent",   precedent);
-        ch.setString("Original",    original);
-        ch.setString("Succeedent",  succeedent);
-        ch.setString("Replacement", replacement);
-        ch.execute();
+        PreparedStatement stmt = m_sql.prepareSelect("INSERT INTO " +
+                "translit_rules SET Precedent = ?, Original = ?, " +
+                "Succeedent = ?, Replacement = ?");
+        stmt.setString(1, precedent);
+        stmt.setString(2, original);
+        stmt.setString(3, succeedent);
+        stmt.setString(4, replacement);
+        stmt.execute();
+        m_sql.finish();
         
         return r;
     }
@@ -40,8 +41,8 @@ public class TransliteratorTest extends TestCase
     
     public void testDatabaseTransliterator() throws Exception
     {
-        m_sql.createChange(SqlChange.DELETE, "translit_rules", null)
-            .execute();
+        m_sql.beginTransaction();
+        m_sql.executeDirect("DELETE FROM translit_rules");
 
         /* characters and symbols */
         final String ALEPH = "\u05d0";
@@ -224,9 +225,14 @@ public class TransliteratorTest extends TestCase
         addRule("", TSERE + HE + DAGESH, "$", E_BAR + "h");
         addRule("", TSERE + YOD, "", E_CIRCUMFLEX);
         addRule("", TSERE, "", E_BAR);
-        addRule("", QAMETS + HE, "$", A_BAR + SUPERSCRIPT_H);
-        addRule("", QAMETS + HE + DAGESH, "$", A_BAR + "h");
-        addRule("", QAMETS + YOD, "", A_BAR + SUPERSCRIPT_Y);
+        addRule("", QAMETS + OPTIONAL_CANTILLATION + HE, "$",
+            A_BAR + SUPERSCRIPT_H);
+        addRule("", QAMETS + OPTIONAL_CANTILLATION + HE + DAGESH, "$",
+            A_BAR + "h");
+        addRule("", QAMETS + OPTIONAL_CANTILLATION + YOD + WAW, "",
+            A_BAR + SUPERSCRIPT_Y + "w");
+        addRule("", QAMETS + OPTIONAL_CANTILLATION + YOD, "$",
+            A_BAR + SUPERSCRIPT_Y);
         addRule("", QAMETS, CONSONANT_DAGESH_CANTILLATION + SHEVA, "o");
         addRule("", QAMETS, CONSONANT + OPTIONAL_DAGESH + "$", "o");
         addRule("", QAMETS, "", A_BAR);
@@ -407,7 +413,7 @@ public class TransliteratorTest extends TestCase
         addTest(QAMETS + HE + DAGESH, A_BAR + "h");
         addTest(QAMETS + HE + DAGESH + HE, A_BAR + "hh");
         addTest(QAMETS + YOD, A_BAR + SUPERSCRIPT_Y);
-        addTest(QAMETS + YOD + DAGESH + HE, A_BAR + SUPERSCRIPT_Y + "h");
+        addTest(QAMETS + YOD + DAGESH + HE, A_BAR + "yyh");
         addTest(QAMETS, A_BAR);
         addTest("\u05c6", "");
         addTest(SOF_PASUQ, ":");
@@ -533,11 +539,21 @@ public class TransliteratorTest extends TestCase
         addTest(FINAL_TSADE, S_DOT);
         addTest(ZAYIN + DAGESH, "zz");
         addTest(ZAYIN, "z");
+        
+        addTest("מִצַּלְעֹתָ֔יו", "miṣṣalʕōtāʸw"); // GEN 2,21
+        addTest("הָיְתָ֥ה", "hoytāʰ"); // GEN 1,2 // wrong! special case
+        // addTest("הָיְתָ֥ה", "hāyᵊtāʰ"); // GEN 1,2 special case 
+        addTest("בָּרָ֣א", "bārāˀ"); // GEN 1,1
+        addTest("שָּׁמַ֖יִם", "ššāmayim"); // GEN 1,1
+        addTest("אֲדָמָ֖ה", "ʔᵃdāmāʰ"); // GEN 1,25
+        addTest("ר֣וּחַ", "rû" + SUBSCRIPT_A + "ḥ");
+        
+        m_sql.commitTransaction();
     }
     
     public void addTest(String input, String output)
     {
-        assertEquals(output, m_trans.transliterate(input, true, true));
+        assertEquals(output, m_trans.transliterate(input, "", ""));
     }
     
     public static void main(String[] args)

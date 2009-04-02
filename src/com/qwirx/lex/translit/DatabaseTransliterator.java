@@ -4,6 +4,7 @@ import java.sql.Connection;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
@@ -12,6 +13,7 @@ import org.apache.log4j.Logger;
 import com.qwirx.db.sql.DbColumn;
 import com.qwirx.db.sql.DbTable;
 import com.qwirx.db.sql.SqlDatabase;
+import com.qwirx.lex.morph.HebrewMorphemeGenerator.Morpheme;
 
 public class DatabaseTransliterator
 {
@@ -37,7 +39,7 @@ public class DatabaseTransliterator
         private Logger m_Log = Logger.getLogger(getClass());
         
         String precedent, original, succeedent, replacement;
-        Pattern m_BeforePattern, m_AfterPattern;
+        Pattern m_BeforePattern, m_AfterPattern, m_ConsumePattern;
         
         public Rule(String precedent, String original, String succeedent,
             String replacement)
@@ -51,6 +53,7 @@ public class DatabaseTransliterator
             {
                 m_BeforePattern = Pattern.compile(precedent + "$");
                 m_AfterPattern = Pattern.compile("^" + original + succeedent);
+                m_ConsumePattern = Pattern.compile("^" + original);
             }
             catch (PatternSyntaxException e)
             {
@@ -61,19 +64,26 @@ public class DatabaseTransliterator
             }
         }
         
-        public boolean matchesAfter(String after)
+        public boolean matchesStartOf(String after)
         {
-            return m_BeforePattern.matcher(after).find();
+            return m_AfterPattern.matcher(after).find();
         }
 
-        public boolean matchesBefore(String before)
+        public boolean matchesEndOf(String before)
         {
-            return m_AfterPattern.matcher(before).find();
+            return m_BeforePattern.matcher(before).find();
         }
         
         public boolean matches(String before, String after)
         {
-            return matchesAfter(before) && matchesBefore(after);
+            return matchesEndOf(before) && matchesStartOf(after);
+        }
+        
+        public String consumes(String after)
+        {
+            Matcher matcher = m_ConsumePattern.matcher(after);
+            matcher.find();
+            return matcher.group();
         }
 
         public String toString()
@@ -101,35 +111,52 @@ public class DatabaseTransliterator
     }
     
     /**
-     * Because we transliterate morphemes, we don't necessarily know
-     * whether this morpheme is at the beginning of a word or not.
-     * But we need to, because regexp rules containing ^ and $ will
-     * match start and end of morphemes if we're not careful.
-     * @param input
-     * @param startOfWord
-     * @param endOfWord
+     * Transliterate the nth morpheme of the given list. Convenience method.
+     * @param morphemes a list of morphemes forming a broken-up word
+     * @param index the index of the morpheme to transliterate
      * @return
      */
-    public String transliterate(String input, boolean startOfWord,
-        boolean endOfWord)
+    public String transliterate(List<Morpheme> morphemes, int index)
+    {
+        StringBuffer before = new StringBuffer();
+        StringBuffer after = new StringBuffer();
+        
+        for (int i = 0; i < morphemes.size(); i++)
+        {
+            Morpheme morpheme = morphemes.get(i);
+            
+            if (i < index)
+            {
+                before.append(morpheme.getSurface());
+            }
+            
+            if (i > index)
+            {
+                after.append(morpheme.getSurface());
+            }
+        }
+        
+        return transliterate(morphemes.get(index).getSurface(),
+            before.toString(), after.toString());
+    }
+    
+    /**
+     * Pass in a morpheme, together with the text which precedes and
+     * follows it, as this text may affect the transliteration.
+     * @param input
+     * @param precedingText
+     * @param followingText
+     * @return
+     */
+    public String transliterate(String input, String precedingText,
+        String followingText)
     {
         StringBuffer output = new StringBuffer();
         
         for (int pos = 0; pos < input.length(); /* pos += result.length() */)
         {
-            String before = input.substring(0, pos);
-            String after = input.substring(pos);
-            
-            if (! startOfWord)
-            {
-                before = " " + before; /* magic space to prevent ^ matching */
-            }
-            
-            if (! endOfWord)
-            {
-                after = after + " "; /* magic space to prevent $ matching */
-            }
-            
+            String before = precedingText + input.substring(0, pos);
+            String after = input.substring(pos) + followingText;
             String consumed = null, result = null;
 
             for (Iterator<Rule> i = m_Rules.iterator(); i.hasNext();)
@@ -138,7 +165,7 @@ public class DatabaseTransliterator
                 
                 if (rule.matches(before, after))
                 {
-                    consumed = rule.original;
+                    consumed = rule.consumes(after);
                     result = rule.replacement;
                     break;
                 }
@@ -146,7 +173,7 @@ public class DatabaseTransliterator
             
             if (consumed == null)
             {
-                // noting matched, this is probably bad!
+                // nothing matched, this is probably bad!
                 // copy and consume one character and try again
                 consumed = after.substring(0, 1);
                 result = consumed;
