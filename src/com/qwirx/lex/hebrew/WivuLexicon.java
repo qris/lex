@@ -7,8 +7,12 @@ import java.io.InputStreamReader;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.apache.log4j.Logger;
+
 public class WivuLexicon
 {
+    private Logger m_LOG = Logger.getLogger(getClass());
+    
     public static class Key
     {
         private String m_Lexeme, m_Form;
@@ -108,6 +112,7 @@ public class WivuLexicon
     
     public WivuLexicon() throws Exception
     {
+        m_LOG.info("Loading WIVU lexicon");
         loadFile("hebrew-lexicon.txt");
         loadFile("aramaic-lexicon.txt");
     }

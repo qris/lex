@@ -17,6 +17,7 @@ public class LexContextListener extends Object implements
     {
         LOG.warn("Lex is loading");
         
+        /*
         try
         {
             Wordnet.getInstance();
@@ -24,6 +25,16 @@ public class LexContextListener extends Object implements
         catch (Exception e)
         {
             LOG.error("Failed to initialise Wordnet", e);
+        }
+        */
+        
+        try
+        {
+            Lex.getWivuLexicon();
+        }
+        catch (Exception e)
+        {
+            LOG.error("Failed to load WIVU lexicon", e);
         }
 
         try
@@ -48,7 +59,7 @@ public class LexContextListener extends Object implements
     public void contextDestroyed(ServletContextEvent arg0)
     {
         LOG.warn("Lex is shutting down");
-        Wordnet.delete();
+        // Wordnet.delete();
         OntologyDb.delete();
         HebrewEnglishDatabase.delete();
         Lex.emptyPools();

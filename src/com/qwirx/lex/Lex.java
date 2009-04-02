@@ -27,6 +27,7 @@ import com.qwirx.db.sql.DbTable;
 import com.qwirx.db.sql.SqlDatabase;
 import com.qwirx.jemdros.Preloader;
 import com.qwirx.lex.emdros.EmdrosDatabase;
+import com.qwirx.lex.hebrew.WivuLexicon;
 import com.qwirx.lex.lexicon.Lexicon;
 import com.qwirx.lex.ontology.OntologyDb;
 import com.qwirx.lex.parser.Parser;
@@ -52,7 +53,7 @@ public class Lex
 	throws Exception 
     {
 		loadLibrary();
-		return new SqlDatabase(getSqlConnection(), user, database);
+		return new SqlDatabase(getSqlConnection(database), user, database);
 	}
 
 	public static final OntologyDb getOntologyDb() 
@@ -124,6 +125,7 @@ public class Lex
             emdrosDb.createFeatureIfMissing("phrase","macrorole_number", "integer default -1");
             emdrosDb.createFeatureIfMissing("word",  "wordnet_gloss",    "string");
             emdrosDb.createFeatureIfMissing("word",  "wordnet_synset",   "integer");
+            emdrosDb.createFeatureIfMissing("word",  "wivu_lexicon_id",  "integer");
             
             return emdrosDb;
         }
@@ -190,8 +192,9 @@ public class Lex
     }
 	
 	private static final Connection getLogDatabaseHandle()
-	throws DatabaseException {
-		return getSqlConnection();
+	throws DatabaseException
+    {
+		return getSqlConnection("lex");
 	}
 
 	private static boolean m_IsLibraryLoaded = false;
@@ -217,13 +220,15 @@ public class Lex
     	// do not call
     }
     
-    private static Connection getSqlConnection()
+    private static Connection getSqlConnection(String database)
     throws DatabaseException
     {
 		// System.out.println("Connection established.");
 
-    	String dsn = "jdbc:mysql://localhost:3306/lex?user=emdf" +
-            "&password=changeme&useServerPrepStmts=false" +
+    	String dsn = "jdbc:mysql://localhost:3306/" + database +
+            "?user=emdf" +
+            "&password=changeme" +
+            "&useServerPrepStmts=false" +
             "&jdbcCompliantTruncation=false" +
             "&characterEncoding=utf8";
     	Connection dbconn;
@@ -290,5 +295,17 @@ public class Lex
 	public static void main (String [] args)
 	{
 			junit.textui.TestRunner.run(LexTest.class);
+    }
+    
+    private static WivuLexicon s_WivuLexicon;
+    
+    public static WivuLexicon getWivuLexicon() throws Exception
+    {
+        if (s_WivuLexicon == null)
+        {
+            s_WivuLexicon = new WivuLexicon();
+        }
+        
+        return s_WivuLexicon;
     }
 }
