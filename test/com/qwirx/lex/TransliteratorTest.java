@@ -1,10 +1,13 @@
 package com.qwirx.lex;
 
 import java.sql.PreparedStatement;
+import java.util.ArrayList;
+import java.util.List;
 
 import junit.framework.TestCase;
 
 import com.qwirx.db.sql.SqlDatabase;
+import com.qwirx.lex.morph.HebrewMorphemeGenerator.Morpheme;
 import com.qwirx.lex.translit.DatabaseTransliterator;
 import com.qwirx.lex.translit.DatabaseTransliterator.Rule;
 
@@ -233,8 +236,8 @@ public class TransliteratorTest extends TestCase
             A_BAR + SUPERSCRIPT_H);
         addRule("", QAMETS + OPTIONAL_CANTILLATION + HE + DAGESH, "$",
             A_BAR + "h");
-        addRule("", QAMETS + OPTIONAL_CANTILLATION + YOD + WAW, "",
-            A_BAR + SUPERSCRIPT_Y + "w");
+        addRule("", QAMETS + OPTIONAL_CANTILLATION + YOD, WAW,
+            A_BAR + SUPERSCRIPT_Y);
         addRule("", QAMETS + OPTIONAL_CANTILLATION + YOD, "$",
             A_BAR + SUPERSCRIPT_Y);
         addRule("", QAMETS, CONSONANT_DAGESH_CANTILLATION + SHEVA, "o");
@@ -569,6 +572,14 @@ public class TransliteratorTest extends TestCase
         addTest("לֻֽקֳחָה־", "luqᵒḥāh-"); // GEN 2,23
         addTest("כִבְשֻׁ֑הָ", "xivšuhā"); // GEN 1,28
         addTest("בְּ", "bᵊ"); // GEN 1,1
+        
+        List<Morpheme> morphs = new ArrayList<Morpheme>();
+        morphs.add(new Morpheme("צַּלְע", "rib", "N/NUC"));
+        morphs.add(new Morpheme("ֹתָ֔י", "FplCS", "N/GNS"));
+        morphs.add(new Morpheme("ו", "3Msg", "N/POS"));
+        assertEquals("ṣṣalʕ", m_trans.transliterate(morphs, 0));
+        assertEquals("ōtāʸ", m_trans.transliterate(morphs, 1));
+        assertEquals("w", m_trans.transliterate(morphs, 2));
         
         m_sql.commitTransaction();
     }
