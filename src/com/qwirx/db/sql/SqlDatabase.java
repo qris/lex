@@ -129,6 +129,8 @@ public class SqlDatabase implements Database
 		return istmt;
 	}
 
+    private Throwable m_PreviousStatementStarted;
+    
 	public PreparedStatement prepareSelect(String sql) 
 	throws DatabaseException 
     {
@@ -137,9 +139,12 @@ public class SqlDatabase implements Database
         
 		if (stmt != null || rs != null) 
         {
-			throw new IllegalStateException("Previous statement not finished");
+			throw new IllegalStateException("Previous statement not finished",
+                m_PreviousStatementStarted);
 		}
 		
+        m_PreviousStatementStarted = new Throwable();
+        
 		try 
         {
 			stmt = m_Connection.prepareStatement(sql);
@@ -555,5 +560,41 @@ public class SqlDatabase implements Database
 
     		throw e;
     	}
+    }
+    
+    public void beginTransaction() throws DatabaseException
+    {
+        try
+        {
+            m_Connection.setAutoCommit(false);
+        }
+        catch (SQLException e)
+        {
+            throw new DatabaseException("Failed to start transaction", e);
+        }
+    }
+    
+    public void commitTransaction() throws DatabaseException
+    {
+        try
+        {
+            m_Connection.commit();
+        }
+        catch (SQLException e)
+        {
+            throw new DatabaseException("Failed to commit transaction", e);
+        }
+    }
+
+    public void cancelTransaction() throws DatabaseException
+    {
+        try
+        {
+            m_Connection.rollback();
+        }
+        catch (SQLException e)
+        {
+            throw new DatabaseException("Failed to cancel transaction", e);
+        }
     }
 }
