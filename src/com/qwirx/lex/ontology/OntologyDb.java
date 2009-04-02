@@ -38,6 +38,8 @@ public class OntologyDb extends DefaultHandler
 			throw new AssertionError("file not found: "+path);
 		}
 		xr.parse(new InputSource(url.openStream()));
+        xr.setContentHandler(null);
+        xr.setErrorHandler(null);
 	}
     
     private static OntologyDb m_Instance = null;
