@@ -1,7 +1,5 @@
 package com.qwirx.lex;
 
-import java.util.Map;
-
 import jemdros.MatchedObject;
 import jemdros.Sheaf;
 import jemdros.SheafConstIterator;
@@ -14,11 +12,37 @@ import org.crosswire.jsword.book.BookData;
 import com.meterware.httpunit.WebConversation;
 import com.meterware.httpunit.WebResponse;
 import com.qwirx.crosswire.kjv.KJV;
+import com.qwirx.db.sql.SqlDatabase;
 import com.qwirx.lex.emdros.EmdrosDatabase;
+import com.qwirx.lex.lexicon.Lexeme;
+import com.qwirx.lex.translit.DatabaseTransliterator;
 
 public class GenExporterTest extends TestCase
 {
-    private static final String NEHEMIAH_2_11b_EXPORT_HEBREW =
+    private SqlDatabase m_SQL;
+
+    public GenExporterTest() throws Exception
+    {
+        m_SQL = Lex.getSqlDatabase("test");
+    }
+    
+    private String getGloss(String predicate) throws Exception
+    {
+        Lexeme lexeme = Lexeme.load(m_SQL, predicate);
+        if (lexeme == null)
+        {
+            return null;
+        }
+        else
+        {
+            return lexeme.getGloss();
+        }
+    }
+    
+    private String getNehemiah2_11bExportHebrew()
+    throws Exception
+    {
+        return
         "\\wordfield morpheme\n" +
         "\\glossfield gloss\n" +
         "\\tagfield tag\n" +
@@ -56,7 +80,7 @@ public class GenExporterTest extends TestCase
         "\\morpheme הִי־\n" +
         "\\trans hî-\n" +
         "\\tag tag\n" +
-        "\\gloss to be\n" +
+        "\\gloss " + getGloss("HJH[") + "\n" +
         "\\lemma lemma\n" +
         "\\re\n" +
         "\n" +
@@ -82,9 +106,9 @@ public class GenExporterTest extends TestCase
         "\\re\n" +
         "\n" +
         "\\morpheme יָמ\n" +
-        "\\trans jām-\n" +
+        "\\trans yām-\n" +
         "\\tag tag\n" +
-        "\\gloss day\n" +
+        "\\gloss " + getGloss("JM") + "\n" +
         "\\lemma lemma\n" +
         "\\re\n" +
         "\n" +
@@ -123,30 +147,40 @@ public class GenExporterTest extends TestCase
         "\\lemma lemma\n" +
         "\\re\n" +
         "\n";
-    private static final String NEHEMIAH_2_11b_EXPORT_TRANS =
-        NEHEMIAH_2_11b_EXPORT_HEBREW
+    }
+
+    private String getNehemiah2_11bExportHebrewTransliterated()
+    throws Exception
+    {
+        return getNehemiah2_11bExportHebrew()
         .replaceAll("\\\\morpheme .*\n", "")
         .replaceAll("\\\\trans (.*)\n", "\\\\morpheme $1\n")
         .replaceAll("\\\\transliterationfield trans\n", "")
         .replaceAll("\\\\righttoleft\n", "\\\\lefttoright\n");
+    }
         
     public void testGenExportCode() throws Exception
     {
-        EmdrosDatabase emdros = Lex.getEmdrosDatabase("test", "localhost",
-            Lex.getSqlDatabase("test"));
+        SqlDatabase sql = Lex.getSqlDatabase("test");
+        EmdrosDatabase emdros = Lex.getEmdrosDatabase("test", "localhost", sql);
+        DatabaseTransliterator transliterator = new DatabaseTransliterator(sql);
         
         Sheaf sheaf = emdros.getSheaf
         (
             "SELECT ALL OBJECTS IN " +
             "{" + emdros.getMinM() + "-" + emdros.getMaxM() + "} " +
             "WHERE " +
-            "[clause self = 1324989 " +
+            "[clause self = 1323065 " +
             " [phrase "+
             "  [word GET phrase_dependent_part_of_speech, person, gender, " +
-            "            number, state, wordnet_gloss, lexeme, tense, stem, " +
-            "            graphical_preformative, graphical_root_formation, " +
-            "            graphical_lexeme, graphical_verbal_ending, " +
-            "            graphical_nominal_ending, graphical_pron_suffix]" +
+            "            number, state, wordnet_gloss, lexeme_wit, tense, stem, " +
+            "            graphical_preformative_utf8, " +
+            "            graphical_root_formation_utf8, " +
+            "            graphical_lexeme_utf8, " +
+            "            graphical_verbal_ending_utf8, " +
+            "            graphical_nominal_ending_utf8, " +
+            "            graphical_pron_suffix_utf8, " +
+            "            suffix_gender, suffix_number, suffix_person]"+
             " ]"+
             "]"
         );
@@ -161,33 +195,34 @@ public class GenExporterTest extends TestCase
         
         BookData verse = KJV.getVerse(emdros, "Nehemiah", 2, 11); 
 
-        assertEquals(NEHEMIAH_2_11b_EXPORT_HEBREW, 
+        assertEquals(getNehemiah2_11bExportHebrew(), 
             new GenExporter().export(clause, verse,
-                Lex.getSqlDatabase("test"), true));
+                Lex.getSqlDatabase("test"), transliterator, true));
 
-        assertEquals(NEHEMIAH_2_11b_EXPORT_TRANS,
+        assertEquals(getNehemiah2_11bExportHebrewTransliterated(),
             new GenExporter().export(clause, verse,
-                Lex.getSqlDatabase("test"), false));
+                Lex.getSqlDatabase("test"), transliterator, false));
     }
     
     public void testGenExportJsp() throws Exception
     {
         WebConversation conv = new WebConversation();
         WebResponse response = conv.getResponse("http://localhost:8080/lex" +
-                "/gen-export.jsp?clause=1324989&hebrew=y");
+                "/gen-export.jsp?clause=1323065&hebrew=y");
         assertEquals("text/x-gen", response.getContentType());
         assertEquals("UTF-8", response.getCharacterSet());
         assertEquals("attachment; filename=export.gen", 
             response.getHeaderField("Content-disposition"));
-        assertEquals(NEHEMIAH_2_11b_EXPORT_HEBREW, response.getText());
+        assertEquals(getNehemiah2_11bExportHebrew(), response.getText());
 
         response = conv.getResponse("http://localhost:8080/lex" +
-            "/gen-export.jsp?clause=1324989&hebrew=n");
+            "/gen-export.jsp?clause=1323065&hebrew=n");
         assertEquals("text/x-gen", response.getContentType());
         assertEquals("UTF-8", response.getCharacterSet());
         assertEquals("attachment; filename=export.gen", 
             response.getHeaderField("Content-disposition"));
-        assertEquals(NEHEMIAH_2_11b_EXPORT_TRANS, response.getText());
+        assertEquals(getNehemiah2_11bExportHebrewTransliterated(),
+            response.getText());
     }
 
     public static void main(String[] args)

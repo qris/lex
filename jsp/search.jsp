@@ -6,6 +6,7 @@
 <%@ page import="com.qwirx.lex.Search.SearchResult" %>
 <%@ page import="com.qwirx.lex.hebrew.*" %>
 <%@ page import="com.qwirx.lex.morph.*" %>
+<%@ page import="com.qwirx.lex.translit.*" %>
 <%@ page import="jemdros.*" %>
 <%@ page import="org.aptivate.webutils.EditField" %>
 
@@ -56,10 +57,12 @@ function toggle(button, divid)
 	boolean simpleSearch   = (request.getParameter("simple")   != null);
 	boolean advancedSearch = (request.getParameter("advanced") != null);
 	List<SearchResult> results = null;
+	DatabaseTransliterator transliterator;
 	
 	if (simpleSearch || advancedSearch)
 	{
-		search = new Search(emdros);
+		transliterator = new DatabaseTransliterator(sql);
+		search = new Search(emdros, transliterator);
 		search.setMaxResults(maxResults);
 		
 		if (simpleSearch)
@@ -154,32 +157,6 @@ function toggle(button, divid)
 					String c = latin.substring(i, i + 1).replaceAll("<", "&lt;");
 					%>
 					<td><%= c %></td>
-					<%
-				}
-			%>
-		</tr>
-		<tr>
-			<th>Hebrew</th>
-			<%
-				for (int i = 0; i < latin.length()	; i++)
-				{
-					String c = latin.substring(i, i + 1);
-					String h = HebrewConverter.toHebrew(c);
-					%>
-					<td class="hebrew"><%= h %></td>
-					<%
-				}
-			%>
-		</tr>
-		<tr>
-			<th>Transliteration</th>
-			<%
-				for (int i = 0; i < latin.length()	; i++)
-				{
-					String c = latin.substring(i, i + 1);
-					String h = HebrewConverter.toTranslit(c);
-					%>
-					<td><%= h %></td>
 					<%
 				}
 			%>

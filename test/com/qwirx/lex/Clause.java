@@ -20,23 +20,26 @@ import com.qwirx.lex.emdros.EmdrosDatabase;
 import com.qwirx.lex.hebrew.HebrewConverter;
 import com.qwirx.lex.lexicon.Lexeme;
 import com.qwirx.lex.morph.HebrewMorphemeGenerator;
+import com.qwirx.lex.translit.DatabaseTransliterator;
 
 public class Clause
 {
     private EmdrosDatabase m_Emdros;
     private SqlDatabase    m_Lexicon;
     private MatchedObject  m_Clause;
+    private DatabaseTransliterator m_Transliterator;
     
     private Clause(EmdrosDatabase emdros, SqlDatabase lexicon,
-        MatchedObject clause)
+        MatchedObject clause, DatabaseTransliterator transliterator)
     {
         m_Emdros  = emdros;
         m_Lexicon = lexicon;
         m_Clause  = clause;
+        m_Transliterator = transliterator;
     }
     
     public static Clause find(EmdrosDatabase emdros, SqlDatabase lexicon,
-        int id)
+        DatabaseTransliterator transliterator, int id)
     throws DatabaseException
     {
         String query = 
@@ -68,7 +71,7 @@ public class Clause
             Straw straw = sheaf.const_iterator().next();
             MatchedObject clause = straw.const_iterator().next();
             
-            return new Clause(emdros, lexicon, clause);
+            return new Clause(emdros, lexicon, clause, transliterator);
         }
         catch (EmdrosException e)
         {
@@ -92,7 +95,7 @@ public class Clause
     }
     
     public String getEvaluatedLogicalStructure()
-    throws DatabaseException
+    throws Exception
     {
         int lsid = getLogicalStructureID();
         
@@ -198,7 +201,8 @@ public class Clause
                 try
                 {
                     MatchedObject word = sci.next().const_iterator().next();
-                    value_text += HebrewConverter.wordTranslitToHtml(word, hmg);
+                    value_text += HebrewConverter.wordTranslitToHtml(word, hmg,
+                        m_Transliterator);
                 }
                 catch (EmdrosException e)
                 {

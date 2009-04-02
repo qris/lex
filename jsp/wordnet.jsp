@@ -5,6 +5,7 @@
 <%@ page import="java.util.regex.*" %>
 <%@ page import="java.net.*" %>
 <%@ page import="java.sql.*" %>
+<%@ page import="jemdros.*" %>
 <%@ page import="com.qwirx.lex.ontology.*" %>
 <%@ page import="com.qwirx.lex.wordnet.*" %>
 <%@ page import="com.qwirx.lex.parser.*" %>
@@ -59,12 +60,10 @@
 </style>
 
 <%@ include file="auth.jsp" %>
-
+<%@ include file="navclause.jsp" %>
 <%
 
 	Wordnet wordnet = Wordnet.getInstance();
-
-%><%@ include file="navclause.jsp" %><%
 
 	Map phrase_functions = emdros.getEnumerationConstants
 		("phrase_function_e",false);
@@ -103,7 +102,7 @@
 	(
 		"SELECT ALL OBJECTS IN " +
 		emdros.intersect(userTextAccessSet, min_m, max_m) +
-		" WHERE [clause self = "+selClauseId+
+		" WHERE [clause self = "+navigator.getClauseId()+
 		"       GET logical_struct_id, logical_structure "+
 		"        [phrase GET phrase_type, phrase_function, argument_name, "+
 		"                    type_id, macrorole_number "+
@@ -215,16 +214,16 @@
 							return m_IsMorpheme;
 						}
 						
-						public void convert(String surface, 
-							boolean lastMorpheme, String desc,
-							String morphNode)
+						public void convert(String surface,
+							boolean firstMorpheme, boolean lastMorpheme,
+							String desc, String morphNode)
 						{
-							String raw = m_word.getEMdFValue(surface).getString();
-
-							String hebrew = HebrewConverter.toHebrew(raw);
+							String hebrew = m_word.getEMdFValue(surface).getString();
 							m_hebrew.append(hebrew);
 
-							String translit = HebrewConverter.toTranslit(raw);
+							String translit = navigator.getTransliterator()
+								.transliterate(hebrew, firstMorpheme,
+									lastMorpheme);
 							translit = HebrewConverter.toHtml(translit);
 							if (translit.equals("")) translit = "&Oslash;";
 							
@@ -362,7 +361,7 @@
 			if (selLsId != currentLsId && lsSaveString != null) 
 			{
 				Change ch = emdros.createChange(EmdrosChange.UPDATE,
-					"clause", new int[]{selClauseId});
+					"clause", new int[]{navigator.getClauseId()});
 				ch.setInt("logical_struct_id", selLsId);
 				ch.execute();
 				currentLsId = selLsId;
@@ -1357,7 +1356,7 @@
 		if (! currentStruct.equals(structure) && emdros.canWriteTo(clause))
 		{
 			Change ch = emdros.createChange(EmdrosChange.UPDATE,
-				"clause", new int[]{selClauseId});
+				"clause", new int[]{navigator.getClauseId()});
 			ch.setString("logical_structure", structure);
 			ch.execute();
 		}
@@ -1371,7 +1370,7 @@
 			
 			EmdrosChange ch = (EmdrosChange)(
 				emdros.createChange(EmdrosChange.CREATE,
-					"note", new int[]{selClauseId}));
+					"note", new int[]{navigator.getClauseId()}));
 			ch.setString("text", newNoteText);
 			ch.execute();
 		}
@@ -1415,7 +1414,7 @@
 		
 			Sheaf clauseSheaf = emdros.getSheaf
 				("SELECT ALL OBJECTS IN { "+min_m+" - "+max_m+"} "+
-				 "WHERE [clause self = "+selClauseId+
+				 "WHERE [clause self = "+navigator.getClauseId()+
 				 " [note GET text]"+
 				 "]");
 	
@@ -1491,7 +1490,7 @@
 </table>
 </form></p>
 	
-<p><a href="gen-export.jsp?clause=<%= selClauseId %>">Download clause in
+<p><a href="gen-export.jsp?clause=<%= navigator.getClauseId() %>">Download clause in
 	GEN format for LTC</a>.</p>
 
 <%

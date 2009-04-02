@@ -207,10 +207,6 @@ public class ParserTest extends TestCase
 
     public void testRuleFromStringComplex()
     {
-        Map fixNothing = new Hashtable();
-        Map copyStateX = new Hashtable();
-        copyStateX.put("state", "X");
-
         Rule rule = Rule.makeFromString2(7, "NP.state=@X",          
                 "{NP:X.state=absolute} {conjunction} " +
                 "{NP:Y.state=absolute}");
@@ -1468,7 +1464,17 @@ public class ParserTest extends TestCase
                 "{PP {NUC {PRED {P \"B\"}}} {NP {Nprop \"<DN=/\"}}} " +
                 "{PP {NUC {PRED {P \"MN\"}}} {NP {Nprop \"QDM/\"}}}" +
                 "}}", CLAUSE.toString());
+        
+        long start = System.currentTimeMillis();
+        for (int i = 0; i < 1000; i++)
+        {
+            p.parseFor("W NV<[ JHWH/ >LHJM/ GN/ B <DN=/ MN QDM/", "CLAUSE");
+        }
+        long elapsed = System.currentTimeMillis() - start;
+        System.out.println("1000 parses in " + elapsed + " ms");
     }
+    
+    
 
     Rule [] hebrewQuest = new Rule[] {
         Rule.makeFromString(0,  "CLM",     "{CONJ}"),
@@ -1840,7 +1846,7 @@ public class ParserTest extends TestCase
     
     class MultiMatcher
     {
-        private final String  m_Input;
+        private final String m_Input;
         private Matcher m_Matcher = null;
         public MultiMatcher(String input)
         {
@@ -1910,6 +1916,64 @@ public class ParserTest extends TestCase
             subject.attribute("arg") == null);
     }
     
+    private void replace(Edge source, Rule [] targetGrammar,
+        Chart destination)
+    {
+        if (source instanceof RuleEdge)
+        {
+            Rule sourceRule = ((RuleEdge)source).rule();
+            RulePart [] sourceParts = sourceRule.parts();
+            Rule match = null;
+            
+            for (int i = 0; i < targetGrammar.length; i++)
+            {
+                Rule r = targetGrammar[i];
+                RulePart [] rParts = r.parts();
+                boolean matches = true;
+                
+                if (r.symbol().equals(sourceRule.symbol()) &&
+                    rParts.length == sourceParts.length)
+                {
+                    for (int j = 0; j < rParts.length; j++)
+                    {
+                        RulePart rp = rParts[j];
+                        if (!(rParts[j].symbol().equals(sourceParts[j].symbol())))
+                        {
+                            matches = false;
+                            break;
+                        }
+                    }
+                }
+                else
+                {
+                    matches = false;
+                }
+                
+                if (matches)
+                {
+                    match = r;
+                    break;
+                }
+            }
+            
+            if (match != null)
+            {
+                /*
+                Edge [] newParts = new Edge [match.parts().length];
+                for (int i = 0; i < newParts.length; i++)
+                {
+                    newParts[i] = replace(sourceParts[i].)
+                }
+                RuleEdge newEdge = new RuleEdge(match, )
+                */
+            }
+        }
+        else if (source instanceof MorphEdge)
+        {
+            MorphEdge sourceMorph = (MorphEdge)source;
+            // match = 
+        }
+    }
     
     public void testTranslation()
     {
@@ -2002,7 +2066,15 @@ public class ParserTest extends TestCase
         
         assertNotNull(verb);
         
-        
+        Chart templates = new Chart();
+        for (int i = 0; i < spanish.length; i++)
+        {
+            Rule rule = spanish[i];
+            if (rule.symbol() == "CLAUSE")
+            {
+                // templates.add(new RuleEdge())
+            }
+        }
     }
 
     public void testInfiniteLoop() throws Exception 

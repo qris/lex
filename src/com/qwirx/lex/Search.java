@@ -13,7 +13,6 @@ import jemdros.FlatSheafConstIterator;
 import jemdros.FlatStraw;
 import jemdros.FlatStrawConstIterator;
 import jemdros.MatchedObject;
-import jemdros.MonadSetElement;
 import jemdros.SetOfMonads;
 import jemdros.Sheaf;
 import jemdros.SheafConstIterator;
@@ -28,16 +27,19 @@ import com.qwirx.db.DatabaseException;
 import com.qwirx.lex.emdros.EmdrosDatabase;
 import com.qwirx.lex.hebrew.HebrewConverter;
 import com.qwirx.lex.morph.HebrewMorphemeGenerator;
+import com.qwirx.lex.translit.DatabaseTransliterator;
 
 public class Search
 {
     private int m_ResultCount = 0;
     private int m_MaxResults = 100;
     private EmdrosDatabase m_Emdros;
+    private DatabaseTransliterator m_Transliterator;
     
-    public Search(EmdrosDatabase emdros)
+    public Search(EmdrosDatabase emdros, DatabaseTransliterator transliterator)
     {
         m_Emdros = emdros;
+        m_Transliterator = transliterator;
     }
 
     private static class ResultBase
@@ -56,7 +58,7 @@ public class Search
     }
     
     public List<SearchResult> basic(String query) 
-    throws DatabaseException, SQLException, TableException, EmdrosException
+    throws Exception
     {
         return advanced("[word " +
             "lexeme = '"+query+"' OR " +
@@ -88,7 +90,7 @@ public class Search
     }
     
     public List<SearchResult> advanced(String query) 
-    throws DatabaseException, SQLException, TableException, EmdrosException
+    throws Exception
     {    
         HebrewMorphemeGenerator generator = 
             new HebrewMorphemeGenerator();
@@ -234,12 +236,12 @@ public class Search
             "[word GET " +
             " lexeme, " +
             " phrase_dependent_part_of_speech, " +
-            " graphical_preformative, " +
-            " graphical_root_formation, " +
-            " graphical_lexeme, " +
-            " graphical_verbal_ending, " +
-            " graphical_nominal_ending, " +
-            " graphical_pron_suffix" +
+            " graphical_preformative_plain, " +
+            " graphical_root_formation_plain, " +
+            " graphical_lexeme_utf8, " +
+            " graphical_verbal_ending_plain, " +
+            " graphical_nominal_ending_plain, " +
+            " graphical_pron_suffix_plain " +
             "]");
         
         FlatSheafConstIterator fsci = flat.const_iterator();
@@ -279,7 +281,8 @@ public class Search
                 }
                 
                 original += HebrewConverter.wordHebrewToHtml  (word, generator);
-                translit += HebrewConverter.wordTranslitToHtml(word, generator);
+                translit += HebrewConverter.wordTranslitToHtml(word, generator,
+                    m_Transliterator);
                 
                 if (isMatch)
                 {

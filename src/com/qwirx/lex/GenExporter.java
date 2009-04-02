@@ -1,28 +1,23 @@
 package com.qwirx.lex;
 
-import java.io.IOException;
-import java.sql.SQLException;
+import java.util.List;
 
-import jemdros.EmdrosException;
 import jemdros.MatchedObject;
 import jemdros.SheafConstIterator;
 
 import org.crosswire.jsword.book.BookData;
-import org.crosswire.jsword.book.BookException;
-import org.xml.sax.SAXException;
 
-import com.qwirx.db.DatabaseException;
 import com.qwirx.db.sql.SqlDatabase;
-import com.qwirx.lex.hebrew.HebrewConverter;
 import com.qwirx.lex.morph.HebrewMorphemeGenerator;
-import com.qwirx.lex.morph.MorphemeHandler;
+import com.qwirx.lex.morph.HebrewMorphemeGenerator.Morpheme;
+import com.qwirx.lex.translit.DatabaseTransliterator;
 
 public class GenExporter
 {
     public String export(MatchedObject object, BookData verse,
-        SqlDatabase sql, boolean includeHebrew)
-    throws IOException, BookException, SAXException, 
-        DatabaseException, SQLException, EmdrosException
+        SqlDatabase sql, DatabaseTransliterator transliterator,
+        boolean includeHebrew)
+    throws Exception
     {
         StringBuffer buf = new StringBuffer();
         buf.append("\\wordfield morpheme\n" +
@@ -39,66 +34,46 @@ public class GenExporter
             "\\transliterationfieldisUTF8\n" +
             "\n");
         
-        exportObject(object, verse, buf, sql, includeHebrew);
+        exportObject(object, verse, buf, sql, transliterator,
+            includeHebrew);
         
         return buf.toString();
     }
     
-    class HebrewFeatureConverter implements MorphemeHandler
-    {
-        private MatchedObject m_Word;
-        private StringBuffer  m_Output;
-        private boolean m_IncludeHebrew;
-        
-        public HebrewFeatureConverter(MatchedObject word, StringBuffer output,
-            boolean includeHebrew)
-        {
-            m_Word   = word;
-            m_Output = output;
-            m_IncludeHebrew = includeHebrew;
-        }
-        
-        public void convert(String surface, 
-            boolean lastMorpheme, String desc,
-            String morphNode)
-        throws EmdrosException
-        {
-            String raw = m_Word.getEMdFValue(surface).getString();
-
-            String hebrew = HebrewConverter.toHebrew(raw);
-
-            String translit = HebrewConverter.toTranslit(raw);
-            if (translit.equals("")) translit = "Ø";
-            if (!lastMorpheme) translit += "-";
-            
-            if (m_IncludeHebrew)
-            {
-                m_Output.append("\\morpheme ").append(hebrew).append("\n");
-                m_Output.append("\\trans ").append(translit).append("\n");
-            }
-            else
-            {
-                m_Output.append("\\morpheme ").append(translit).append("\n");
-            }
-
-            m_Output.append("\\tag tag\n");
-            m_Output.append("\\gloss ").append(desc).append("\n");
-            m_Output.append("\\lemma lemma\n");
-            m_Output.append("\\re\n\n");
-        }
-    }
-
     private void exportObject(MatchedObject object, BookData verse,
-        StringBuffer buf, SqlDatabase sql, boolean includeHebrew)
-    throws IOException, BookException, SAXException,
-        DatabaseException, SQLException, EmdrosException
+        StringBuffer buf, SqlDatabase sql,
+        DatabaseTransliterator transliterator, boolean includeHebrew)
+    throws Exception
     {
         if (object.getObjectTypeName().equals("word"))
         {
-            HebrewFeatureConverter hfc = 
-                new HebrewFeatureConverter(object, buf, includeHebrew);
+            List<Morpheme> morphemes = new HebrewMorphemeGenerator().parse(object,
+                true, sql);
             
-            new HebrewMorphemeGenerator().parse(object, hfc, true, sql);
+            for (int i = 0; i < morphemes.size(); i++)
+            {
+                Morpheme morpheme = morphemes.get(i);
+                String hebrew = morpheme.getSurface();
+
+                String translit = transliterator.transliterate(morphemes, i);
+                if (translit.equals("")) translit = "Ø";
+                if (i < morphemes.size() - 1) translit += "-";
+                
+                if (includeHebrew)
+                {
+                    buf.append("\\morpheme ").append(hebrew).append("\n");
+                    buf.append("\\trans ").append(translit).append("\n");
+                }
+                else
+                {
+                    buf.append("\\morpheme ").append(translit).append("\n");
+                }
+
+                buf.append("\\tag tag\n");
+                buf.append("\\gloss ").append(morpheme.getGloss()).append("\n");
+                buf.append("\\lemma lemma\n");
+                buf.append("\\re\n\n");
+            }
         }
         
         if (!object.sheafIsEmpty())
@@ -107,7 +82,8 @@ public class GenExporter
             while (straws.hasNext())
             {
                 MatchedObject child = straws.next().const_iterator().next();
-                exportObject(child, verse, buf, sql, includeHebrew);
+                exportObject(child, verse, buf, sql, transliterator,
+                    includeHebrew);
             }
         }
     }

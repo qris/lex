@@ -24,6 +24,7 @@ import org.jdom.Element;
 import org.jdom.Text;
 
 import com.qwirx.db.DatabaseException;
+import com.qwirx.lex.controller.Navigator;
 import com.qwirx.lex.emdros.EmdrosDatabase;
 import com.qwirx.lex.hebrew.HebrewEnglishDatabase;
 
@@ -38,8 +39,18 @@ public class KJV
     
     private static Map<String, Integer> s_BookNameToNumMap = null;
     
-    public static BookData getVerse(EmdrosDatabase emdros, 
-        String bookName, int chapter, int verse) 
+    public static BookData getVerse(EmdrosDatabase emdros,
+        Navigator navigator)
+    throws NoSuchKeyException, TableException, DatabaseException
+    {
+        String bookName = navigator.getLabel("book");
+        int chapter = Integer.parseInt(navigator.getLabel("chapter"));
+        int verse = Integer.parseInt(navigator.getLabel("verse"));
+        return getVerse(emdros, bookName, chapter, verse);
+    }
+    
+    public static BookData getVerse(EmdrosDatabase emdros,
+        String bookName, int chapter, int verse)
     throws NoSuchKeyException, TableException, DatabaseException
     {
         if (s_BookNameToNumMap == null)
@@ -71,10 +82,10 @@ public class KJV
     }
     
     public static String getStrongGloss(EmdrosDatabase emdros, 
-        String bookName, int chapterNum, int verseNum, int strongsNum)
+        Navigator navigator, int strongsNum)
     throws NoSuchKeyException, TableException, DatabaseException, BookException
     {
-        BookData data = getVerse(emdros, bookName, chapterNum, verseNum);
+        BookData data = getVerse(emdros, navigator);
         return getStrongGloss(data, strongsNum);
     }
     
@@ -175,5 +186,4 @@ public class KJV
         
         return "(no exact matches)";
     }
-
 }

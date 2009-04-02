@@ -4,10 +4,14 @@
 <%@ page import="java.util.regex.*" %>
 <%@ page import="java.net.*" %>
 <%@ page import="java.sql.*" %>
-<%@ page import="com.qwirx.lex.parser.*" %>
-<%@ page import="com.qwirx.lex.morph.*" %>
+<%@ page import="jemdros.*" %>
+<%@ page import="com.qwirx.lex.controller.*" %>
+<%@ page import="com.qwirx.lex.hebrew.*" %>
 <%@ page import="com.qwirx.lex.lexicon.*" %>
+<%@ page import="com.qwirx.lex.morph.*" %>
+<%@ page import="com.qwirx.lex.parser.*" %>
 <%@ page import="com.qwirx.crosswire.kjv.KJV" %>
+<%@ page import="org.aptivate.webutils.EditField" %>
 <%@ page import="org.crosswire.jsword.book.*" %>
 <%@ page import="net.didion.jwnl.data.POS" %>
 <%@ page import="net.didion.jwnl.data.Synset" %>
@@ -60,88 +64,9 @@
 <%@ include file="navclause.jsp" %>
 
 <%
-
-	Map phrase_functions = emdros.getEnumerationConstants
-		("phrase_function_e",false);
-
-	Map phrase_types = emdros.getEnumerationConstants
-		("phrase_type_e",false);
-		
-	Map parts_of_speech = emdros.getEnumerationConstants
-		("part_of_speech_e",false);
-
-	if (request.getParameter("savearg") != null)
-	{
-		String phraseIdString = request.getParameter("phraseid");
-		String newArg         = request.getParameter("newarg");
-		int phraseId          = Integer.parseInt(phraseIdString);
-		Change ch = emdros.createChange(EmdrosChange.UPDATE,
-			"phrase", new int[]{phraseId});
-		ch.setString("argument_name", newArg);
-		ch.execute();
-	}
-
-	if (request.getParameter("changemr") != null &&
-		request.getParameter("mr") != null) 
-	{
-		String phraseIdString = request.getParameter("pid");
-		String newMRString    = request.getParameter("mr");
-		int phraseId          = Integer.parseInt(phraseIdString);
-		int newMR             = Integer.parseInt(newMRString);
-		Change ch = emdros.createChange(EmdrosChange.UPDATE,
-			"phrase", new int[]{phraseId});
-		ch.setInt("macrorole_number", newMR);
-		ch.execute();
-	}
-
-	Sheaf sheaf = emdros.getSheaf
-	(
-		"SELECT ALL OBJECTS IN " +
-		emdros.intersect(userTextAccessSet, min_m, max_m) +
-		" WHERE [clause self = "+selClauseId+
-		"       GET logical_struct_id, logical_structure "+
-		"        [phrase GET phrase_type, phrase_function, argument_name, "+
-		"                    type_id, macrorole_number "+
-		"          [word GET lexeme, phrase_dependent_part_of_speech, " +
-		"                    tense, stem, wordnet_gloss, wordnet_synset, " +
-		"                    graphical_preformative, " +
-		"                    graphical_locative, " +
-		"                    graphical_lexeme, " +
-		"                    graphical_pron_suffix, " +
-		"                    graphical_verbal_ending, " +
-		"                    graphical_root_formation, " +
-		"                    graphical_nominal_ending, " +
-		"                    person, number, gender, state, " +
-		"                    surface_consonants, " +
-		"                    suffix_person, suffix_number, suffix_gender " +
-		"          ]"+
-		"        ]"+
-		"      ]"
-	);
-
-	class BorderTableRenderer extends TableRenderer
-	{
-	    public String getTable(String contents)
-	    {
-	        return "<table class=\"tree\" border>" + contents + "</table>\n";
-	    }
-	}
-
-	BorderTableRenderer rend = new BorderTableRenderer();
-	
-	MatchedObject clause = null;
-	{
-		SheafConstIterator sci = sheaf.const_iterator();
-		if (sci.hasNext()) 
-		{
-			Straw straw = sci.next();
-			StrawConstIterator swci = straw.const_iterator();
-			if (swci.hasNext()) 
-			{
-				clause = swci.next();
-			}
-		}
-	}
+	ClauseController controller = new ClauseController(request, emdros, sql,
+		navigator);	
+	MatchedObject clause = controller.getClause();
 		 
 	if (clause == null) 
 	{
@@ -149,697 +74,37 @@
 	} 
 	else 
 	{
-		String predicate_text = "";
-		StringBuffer hebrewText = new StringBuffer();
-		List<MorphEdge> morphEdges = new ArrayList<MorphEdge>();
-		HebrewMorphemeGenerator generator = new HebrewMorphemeGenerator();
-		BookData swordVerse = null;
-		
-		/* Prescan to find the predicate lexeme and populate the chart */
-		
-		{
-			List<String[]> columns = new ArrayList<String[]>();
-			SheafConstIterator phrases = clause.getSheaf().const_iterator();
-			boolean isFirstWord = true;
-	
-			while (phrases.hasNext()) 
-			{
-				MatchedObject phrase =
-					phrases.next().const_iterator().next();
-	
-				String function_name = (String)( phrase_functions.get(
-					phrase.getEMdFValue("phrase_function").toString())
-				);
-	
-				SheafConstIterator words = phrase.getSheaf().const_iterator();
-				
-				while (words.hasNext()) 
-				{
-					MatchedObject word = words.next().const_iterator().next();
-
-					String psp = (String)( parts_of_speech.get(
-						word.getEMdFValue("phrase_dependent_part_of_speech").toString()) 
-					);
-						
-					HebrewGlossTableGeneratingMorphemeHandler hmh = 
-						new HebrewGlossTableGeneratingMorphemeHandler(
-							columns, word, hebrewText,
-							morphEdges, isFirstWord,
-							!phrases.hasNext() && !words.hasNext());
-						
-					generator.parse(word, hmh, true, sql);
-					isFirstWord = false;
-					
-					if (!hmh.isMorpheme())
-					{				
-						hebrewText.append(" ");
-					}
-					
-					if (psp.equals("verb"))
-					{
-						predicate_text = 
-							word.getEMdFValue("lexeme").getString();
-					}
-				}
-			}
-			
-			%>
-
-			<span class="hebrew"><%= 
-				HebrewConverter.toHtml(hebrewText.toString())
-			%></span>
-
-			<table> 
-				<% for (int row = 0; row < 2; row++) { %>
-				<tr>
-					<%
-					for (Iterator<String[]> i = columns.iterator();
-						i.hasNext();) 
-					{
-					%>
-						<% String [] rows = i.next(); %>
-						<td><%= rows[row] %></td>	
-					<%
-					}
-					%>
-				</tr>
-				<% } %>
-				<tr>
-					<td colspan="<%= columns.size() %>"><%
-					try
-					{
-						swordVerse = KJV.getVerse(emdros, selBook, selChapNum,
-							selVerseNum);
-						%><em><%= 
-							OSISUtil.getCanonicalText(swordVerse.getOsisFragment())
-						%></em><%
-					}
-					catch (Exception e)
-					{
-						%>KJV Gloss not found (<%= e %>)<%
-					}		
-					%></td>
-				</tr>	
-			</table>
-			<%
-		}
-
 		%>
-		<p>Predicate text is: <%= 
-			predicate_text 
-				.replaceAll("<", "&lt;")
-				.replaceAll(">", "&gt;")
-		%></p>
+		<span class="hebrew"><%= controller.getHebrewText() %></span>
+		<table><%= controller.getGlossTable() %></table>
+		<p><%= controller.getKingJamesVerse() %></p>
+
+		<p>Predicate text is: 
 		<%
-		
-		int numSyntacticMacroroles = -1;
-		int currentLsId = clause.getEMdFValue("logical_struct_id").getInt();
-	
-		String selLsIdString = request.getParameter("lsid");
-		String structure = "";
-
-		{	
-			int selLsId = currentLsId;
-		
-			String newLsString   = request.getParameter("newls");
-			String lsSaveString  = request.getParameter("lssave");
-		
-			if (request.getParameter("create") != null && newLsString != null) 
-			{
-				try 
-				{
-					Change ch = sql.createChange(SqlChange.INSERT,
-						"lexicon_entries", null);
-					ch.setString("Lexeme",    predicate_text);
-					ch.setString("Structure", newLsString);
-					ch.execute();
-					selLsId = ((SqlChange)ch).getInsertedRowId();
-					selLsIdString = "" + selLsId;
-					lsSaveString = "yes";
-				} 
-				catch (DatabaseException ex) 
-				{
-					%><%= ex %><%
-				} 
-				finally 
-				{
-					sql.finish();
-				}
-			} 
-			else 
-			{		
-				try { selLsId = Integer.parseInt(selLsIdString); }
-				catch (Exception e) { /* do nothing, use default */ }
-			}
-		
-			if (selLsId != currentLsId && lsSaveString != null) 
-			{
-				Change ch = emdros.createChange(EmdrosChange.UPDATE,
-					"clause", new int[]{selClauseId});
-				ch.setInt("logical_struct_id", selLsId);
-				ch.execute();
-				currentLsId = selLsId;
-			}
+		String predicate = controller.getPredicateText();
+		if (predicate != null)
+		{
+			%><%= controller.getPredicateText()
+				.replaceAll("<", "&lt;")
+				.replaceAll(">", "&gt;") %><%
 		}
-		
-		try 
+		else
 		{
-			PreparedStatement stmt = sql.prepareSelect
-				("SELECT ID,Structure,Syntactic_Args " +
-				 "FROM lexicon_entries WHERE ID = ?");
-			stmt.setInt(1, currentLsId);
-				
-			ResultSet rs = sql.select();
-				
-			if (rs.next()) 
-			{
-				int    thisLsId      = rs.getInt("ID");
-				String thisStructure = rs.getString("Structure");
-				int    thisNumSMRs   = rs.getInt("Syntactic_Args");
-
-				if (thisStructure != null)
-				{
-					structure = thisStructure;
-				}
-				numSyntacticMacroroles = thisNumSMRs;
-			}
-		} 
-		catch (DatabaseException ex) 
-		{
-			%><%= ex %><%
-		} 
-		finally 
-		{
-			sql.finish();
+			%>Not found<%
 		}
-	
-		Vector argNames = new Vector();
-		Hashtable argNamesHash = new Hashtable();
-
-		Pattern varPat = Pattern.compile
-			("(?s)(?i)<([^>]*)>");
-		Matcher m = varPat.matcher(structure);
-		while (m.find()) 
-		{
-			String arg = m.group(1);
-			if (argNamesHash.get(arg) != null)
-				continue;
-			argNames.addElement(m.group(1));
-			argNamesHash.put(arg, Boolean.TRUE);
-		}
-		
-		Hashtable variables = new Hashtable();
-		
 		%>
+		</p>
 		<p>
 		<table border>
-		<%
-		
-		String [] object_types = new String [] {
-			"word",
-			"phrase"
-		};
-		
-		class Cell {
-			String label, link, format, html;
-			int columns;
-			Vector subcells = new Vector();
-		}
-
-		// "ewg" stands for "edit word gloss"
-		String ewgString = request.getParameter("ewg");
-		int ewgId = -1;
-		if (ewgString != null) {
-			ewgId = Integer.parseInt(ewgString);
-		}
-
-		for (int objectNum = 0; objectNum < object_types.length; 
-			objectNum++) 
-		{
-			String type = object_types[objectNum];
-			Vector word_row = new Vector(), struct_row = new Vector();
-			int column = 0;
-			
-			SheafConstIterator phrases = clause.getSheaf().const_iterator();
-			while (phrases.hasNext())
-			{
-				MatchedObject phrase =
-					phrases.next().const_iterator().next();
-				int first_col = column;
-				boolean canWriteToPhrase = emdros.canWriteTo(phrase);
-	
-				String function_name = (String)( phrase_functions.get(
-					phrase.getEMdFValue("phrase_function").toString())
-				);
-
-				String phrase_type = (String)( phrase_types.get(
-					phrase.getEMdFValue("phrase_type").toString())
-				);
-				
-				SheafConstIterator words = phrase.getSheaf().const_iterator();
-				while (words.hasNext())
-				{
-					MatchedObject word =
-						words.next().const_iterator().next();
-					column++;
-					
-					if (type.equals("word"))
-					{
-						Lexeme lexeme = Lexeme.findOrBuild(sql, word);
-						
-						String part_of_speech = word.getFeatureAsString(
-							word.getEMdFValueIndex(
-								"phrase_dependent_part_of_speech"));
-						boolean canWriteToWord = emdros.canWriteTo(word);
-							
-						Cell cell = new Cell();
-						cell.label = lexeme.getTranslit();
-						cell.columns = 1;
-						word_row.addElement(cell);
-						
-						int wid = word.getID_D();
-
-						// lexicon gloss
-						{
-							Cell glossCell = new Cell();
-							cell.subcells.add(glossCell);
-	
-							if (ewgId == wid &&
-								request.getParameter("ewgs") != null) 
-							{
-								lexeme.setGloss(request.getParameter("gloss"));
-								lexeme.save();
-								lexeme = Lexeme.load(sql, word);
-								ewgId = -1;
-							}
-							
-							String lexiconGloss = lexeme.getGloss();
-							
-							if (ewgId == wid) 
-							{
-								if (lexiconGloss == null)
-								{
-									lexiconGloss = "";
-								}
-								glossCell.html = "<form method=\"post\">\n" +
-									"<input type=\"hidden\" name=\"ewg\"" +
-									" value=\"" + wid + "\">\n" +
-									"<input name=\"gloss\" size=\"10\" value=\"" +
-									HebrewConverter.toHtml(lexiconGloss) +
-									"\">\n" +
-									"<input type=\"submit\" name=\"ewgs\""+
-									" value=\"Save\">\n" +
-									"</form>";
-							} 
-							else 
-							{
-								if (lexiconGloss == null)
-								{
-									lexiconGloss = "(gloss)";
-								}
-								glossCell.html = "<a href=\"clause.jsp?ewg=" + 
-									wid + "\">" + lexiconGloss + "</a>";
-							}
-						}
-
-						// DiB lookup
-						{
-							Cell dictCell = new Cell();
-							cell.subcells.add(dictCell);
-							String gloss = KJV.getDibGloss(
-								word.getEMdFValue("lexeme").getString());
-							if (gloss == null)
-							{
-								dictCell.html = "";
-							}
-							else
-							{
-								dictCell.html = "[DiB] " + gloss;
-							}	
-						}
-												
-						// Hebrew-English Dictionary lookup
-						if (swordVerse != null)
-						{
-							Cell dictCell = new Cell();
-							cell.subcells.add(dictCell);
-							String gloss = KJV.getKingJamesGloss(swordVerse,
-								word.getEMdFValue("lexeme").getString());
-							if (gloss == null)
-							{
-								dictCell.html = "";
-							}
-							else
-							{
-								dictCell.html = "[KJV] " + gloss;
-							}	
-						}
-					}
-				}
-				
-				if (type.equals("phrase")) 
-				{
-					Cell pCell    = new Cell();
-					pCell.label   = phrase.getEMdFValue("phrase_function").toString();
-					pCell.columns = column - first_col;
-					struct_row.addElement(pCell);
-
-					if (function_name != null)
-						pCell.label = phrase_type + " (" + function_name + ")";
-					
-					if (phrase_type == null)
-						continue;
-						
-					Cell mrCell = new Cell();
-					pCell.subcells.add(mrCell);
-					mrCell.html = "";
-
-					if (phrase_type.equals("VP"))
-					{
-						String html = "Macroroles: ";
-						
-						switch (numSyntacticMacroroles)
-						{
-							case -1: html += "MR? (unknown)"; break;
-							case 0:  html += "MR0"; break;
-							case 1:  html += "MR1"; break;
-							case 2:  html += "MR2"; break;
-							case 3:  html += "MR3"; break;
-							default: html += "MR! (invalid)"; break;
-						}
-						
-						mrCell.html = html;
-					}
-					else if (phrase_type.equals("NP") ||
-							 phrase_type.equals("IrPronNP") ||
-							 phrase_type.equals("PersPronNP") ||
-							 phrase_type.equals("DemPronNP") ||
-							 phrase_type.equals("PropNP") ||
-							 phrase_type.equals("PP"))
-					{
-						int oldMR = phrase.getEMdFValue("macrorole_number")
-							.getInt();
-						String formName = "mr_" + phrase.getID_D();
-							
-						StringBuffer html = new StringBuffer();
-						html.append("<form name=\"" + formName + "\" " +
-							"method=\"POST\">\n");
-						html.append("<input type=\"hidden\" name=\"pid\" " +
-							"value=\"" + phrase.getID_D() + "\">\n");
-						html.append("<input type=\"hidden\" name=\"prev\" " +
-							"value=\"" + oldMR + "\">\n");
-						html.append("<select name=\"mr\" " +
-							"onChange=\"return enableChangeButton(" +
-							"changemr, "+oldMR+", mr)\">\n");
-						html.append("<option "+((oldMR==-1)?"SELECTED":"")+
-							" value=\"-1\">Unknown\n");
-						html.append("<option "+((oldMR==0) ?"SELECTED":"")+
-							" value=\"0\">None\n");
-						html.append("<option "+((oldMR==1) ?"SELECTED":"")+
-							" value=\"1\">1 (Actor)\n");
-						html.append("<option "+((oldMR==2) ?"SELECTED":"")+
-							" value=\"2\">2 (Undergoer)\n");
-						html.append("</select>\n");
-						
-						if (canWriteToPhrase)
-						{
-							html.append("<input type=\"submit\" "+
-								"name=\"changemr\" value=\"Change\">\n");
-						}
-						
-						html.append("</form>\n");
-
-						html.append("<script type=\"text/javascript\"><!--\n");
-						html.append("\tenableChangeButton(" +
-							"document.forms."+formName+".changemr, "+
-							oldMR+", "+
-							"document.forms."+formName+".mr)\n");
-						html.append("//--></script>\n");
-
-						mrCell.html = html.toString();
-					}
-						
-					if (! phrase_type.equals("NP") &&
-						! phrase_type.equals("IrPronNP") &&
-						! phrase_type.equals("PersPronNP") &&
-						! phrase_type.equals("DemPronNP") &&
-						! phrase_type.equals("PropNP") &&
-						! phrase_type.equals("PP"))
-						continue;
-
-					Cell varCell = new Cell();
-					pCell.subcells.add(varCell);
-
-					StringBuffer editHtml = new StringBuffer();
-					  
-					String oldArg = phrase.getEMdFValue("argument_name")
-						.toString();
-					String newArg = "";
-
-					if (oldArg.equals("")) 
-					{
-						// Argument not decided yet. Maybe we can guess
-						// based on the "function" of the clause?
-						
-						if (
-							function_name.equals("Subj") ||
-							function_name.equals("PreS") ||
-							function_name.equals("IrpS") ||
-							function_name.equals("ModS"))
-						{
-							newArg = "x";
-						}
-						else if (
-							function_name.equals("Objc") ||
-							function_name.equals("PreC") ||
-							function_name.equals("PreO") ||
-							function_name.equals("PtcO") ||
-							function_name.equals("IrpO"))
-						{
-							newArg = "y";
-						}
-						
-						if (newArg != oldArg && 
-							argNamesHash.get(newArg) != null) 
-						{
-							if (canWriteToPhrase)
-							{
-								Change ch = emdros.createChange(
-									EmdrosChange.UPDATE,
-									"phrase", new int[]{phrase.getID_D()});
-								ch.setString("argument_name", newArg);
-								ch.execute();
-							}
-							oldArg = newArg;
-						}
-					}
-					else if (argNamesHash.get(oldArg) == null)
-					{
-						argNames.add(oldArg);
-						argNamesHash.put(oldArg, Boolean.TRUE);
-					}
-						
-					if (oldArg.equals(""))
-					{
-						if (! newArg.equals(""))
-						{
-							editHtml.append("<font color=\"red\">" +
-								"Variable not set</font> " +
-								"(defaults to <em>"+newArg+"</em>)");
-						}
-						else
-						{
-							editHtml.append("<font color=\"red\">" +
-								"Variable not set</font>");
-						}
-					}
-					else if (variables.get(oldArg) != null) 
-					{
-						editHtml.append("<font color=\"red\">" +
-							"Duplicate variable!</font>");
-					} 
-					else 
-					{
-						variables.put(oldArg, phrase);
-					}
-
-					String formName = "sv_" + phrase.getID_D();
-
-					editHtml.append(
-						"<form method=\"post\" name=\""+formName+"\">\n" +
-						"<input type=\"hidden\" name=\"phraseid\"" +
-						" value=\"" + phrase.getID_D() + "\">\n" +
-						"<select name=\"newarg\" onChange=\"return " +
-						"enableChangeButton(savearg,'"+oldArg+"',newarg)" +
-						"\">\n" +
-						"<option value=\"\" " +
-						(oldArg.equals("") ? " SELECTED" : "") +
-						">Auto\n" +
-						"<option value=\" \" " +
-						(oldArg.equals(" ") ? " SELECTED" : "") +
-						">None\n");
-
-					for (int j = 0; j < argNames.size(); j++) {
-						String arg = (String)( argNames.elementAt(j) );
-						editHtml.append("<option value=\""+arg+
-							"\""+(oldArg.equals(arg)?" SELECTED":"")+
-							">"+arg+"\n");
-					}
-
-					editHtml.append("</select>\n");
-					
-					if (canWriteToPhrase)
-					{
-						editHtml.append
-						(
-							"<input type=\"submit\" name=\"savearg\" "+
-							"value=\"Change\">\n"
-						);
-					}
-					
-					editHtml.append("</form>\n");
-
-					editHtml.append("<script type=\"text/javascript\"><!--\n" +
-						"enableChangeButton(" +
-						"document.forms."+formName+".savearg,\""+oldArg+"\"," +
-						"document.forms."+formName+".newarg)\n" +
-						"//--></script>\n");
-												
-					varCell.html = editHtml.toString();
-
-					/*
-					Cell typeCell = new Cell();
-					pCell.subcells.add(typeCell);
-					editHtml = new StringBuffer();
-
-					int oldType = phrase.getEMdFValue("type_id")
-						.getInt();
-						
-					editHtml.append("<form method=\"post\">\n" +
-						"<input type=\"hidden\" name=\"phraseid\"" +
-						" value=\"" + phrase.getID_D() + "\">\n" +
-						"<select name=\"newtype\">\n" +
-						"<option value=\"\" " +
-						(oldType == 0 ? " SELECTED" : "") +
-						">None\n");
-
-					for (int j = 0; j < types.length; j++) {
-						DataType t = types[j];
-						editHtml.append("<option value=\""+t.id+
-							"\""+(oldType == t.id ? " SELECTED" : "")+
-							">");
-						while (t.depth-- > 0) {
-							editHtml.append("&nbsp;");
-						}
-						editHtml.append(t.name+"\n");
-					}
-
-					editHtml.append("</select>\n" +
-						"<input type=\"submit\" name=\"savetype\" "+
-						"value=\"Save\">\n"+
-						"</form>\n");
-					
-					typeCell.html = editHtml.toString();
-					*/
-				}
-			}
-
-			
-			Vector bigRows = new Vector();
-			if (word_row.size() > 0)
-				bigRows.add(word_row);
-			if (struct_row.size() > 0)
-				bigRows.add(struct_row);
-
-			Cell filler = new Cell();
-			filler.label = "";
-
-			for (int nBigRow = 0; nBigRow < bigRows.size(); nBigRow++) {
-				Vector bigRow = (Vector)( bigRows.elementAt(nBigRow) );
-				int numColumns = bigRow.size();
-				int littleRowsThisBigRow = 0;
-				
-				for (Enumeration e = bigRow.elements(); 
-					e.hasMoreElements(); ) 
-				{
-					Cell c = (Cell)(e.nextElement());
-					int reqRows = c.subcells.size();
-					if (reqRows > littleRowsThisBigRow) 
-						littleRowsThisBigRow = reqRows;
-				}
-				
-				// don't forget to count the top cell as well!
-				littleRowsThisBigRow++;
-				
-				for (int r = 0; r < littleRowsThisBigRow; r++) {
-					%><!-- <%= nBigRow %>/<%= r %> -->
-					<tr>
-					<%
-					
-					if (r == 0) {
-						%>
-						<th rowspan="<%= littleRowsThisBigRow %>">
-							<%= type %>
-						</th>
-						<%
-					}
-
-					for (int c = 0; c < numColumns; c++) {
-						Cell topCell  = (Cell)( bigRow.elementAt(c) );
-						Cell thisCell = topCell;
-						if (r > 0) {
-							if (topCell.subcells != null && 
-								r <= topCell.subcells.size()) 
-							{
-								thisCell = (Cell)( 
-									topCell.subcells.elementAt(r - 1) );
-							} else {
-								thisCell = filler;
-							}
-						}
-
-						%>
-						<td colspan="<%= topCell.columns %>"><%
-
-						if (thisCell.html != null) {
-							%><%= thisCell.html %><%
-						} else {
-							String html = thisCell.label
-								.replaceAll("<", "&lt;")
-								.replaceAll(">", "&gt;");
-							
-							if (thisCell.link != null) {
-								%><a href="<%= thisCell.link %>"><%
-							}
-
-							%><%= html %><%
-
-							if (thisCell.link != null) {
-								%></a>><%
-							}
-						}
-						
-						%>
-						</td><%
-					}
-	
-					%>
-					</tr>
-					<%
-				}
-			}
-		}
-	
-		%>
+			<%= controller.getWordTable() %>
 		</table>
 		</p>
-	
 		<%
 		
 		{
 			Parser p = new Parser(sql);
 			p.setVerbose(true);
-			List sentences = p.parseFor(morphEdges, "SENTENCE");
+			List sentences = p.parseFor(controller.getMorphEdges(), "SENTENCE");
 			
 			if (sentences.size() == 0)
 			{
@@ -862,7 +127,8 @@
 				{
 					Edge sentence = (Edge)( sentences.get(i) );
 					
-					%><%= sentence.toTree().toHtml(rend) %><%
+					%><%= sentence.toTree().toHtml(new
+						ClauseController.BorderTableRenderer()) %><%
 				}
 				
 				%><p>
@@ -877,40 +143,11 @@
 
 		<p>
 		<%
+		String selLsIdString = request.getParameter("lsid");
+		
 		if (!emdros.canWriteTo(clause))
 		{
-			// just show the current value
-			try 
-			{
-				PreparedStatement stmt = sql.prepareSelect
-					("SELECT ID,Structure,Syntactic_Args " +
-					 "FROM lexicon_entries WHERE ID = ?");
-				stmt.setInt(1, currentLsId);
-				
-				ResultSet rs = sql.select();
-				
-				if (rs.next()) 
-				{
-					int    thisLsId      = rs.getInt("ID");
-					String thisStructure = rs.getString("Structure");
-					int    thisNumSMRs   = rs.getInt("Syntactic_Args");
-
-					if (thisStructure != null)
-					{
-						structure = thisStructure;
-					}
-					numSyntacticMacroroles = thisNumSMRs;
-				}
-			} 
-			catch (DatabaseException ex) 
-			{
-				%><%= ex %><%
-			} 
-			finally 
-			{
-				sql.finish();
-			}
-			
+			String structure = controller.getUnlinkedLogicalStructure();
 			%>
 			Selected lexicon entry logical structure:
 			<%=
@@ -942,8 +179,14 @@
 			<form name="changels" method="POST">
 			Choose logical structure:
 			<select name="lsid" onChange="enableEditButton(); 
-			return enableChangeButton(lssave,<%= currentLsId %>,lsid)">
-			<option value="0" <%= (currentLsId == 0) ? " SELECTED" : "" %>>Not specified
+			return enableChangeButton(lssave,<%=
+				controller.getSelectedLogicalStructureId()
+			%>,lsid)">
+			<option value="0" <%=
+				(controller.getSelectedLogicalStructureId() == 0)
+					? " SELECTED" : "" %>>
+				Not specified
+			</option>
 			<%
 
 			try 
@@ -951,7 +194,7 @@
 				PreparedStatement stmt = sql.prepareSelect
 					("SELECT ID,Structure,Syntactic_Args " +
 					 "FROM lexicon_entries WHERE Lexeme = ?");
-				stmt.setString(1, predicate_text);
+				stmt.setString(1, controller.getPredicateText());
 				
 				ResultSet rs = sql.select();
 				while (rs.next()) 
@@ -960,20 +203,12 @@
 					String thisStructure = rs.getString("Structure");
 					int    thisNumSMRs   = rs.getInt("Syntactic_Args");
 					
-					if (thisLsId == currentLsId)
-					{
-						if (thisStructure != null)
-						{
-							structure = thisStructure;
-						}
-						numSyntacticMacroroles = thisNumSMRs;
-					}
-					
 					%>
 			<option value="<%=
 				thisLsId
 			%>"<%=
-				thisLsId == currentLsId ? " SELECTED" : ""
+				thisLsId == controller.getSelectedLogicalStructureId()
+					? " SELECTED" : ""
 			%>><%=
 				thisStructure == null
 				? "(undefined structure "+thisLsId+")"
@@ -1002,19 +237,22 @@
 			<input type="submit" name="lssave" value="Change">
 			</form>
 			<script type="text/javascript"><!--
-			enableChangeButton(document.forms.changels.lssave,<%= currentLsId %>,
-							   document.forms.changels.lsid);
+			enableChangeButton(document.forms.changels.lssave,<%=
+				controller.getSelectedLogicalStructureId()
+			%>, document.forms.changels.lsid);
 			//--></script>
 		</td>
 			<%
 			
-			if (selLsIdString == null || ! selLsIdString.equals("0")) 
+			if (controller.getSelectedLogicalStructureId() == 0)
 			{
 				%>
 		<td>
 			<form name="editls" method="get" action="lsedit.jsp">
-			<input type="hidden" name="lsid" value="<%= currentLsId %>">
-			<input type="submit" name="submit" value="Edit...">
+			<input type="hidden" name="lsid" value="<%=
+				controller.getSelectedLogicalStructureId()
+			%>" />
+			<input type="submit" name="submit" value="Edit..." />
 			</form>
 		</td>
 				<%
@@ -1031,85 +269,19 @@
 			enableEditButton();
 		//--></script>
 		
-		<p>Linked logical structure:
+		<% EditField form = new EditField(request); %>
+		
+		<p>Linked logical structure: <%=
+			form.escapeEntities(controller.getLinkedLogicalStructure())
+		%></p>
+
+		<h3>Notes</h3>
+		
 		<%
-
-		for (Enumeration e = variables.keys(); e.hasMoreElements();) 
-		{
-			String variable = (String)( e.nextElement() );
-			MatchedObject value = (MatchedObject)
-				( variables.get(variable) );
-			String value_text = "";
-			SheafConstIterator sci = value.getSheaf().const_iterator();
-			
-			while (sci.hasNext())
-			{
-				MatchedObject word = sci.next().const_iterator().next();
-				value_text += HebrewConverter.wordTranslitToHtml(word, generator);
-				if (sci.hasNext())
-				{
-					value_text += " ";
-				}
-			}
-			
-			structure = structure.replaceAll
-				("<" + variable + ">", value_text);
-		}
 		
-		%>
-		<%= structure.replaceAll("<","&lt;").replaceAll(">","&gt;") %></p>
-		<%	
-
-		String currentStruct = clause.getEMdFValue("logical_structure")
-			.getString();
-		if (! currentStruct.equals(structure) && emdros.canWriteTo(clause))
-		{
-			Change ch = emdros.createChange(EmdrosChange.UPDATE,
-				"clause", new int[]{selClauseId});
-			ch.setString("logical_structure", structure);
-			ch.execute();
-		}
-
-		%><h3>Notes</h3><%
-		
-		if (request.getParameter("nc") != null &&
-			request.getParameter("nt") != null)
-		{
-			String newNoteText = request.getParameter("nt");
-			
-			EmdrosChange ch = (EmdrosChange)(
-				emdros.createChange(EmdrosChange.CREATE,
-					"note", new int[]{selClauseId}));
-			ch.setString("text", newNoteText);
-			ch.execute();
-		}
-	
-		if (request.getParameter("nu") != null &&
-			request.getParameter("ni") != null &&
-			request.getParameter("nt") != null)
-		{
-			String updateNoteIdString = request.getParameter("ni");
-			int updateNoteId = Integer.parseInt(updateNoteIdString);
-			String newNoteText = request.getParameter("nt");
-			
-			EmdrosChange ch = (EmdrosChange)(
-				emdros.createChange(EmdrosChange.UPDATE,
-					"note", new int [] {updateNoteId}));
-			ch.setString("text", newNoteText);
-			ch.execute();
-		}
-	
 		if (request.getParameter("nd") != null &&
 			request.getParameter("ni") != null)
 		{
-			String deleteNoteIdString = request.getParameter("ni");
-			int deleteNoteId = Integer.parseInt(deleteNoteIdString);
-			
-			EmdrosChange ch = (EmdrosChange)(
-				emdros.createChange(EmdrosChange.DELETE,
-					"note", new int[]{deleteNoteId}));
-			ch.execute();
-	
 			%><table border><%
 			
 			boolean foundNotes = false;
@@ -1123,7 +295,7 @@
 		
 			Sheaf clauseSheaf = emdros.getSheaf
 				("SELECT ALL OBJECTS IN { "+min_m+" - "+max_m+"} "+
-				 "WHERE [clause self = "+selClauseId+
+				 "WHERE [clause self = "+navigator.getClauseId()+
 				 " [note GET text]"+
 				 "]");
 	
@@ -1155,9 +327,7 @@
 	<form method="POST" action="clause.jsp">
 	<input type="hidden" name="ni" value="<%= note.getID_D() %>" />
 	<td>
-		<input name="nt" size="80" value="<%= 
-		noteText.replaceAll("<", "&lt;").replaceAll(">", "&gt;") 
-	%>" />
+		<input name="nt" size="80" value="<%= form.escapeEntities(noteText) %>" />
 	</td>
 	<td>
 		<input type="submit" name="nu" value="Update" />
@@ -1169,7 +339,7 @@
 					else
 					{
 						%>					
-	<td><%= noteText.replaceAll("<", "&lt;").replaceAll(">", "&gt;") %></td>
+	<td><%= form.escapeEntities(noteText) %></td>
 	<td>
 		<a href="clause.jsp?ni=<%= note.getID_D() %>&ne=1">Edit</a>
 	</td>
@@ -1201,55 +371,18 @@
 	
 <p>Download clause in GEN format for LTC:</p>
 <ul>
-	<li><a href="gen-export.jsp?clause=<%= selClauseId %>&hebrew=y">With
+	<li><a href="gen-export.jsp?clause=<%= navigator.getClauseId() %>&hebrew=y">With
 		Hebrew (right-to-left)</a></li>
-	<li><a href="gen-export.jsp?clause=<%= selClauseId %>&hebrew=n">Without
+	<li><a href="gen-export.jsp?clause=<%= navigator.getClauseId() %>&hebrew=n">Without
 		Hebrew (left-to-right)</a></li>
 </ul>
 
 <%
 		if (emdros.canWriteTo(clause))
 		{
-			if (request.getParameter("publish") != null)
-			{
-				Change ch = sql.createChange(SqlChange.INSERT,
-					"user_text_access", null);
-				ch.setInt("Monad_First", clause.getMonads().first());
-				ch.setInt("Monad_Last",  clause.getMonads().last());
-				ch.setString("User_Name",   "anonymous");
-				ch.setInt("Write_Access", 0);
-				ch.execute();
-
-				ch = emdros.createChange(EmdrosChange.UPDATE, "clause", 
-					new int[]{clause.getID_D()});
-				ch.setInt("published", 1);
-				ch.setString("predicate", predicate_text);
-				ch.execute();
-			}
-			else if (request.getParameter("unpublish") != null)
-			{
-				Change ch = sql.createChange(SqlChange.DELETE,
-					"user_text_access",
-					"Monad_First = " + clause.getMonads().first() + " AND " +
-					"Monad_Last  = " + clause.getMonads().last()  + " AND " +
-					"User_Name   = \"anonymous\"");
-				ch.execute();
-	
-				ch = emdros.createChange(EmdrosChange.UPDATE, "clause", 
-					new int[]{clause.getID_D()});
-				ch.setInt("published", 0);
-				ch.execute();
-			}
-		
-			boolean isPublished = sql.getSingleInteger("SELECT COUNT(1) " +
-				"FROM user_text_access " +
-				"WHERE Monad_First = " + clause.getMonads().first() +
-				" AND  Monad_Last  = " + clause.getMonads().last()  + 
-				" AND  User_Name   = \"anonymous\"") > 0;
-		
 			%>
 			<form method="POST">
-				<% if (isPublished) { %>
+				<% if (controller.isPublished(clause)) { %>
 				<input type="submit" name="unpublish" value="Unpublish" />
 				<% } else { %>
 				<input type="submit" name="publish" value="Publish" />
@@ -1261,10 +394,10 @@
 %>
 	
 <hr>
-        <%= session.getAttribute("book") %>,
-Chapter <%= session.getAttribute("chapterNum") %>,
-Verse   <%= session.getAttribute("verseNum") %>,
-Clause  <%= session.getAttribute("clauseId") %>
+        <%= navigator.getLabel("book") %>,
+Chapter <%= navigator.getLabel("chapter") %>,
+Verse   <%= navigator.getLabel("verse") %>,
+Clause  <%= navigator.getClauseId() %>
 </form>
 
 <%@ include file="footer.jsp" %>

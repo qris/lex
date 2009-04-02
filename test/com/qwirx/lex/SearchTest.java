@@ -15,19 +15,23 @@ import org.aptivate.webutils.HtmlIterator.Attributes;
 
 import com.meterware.httpunit.WebConversation;
 import com.meterware.httpunit.WebResponse;
+import com.qwirx.db.sql.SqlDatabase;
 import com.qwirx.lex.Search.SearchResult;
 import com.qwirx.lex.emdros.EmdrosDatabase;
 import com.qwirx.lex.hebrew.HebrewConverter;
 import com.qwirx.lex.morph.HebrewMorphemeGenerator;
+import com.qwirx.lex.translit.DatabaseTransliterator;
 
 public class SearchTest extends TestCase
 {
     private EmdrosDatabase m_Emdros;
+    private DatabaseTransliterator m_Transliterator;
     
     public void setUp() throws Exception
     {
-        m_Emdros = Lex.getEmdrosDatabase("chris", "test",
-            Lex.getSqlDatabase("test"));
+        SqlDatabase sql = Lex.getSqlDatabase("test");
+        m_Emdros = Lex.getEmdrosDatabase("chris", "test", sql);
+        m_Transliterator = new DatabaseTransliterator(sql);
     }
     
     public void tearDown()
@@ -38,14 +42,14 @@ public class SearchTest extends TestCase
     private void assertSearchResultsMatch(String query)
     throws Exception
     {
-        Search search = new Search(m_Emdros);
+        Search search = new Search(m_Emdros, m_Transliterator);
         assertSearchResultsMatch(query, search, 100);
     }
     
     private void assertSearchResultsMatch(String query, int limit)
     throws Exception
     {
-        Search search = new Search(m_Emdros);
+        Search search = new Search(m_Emdros, m_Transliterator);
         search.setMaxResults(limit);
         assertSearchResultsMatch(query, search, limit);
     }
@@ -160,7 +164,8 @@ public class SearchTest extends TestCase
                     }
                     
                     original += HebrewConverter.wordHebrewToHtml  (word, generator);
-                    translit += HebrewConverter.wordTranslitToHtml(word, generator);
+                    translit += HebrewConverter.wordTranslitToHtml(word,
+                        generator, m_Transliterator);
                     
                     if (isMatch)
                     {
@@ -245,7 +250,7 @@ public class SearchTest extends TestCase
         i.assertStart("h2");
         i.assertText("RLM for BH:");
         i.assertSimple("a", "Nicolai Winther-Nielsen",
-            new Attributes().href("http://www.winthernielsen.dk"));
+            new Attributes().href("http://3bm.dk/index.php?p=3"));
         i.assertEnd("h2");
 
         i.assertStart("div", new Attributes().clazz("topmenu"));
@@ -320,8 +325,10 @@ public class SearchTest extends TestCase
                 "or lower case, from the set:");
         
         String latin  = ">BGDHWZXVJKLMNS<PYQRFCT";
+        /*
         String hebrew = HebrewConverter.toHebrew(latin);
-        String trans  = HebrewConverter.toTranslit(latin);
+        String trans  = HebrewConverter.toTranslit(latin, m_Transliterator);
+        */
         
         i.assertStart("table", new Attributes().clazz("grid"));
         
@@ -334,6 +341,7 @@ public class SearchTest extends TestCase
         }
         i.assertEnd("tr");
         
+        /*
         i.assertStart("tr");
         i.assertSimple("th", "Hebrew");
         for (int j = 0; j < latin.length(); j++)
@@ -353,6 +361,7 @@ public class SearchTest extends TestCase
             i.assertSimple("td", h);
         }
         i.assertEnd("tr");
+        */
 
         i.assertEnd("table");
         i.assertEnd("div", new Attributes().clazz("advanced"));

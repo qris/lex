@@ -1,6 +1,5 @@
 package com.qwirx.lex.morph;
 
-import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
@@ -9,15 +8,30 @@ import java.util.List;
 import jemdros.EmdrosException;
 import jemdros.MatchedObject;
 
-import com.qwirx.db.DatabaseException;
 import com.qwirx.db.sql.SqlDatabase;
 import com.qwirx.lex.lexicon.Lexeme;
 
 public class HebrewMorphemeGenerator
 {
-    public void parse(MatchedObject word, MorphemeHandler handler,
-        boolean generateGloss, SqlDatabase sql)
-    throws SQLException, DatabaseException, EmdrosException
+    public static class Morpheme
+    {
+        private String m_Surface, m_Gloss, m_Symbol;
+        
+        public Morpheme(String surface, String gloss, String symbol)
+        {
+            m_Surface = surface;
+            m_Gloss = gloss;
+            m_Symbol = symbol;
+        }
+        
+        public String getSurface() { return m_Surface; }
+        public String getGloss() { return m_Gloss; }
+        public String getNodeSymbol() { return m_Symbol; }
+    }
+    
+    public List<Morpheme> parse(MatchedObject word, boolean generateGloss,
+        SqlDatabase sql)
+    throws Exception
     {
         String gloss = null;
         
@@ -30,12 +44,12 @@ public class HebrewMorphemeGenerator
             }
         }
         
-        parse(word, handler, generateGloss, gloss);
+        return parse(word, generateGloss, gloss);
     }
     
-    public void parse(MatchedObject word, MorphemeHandler handler,
-        boolean generateGloss, String gloss)
-    throws EmdrosException
+    public List<Morpheme> parse(MatchedObject word, boolean generateGloss,
+        String gloss)
+    throws Exception
     {
         if (!word.getObjectTypeName().equals("word"))
         {
@@ -44,12 +58,12 @@ public class HebrewMorphemeGenerator
         
         List<String> requiredFeatures = Arrays.asList(new String[]{
             "phrase_dependent_part_of_speech",
-            "graphical_preformative",
-            "graphical_root_formation",
-            "graphical_lexeme",
-            "graphical_verbal_ending",
-            "graphical_nominal_ending",
-            "graphical_pron_suffix",
+            "graphical_preformative_utf8",
+            "graphical_root_formation_utf8",
+            "graphical_lexeme_utf8",
+            "graphical_verbal_ending_utf8",
+            "graphical_nominal_ending_utf8",
+            "graphical_pron_suffix_utf8",
         });
         
         if (generateGloss)
@@ -61,7 +75,7 @@ public class HebrewMorphemeGenerator
                 "number",
                 "state",
                 "wordnet_gloss",
-                "lexeme",
+                "lexeme_wit",
                 "tense",
                 "stem",
                 "suffix_gender",
@@ -87,8 +101,10 @@ public class HebrewMorphemeGenerator
         String nounEnding = null;
 
         String suffixText = 
-            word.getEMdFValue("graphical_pron_suffix").getString();
+            word.getEMdFValue("graphical_pron_suffix_utf8").getString();
         String suffixGloss = null;
+        
+        List<Morpheme> results = new ArrayList<Morpheme>();
         
         if (generateGloss)
         {
@@ -181,19 +197,21 @@ public class HebrewMorphemeGenerator
                 else if (stem.equals("hofal"))   { stem = "Ho"; }
             }
             
-            handler.convert("graphical_preformative", false, tense, "V/TAM");
+            convert(results, word, "graphical_preformative_utf8",
+                tense, "V/TAM");
             
             // String stemNum = word.getEMdFValue("verbal_stem").toString();
-            handler.convert("graphical_root_formation", false,
+            convert(results, word, "graphical_root_formation_utf8",
                 stem, "V/STM");
             
-            handler.convert("graphical_lexeme", false, gloss, "V/NUC");
+            convert(results, word, "graphical_lexeme_utf8", 
+                gloss, "V/NUC");
             
-            handler.convert("graphical_verbal_ending", false,
+            convert(results, word, "graphical_verbal_ending_utf8",
                 verbEnding, "AG/PSA");
 
-            handler.convert("graphical_pron_suffix", true, suffixGloss,
-                "PRON/DCA");
+            convert(results, word, "graphical_pron_suffix_utf8",
+                suffixGloss, "PRON/DCA");
         }
         else if (psp.equals("noun")
             || psp.equals("proper_noun"))
@@ -205,16 +223,16 @@ public class HebrewMorphemeGenerator
                 type = "HEAD/NPROP";
             }
             
-            handler.convert("graphical_lexeme", false, gloss, type);
-            handler.convert("graphical_nominal_ending", false,
+            convert(results, word, "graphical_lexeme_utf8", gloss, type);
+            convert(results, word, "graphical_nominal_ending_utf8",
                 nounEnding, "N/GNS");
-            handler.convert("graphical_pron_suffix", true, suffixGloss,
-                "N/POS");
+            convert(results, word, "graphical_pron_suffix_utf8",
+                suffixGloss, "N/POS");
         }
         else if (psp.equals("none"))
         {
             // hack for LexemeTest
-            handler.convert("lexeme", true, "none", "none");
+            convert(results, word, "lexeme", "none", "none");
         }
         else
         {
@@ -275,14 +293,23 @@ public class HebrewMorphemeGenerator
             }
 
             boolean hasSuffix = !(suffixText.equals(""));
-            handler.convert("graphical_lexeme", !hasSuffix, type, type);
+            convert(results, word, "graphical_lexeme_utf8", type, type);
             
             if (hasSuffix)
             {
-                handler.convert("graphical_pron_suffix", true,
+                convert(results, word, "graphical_pron_suffix_utf8",
                     suffixGloss, type + "/SFX");
             }
         }   
 
+        return results;
+    }
+    
+    private void convert(List<Morpheme> results, MatchedObject word,
+        String feature, String gloss, String symbol)
+    throws EmdrosException
+    {
+        results.add(new Morpheme(word.getEMdFValue(feature).toString(),
+            gloss, symbol));
     }
 }

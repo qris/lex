@@ -39,7 +39,7 @@
 
 	int left = 728, right = 734;
 
-	int clauseId = selClauseId;
+	int clauseId = navigator.getClauseId();
 
 	Sheaf sheaf = emdros.getSheaf
 	(

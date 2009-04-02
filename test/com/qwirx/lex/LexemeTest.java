@@ -1,25 +1,24 @@
 package com.qwirx.lex;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Hashtable;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
-import java.util.Vector;
 
-import jemdros.EmdrosException;
-import jemdros.MatchedObject;
-import jemdros.Sheaf;
-import jemdros.SheafConstIterator;
-import jemdros.Straw;
-import jemdros.StrawConstIterator;
+import jemdros.BadMonadsException;
+import jemdros.SetOfMonads;
 import junit.framework.TestCase;
 
 import com.meterware.httpunit.WebConversation;
 import com.meterware.httpunit.WebForm;
 import com.meterware.httpunit.WebResponse;
+import com.qwirx.db.Change;
 import com.qwirx.db.DatabaseException;
+import com.qwirx.db.sql.SqlChange;
 import com.qwirx.db.sql.SqlDatabase;
 import com.qwirx.lex.emdros.EmdrosChange;
 import com.qwirx.lex.emdros.EmdrosDatabase;
@@ -27,13 +26,15 @@ import com.qwirx.lex.emdros.EmdrosChange.MonadSetEntry;
 import com.qwirx.lex.lexicon.Lexeme;
 import com.qwirx.lex.lexicon.ThematicRelation;
 import com.qwirx.lex.lexicon.Lexeme.Variable;
+import com.qwirx.lex.translit.DatabaseTransliterator;
 
 public final class LexemeTest extends TestCase
 {
     private SqlDatabase sql;
     private EmdrosDatabase emdros;
     
-    private List addedLexemes = new Vector(), addedObjects = new Vector();
+    private List<Lexeme> addedLexemes = new ArrayList<Lexeme>();
+    private List<EmdrosObject> addedObjects = new ArrayList<EmdrosObject>();
     
     public LexemeTest(String name) throws Exception
     {
@@ -53,6 +54,25 @@ public final class LexemeTest extends TestCase
         }
     }
     
+    private static final int m_FirstMonad = 1000000;
+    private static final int m_LastMonad  = 1000100;
+    
+    public void setUp() throws Exception
+    {
+        if (sql.getSingleInteger("SELECT COUNT(1) FROM user_text_access " +
+            "WHERE User_Name = \"test\" AND Monad_First = " + m_FirstMonad +
+            " AND Monad_Last = " + m_LastMonad + " AND Write_Access = 1") == 0)
+        {
+            Change ch = sql.createChange(SqlChange.INSERT,
+                "user_text_access", null);
+            ch.setString("User_Name", "test");
+            ch.setInt("Monad_First", m_FirstMonad);
+            ch.setInt("Monad_Last",  m_LastMonad);
+            ch.setInt("Write_Access", 1);
+            ch.execute();
+        }
+    }
+
     public void tearDown()
     {
         for (Iterator i = addedLexemes.iterator(); i.hasNext(); )
@@ -317,7 +337,7 @@ public final class LexemeTest extends TestCase
             "do'(<x>, [bar'(<x>:LOCATION, <y>:THEME)]) " +
             "& INGR baz'(<x>)", t.getLogicalStructure());
         
-        Set testVars = new TreeSet();
+        Set<Variable> testVars = new TreeSet<Variable>();
         testVars.add(new Variable("x", "house'"));
         testVars.add(new Variable("y", "table'"));
         assertEquals("do'(house', \u00D8) CAUSE INGR BECOME " +
@@ -335,13 +355,13 @@ public final class LexemeTest extends TestCase
         
     }
     
-    private Map makeMap(String [] values)
+    private Map makeMap(Object [] values)
     {
-        Map result = new Hashtable();
+        Map<String, Object> result = new Hashtable<String, Object>();
         
         for (int i = 0; i < values.length; i += 2)
         {
-            result.put(values[i], values[i+1]);
+            result.put((String)values[i], values[i+1]);
         }
         
         return result;
@@ -349,7 +369,7 @@ public final class LexemeTest extends TestCase
 
     private int addEmdrosObject(String type, MonadSetEntry[] monads,
         String featureName, String featureValue)
-    throws DatabaseException
+    throws DatabaseException, BadMonadsException
     {
         EmdrosChange ch = (EmdrosChange)emdros.createChange(
             EmdrosChange.CREATE, type, null);
@@ -366,14 +386,20 @@ public final class LexemeTest extends TestCase
     throws DatabaseException
     {
         EmdrosChange ch = (EmdrosChange)emdros.createChange(
-            EmdrosChange.CREATE, type, null);
-        ch.setMonadsFromObjects(objectIds);
+            EmdrosChange.CREATE, type, objectIds);
        
         for (Iterator i = features.keySet().iterator(); i.hasNext(); )
         {
             String name  = (String)( i.next() );
-            String value = (String)( features.get(name) );
-            ch.setString(name, value);
+            Object value = features.get(name);
+            if (value instanceof Constant)
+            {
+                ch.setConstant(name, ((Constant)value).getName());
+            }
+            else
+            {
+                ch.setString(name, (String)value);
+            }
         }
         
         ch.execute();
@@ -383,28 +409,67 @@ public final class LexemeTest extends TestCase
         return id;
     }
     
-    private String getEvaluatedLogicalStructure(int emdrosClauseId)
-    throws DatabaseException, EmdrosException
+    class Constant
     {
-        Sheaf sheaf = emdros.getSheaf
-            ("SELECT ALL OBJECTS IN { 1 - 5 } "+
-             "WHERE [clause self = "+emdrosClauseId+
-             "       GET evaluated_logical_struct]");
-
-        SheafConstIterator sci = sheaf.const_iterator();
-        assertTrue(sci.hasNext());
+        private String m_Name;
+        public Constant(String name)
+        {
+            m_Name = name;
+        }
+        public Constant(int value)
+        {
+            m_Name = "" + value;
+        }
+        public String getName() { return m_Name; }
+    }
+    
+    private int m_MonadCounter = 1000000;
+    
+    private int addClause(String [] words, Object [][] phrases,
+        Integer logicalStructid)
+    throws Exception
+    {
+        int [] phraseIds = new int [words.length];
         
-        Straw straw = sci.next();
-        StrawConstIterator swci = straw.const_iterator();
-        assertTrue(swci.hasNext());
+        for (int i = 0; i < words.length; i++)
+        {
+            int wordId = addEmdrosObject("word", new MonadSetEntry[]{
+                new MonadSetEntry(m_MonadCounter++)}, "lexeme", words[i]);        
+            phraseIds[i] = addEmdrosObject("phrase", new int[]{wordId},
+                makeMap(phrases[i]));
+        }
         
-        MatchedObject clause = swci.next();
-        return clause.getEMdFValue("evaluated_logical_struct").getString();
+        Map<String, Constant> clauseAttribs = new HashMap<String, Constant>();
+        
+        if (logicalStructid != null)
+        {
+            clauseAttribs.put("logical_struct_id", 
+                new Constant(logicalStructid.intValue()));
+        }
+        
+        return addEmdrosObject("clause", phraseIds, clauseAttribs);  
     }
     
     public void testEmdrosDatabaseUpdatedWithLogicalStructure()
     throws Exception
     {
+        SetOfMonads monadsToClear = new SetOfMonads(m_FirstMonad, m_LastMonad); 
+        
+        EmdrosChange ch = (EmdrosChange)emdros.createChange(
+            EmdrosChange.DELETE, "word", null);
+        ch.setMonads(monadsToClear);
+        ch.execute();
+        
+        ch = (EmdrosChange)emdros.createChange(EmdrosChange.DELETE, 
+            "phrase", null);
+        ch.setMonads(monadsToClear);
+        ch.execute();
+
+        ch = (EmdrosChange)emdros.createChange(EmdrosChange.DELETE, 
+            "clause", null);
+        ch.setMonads(monadsToClear);
+        ch.execute();
+
         Lexeme be = new Lexeme(sql);
         be.save();
         addedLexemes.add(be);
@@ -417,55 +482,44 @@ public final class LexemeTest extends TestCase
         drink.save();
         addedLexemes.add(drink);
 
-        int wordIdCat = addEmdrosObject("word", new MonadSetEntry[]{
-            new MonadSetEntry(1, 1)}, "lexeme", "cat");        
-        int wordIdIs = addEmdrosObject("word", new MonadSetEntry[]{
-            new MonadSetEntry(2, 2)}, "lexeme", "is");
-        int wordIdDrinks = addEmdrosObject("word", new MonadSetEntry[]{
-            new MonadSetEntry(3, 3)}, "lexeme", "drinks");
-        int wordIdWants = addEmdrosObject("word", new MonadSetEntry[]{
-            new MonadSetEntry(4, 4)}, "lexeme", "wants");
-        int wordIdBlack = addEmdrosObject("word", new MonadSetEntry[]{
-            new MonadSetEntry(5, 5)}, "lexeme", "black");
-        int wordIdMilk = addEmdrosObject("word", new MonadSetEntry[]{
-            new MonadSetEntry(6, 6)}, "lexeme", "milk");
-  
-        int phraseIdCat = addEmdrosObject("phrase", 
-            new int[]{wordIdCat}, 
-            makeMap(new String[]{"function", "Noun", "argument_name", "x"}));
-        int phraseIdIs = addEmdrosObject("phrase", 
-            new int[]{wordIdIs}, 
-            makeMap(new String[]{"function", "Pred"}));
-        int phraseIdWants = addEmdrosObject("phrase", 
-            new int[]{wordIdWants}, 
-            makeMap(new String[]{"function", "Pred"}));
-        int phraseIdDrinks = addEmdrosObject("phrase", 
-            new int[]{wordIdDrinks}, 
-            makeMap(new String[]{"function", "Pred"}));
-        int phraseIdBlack = addEmdrosObject("phrase", 
-            new int[]{wordIdBlack}, 
-            makeMap(new String[]{"function", "Noun", "argument_name", "y"}));
-        int phraseIdMilk = addEmdrosObject("phrase", 
-            new int[]{wordIdMilk}, 
-            makeMap(new String[]{"function", "Noun", "argument_name", "y"}));
-    
-        int clauseIdCatBlack = addEmdrosObject("clause", 
-            new int[]{phraseIdCat, phraseIdBlack}, 
-            makeMap(new String[]{}));
-        int clauseIdCatIsBlack = addEmdrosObject("clause", 
-            new int[]{phraseIdCat, phraseIdIs, phraseIdBlack}, 
-            makeMap(new String[]{"logical_struct_id", be.id+""}));
-        int clauseIdCatWantsMilk = addEmdrosObject("clause", 
-            new int[]{phraseIdCat, phraseIdWants, phraseIdMilk}, 
-            makeMap(new String[]{"logical_struct_id", drink.id+""}));
-        int clauseIdCatDrinksMilk = addEmdrosObject("clause", 
-            new int[]{phraseIdCat, phraseIdDrinks, phraseIdMilk}, 
-            makeMap(new String[]{"logical_struct_id", drink.id+""}));
+        Constant subj = new Constant("Subj");
+        Constant objc = new Constant("Objc");
+        Constant pred = new Constant("Pred");
+
+        Object [] subjAttr = new Object []{
+            "phrase_function", subj, "argument_name", "x"
+        };
+        Object [] predAttr = new Object []{"phrase_function", pred};
+        Object [] objcAttr = new Object []{
+            "phrase_function", objc, "argument_name", "y"
+        };
         
-        assertEquals("", getEvaluatedLogicalStructure(clauseIdCatBlack));
-        assertEquals("", getEvaluatedLogicalStructure(clauseIdCatIsBlack));
-        assertEquals("", getEvaluatedLogicalStructure(clauseIdCatWantsMilk));
-        assertEquals("", getEvaluatedLogicalStructure(clauseIdCatDrinksMilk));
+        int clauseIdCatBlack = addClause(
+            new String[]{"YAT","$LAYK"}, 
+            new Object[][]{subjAttr, objcAttr}, null);
+        int clauseIdCatIsBlack = addClause(
+            new String[]{"YAT","IS","$LAYK"}, 
+            new Object[][]{subjAttr, predAttr, objcAttr}, 
+            new Integer(be.id));
+        int clauseIdCatWantsMilk = addClause(
+            new String[]{"YAT","WANTS","MILK"}, 
+            new Object[][]{subjAttr, predAttr, objcAttr},
+            new Integer(want.id));
+        int clauseIdCatDrinksMilk = addClause(
+            new String[]{"YAT","DRINKS","MILK"}, 
+            new Object[][]{subjAttr, predAttr, objcAttr},
+            new Integer(drink.id));
+        
+        DatabaseTransliterator transliterator = new DatabaseTransliterator(sql);
+        
+        assertEquals(null, Clause.find(emdros, sql, transliterator,
+            clauseIdCatBlack).getEvaluatedLogicalStructure());
+        assertEquals("", Clause.find(emdros, sql, transliterator,
+            clauseIdCatIsBlack).getEvaluatedLogicalStructure());
+        assertEquals("", Clause.find(emdros, sql, transliterator,
+            clauseIdCatWantsMilk).getEvaluatedLogicalStructure());
+        assertEquals("", Clause.find(emdros, sql, transliterator,
+            clauseIdCatDrinksMilk).getEvaluatedLogicalStructure());
         
         be.setPredicate("<y>'");
         be.setDynamic(false);
@@ -473,14 +527,21 @@ public final class LexemeTest extends TestCase
         be.setHasResultState(false);
         be.setPunctual(false);
         be.setTelic(false);
-        be.setThematicRelation(ThematicRelation.list()[0]);
+        be.setThematicRelation(ThematicRelation.get("STA-ind"));
         be.save();
         
-        assertEquals("", getEvaluatedLogicalStructure(clauseIdCatBlack));
-        assertEquals("black'(cat':PATIENT)", 
-            getEvaluatedLogicalStructure(clauseIdCatIsBlack));
-        assertEquals("", getEvaluatedLogicalStructure(clauseIdCatWantsMilk));
-        assertEquals("", getEvaluatedLogicalStructure(clauseIdCatDrinksMilk));
+        assertEquals(null,
+            Clause.find(emdros, sql, transliterator,
+                clauseIdCatBlack).getEvaluatedLogicalStructure());
+        assertEquals("black'(cat:PATIENT)",
+            Clause.find(emdros, sql,
+                transliterator, clauseIdCatIsBlack).getEvaluatedLogicalStructure());
+        assertEquals("",
+            Clause.find(emdros, sql, transliterator,
+                clauseIdCatWantsMilk).getEvaluatedLogicalStructure());
+        assertEquals("",
+            Clause.find(emdros, sql, transliterator,
+                clauseIdCatDrinksMilk).getEvaluatedLogicalStructure());
         
         want.setPredicate("want'");
         want.setDynamic(false);
@@ -488,15 +549,21 @@ public final class LexemeTest extends TestCase
         want.setHasResultState(false);
         want.setPunctual(false);
         want.setTelic(false);
-        want.setThematicRelation(ThematicRelation.list()[5]);
+        want.setThematicRelation(ThematicRelation.get("STA-des"));
         want.save();
         
-        assertEquals("", getEvaluatedLogicalStructure(clauseIdCatBlack));
-        assertEquals("black'(cat':PATIENT)", 
-            getEvaluatedLogicalStructure(clauseIdCatIsBlack));
-        assertEquals("want'(cat':WANTER, milk':DESIRE)", 
-            getEvaluatedLogicalStructure(clauseIdCatWantsMilk));
-        assertEquals("", getEvaluatedLogicalStructure(clauseIdCatDrinksMilk));
+        assertEquals(null,
+            Clause.find(emdros, sql, transliterator,
+                clauseIdCatBlack).getEvaluatedLogicalStructure());
+        assertEquals("black'(cat:PATIENT)", 
+            Clause.find(emdros, sql, transliterator,
+                clauseIdCatIsBlack).getEvaluatedLogicalStructure());
+        assertEquals("want'(cat:WANTER, milk:DESIRE)", 
+            Clause.find(emdros, sql, transliterator,
+                clauseIdCatWantsMilk).getEvaluatedLogicalStructure());
+        assertEquals("",
+            Clause.find(emdros, sql, transliterator,
+                clauseIdCatDrinksMilk).getEvaluatedLogicalStructure());
 
         drink.setPredicate("drink'");
         drink.setDynamic(true);
@@ -505,17 +572,23 @@ public final class LexemeTest extends TestCase
         drink.setResultPredicate("drunk'");
         drink.setPunctual(false);
         drink.setTelic(false);
-        drink.setThematicRelation(ThematicRelation.list()[18]);
+        drink.setResultPredicateArg("x");
+        drink.setThematicRelation(ThematicRelation.get("ACT-cons"));
         drink.save();
-        
-        assertEquals("", getEvaluatedLogicalStructure(clauseIdCatBlack));
-        assertEquals("black'(cat':PATIENT)", 
-            getEvaluatedLogicalStructure(clauseIdCatIsBlack));
-        assertEquals("want'(cat':WANTER, milk':DESIRE)", 
-            getEvaluatedLogicalStructure(clauseIdCatWantsMilk));
-        assertEquals("do(cat', [drink'(cat':CONSUMER, milk':consumed)]) "+
-            "& INGR drunk'(cat')", 
-            getEvaluatedLogicalStructure(clauseIdCatDrinksMilk));
+
+        assertEquals(null,
+            Clause.find(emdros, sql, transliterator,
+                clauseIdCatBlack).getEvaluatedLogicalStructure());
+        assertEquals("black'(cat:PATIENT)", 
+            Clause.find(emdros, sql, transliterator,
+                clauseIdCatIsBlack).getEvaluatedLogicalStructure());
+        assertEquals("want'(cat:WANTER, milk:DESIRE)", 
+            Clause.find(emdros, sql, transliterator,
+                clauseIdCatWantsMilk).getEvaluatedLogicalStructure());
+        assertEquals("do'(cat, [drink'(cat:CONSUMER, milk:CONSUMED)]) "+
+            "& INGR drunk'(cat)",
+            Clause.find(emdros, sql, transliterator,
+                clauseIdCatDrinksMilk).getEvaluatedLogicalStructure());
     }
     
     public static void main(String[] args)
