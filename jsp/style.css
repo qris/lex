@@ -52,7 +52,7 @@ div.clearer
 .hebrew
 {
 	font-size: x-large;
-	font-family: Doulos SIL, serif;
+	font-family: Charis SIL, Doulos SIL, serif;
 }
 
 .bigborder
@@ -134,4 +134,10 @@ table.search_results td, table.search_results th
 .nav2
 {
 	 background-color: #fee;
+}
+
+ul.mini
+{
+	margin: 0;
+	padding-left: 1.5em;
 }
