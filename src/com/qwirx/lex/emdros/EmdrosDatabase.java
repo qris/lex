@@ -27,6 +27,7 @@ import jemdros.Table;
 import jemdros.TableException;
 import jemdros.TableIterator;
 import jemdros.TableRow;
+import jemdros.TableRowException;
 import jemdros.eCharsets;
 import jemdros.eOutputKind;
 
@@ -152,6 +153,36 @@ public class EmdrosDatabase implements Database
 		
         return env.takeOverTable();
 	}
+    
+    public List<String[]> getTableAsListOfArrays(String query, int [] columns)
+    throws DatabaseException
+    {
+        Table table = getTable(query);
+        TableIterator rows = table.iterator();
+        List<String[]> results = new ArrayList();
+        
+        try
+        {
+            while (rows.hasNext()) 
+            {
+                TableRow row = rows.next();
+                String [] values = new String [columns.length];
+                
+                for (int i = 0; i < columns.length; i++)
+                {
+                    values[i] = row.getColumn(columns[i]);
+                }
+                
+                results.add(values);
+            }
+        }
+        catch (TableException te)
+        {
+            throw new DatabaseException("Failed to read table from Emdros", te);
+        }
+
+        return results;
+    }
 	
 	public int getMinM() throws DatabaseException 
     {
