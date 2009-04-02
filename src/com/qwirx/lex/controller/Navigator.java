@@ -187,7 +187,7 @@ public class Navigator
         
         setParamOverride(objectType, selectedObject);
         
-        SelectBox sb = m_Form.select(objectType, objects);
+        SelectBox sb = new SelectBox(objectType, objects, selectedObject);
         sb.setAttribute("onChange", "document.forms.nav.submit()");
         return sb.toString();
     }
@@ -267,7 +267,7 @@ public class Navigator
             
         setParamOverride("clause", Integer.toString(selClauseId));
 
-        SelectBox sb = m_Form.select("clause", clauses);
+        SelectBox sb = new SelectBox("clause", clauses, selClauseId + "");
         sb.setAttribute("onChange", "document.forms.nav.submit()");
         return sb.toString();
     }
