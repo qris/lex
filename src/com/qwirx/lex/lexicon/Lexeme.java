@@ -20,8 +20,6 @@ import com.qwirx.db.Change;
 import com.qwirx.db.DatabaseException;
 import com.qwirx.db.sql.SqlChange;
 import com.qwirx.db.sql.SqlDatabase;
-import com.qwirx.lex.hebrew.HebrewConverter.Transliterator;
-import com.qwirx.lex.morph.HebrewMorphemeGenerator;
 
 public class Lexeme implements Comparable 
 {
@@ -247,16 +245,6 @@ public class Lexeme implements Comparable
         return true;
     }
     
-    public String getTranslit() throws EmdrosException
-    {
-        assert(m_WordObject != null);
-        StringBuffer out = new StringBuffer();
-        Transliterator xlit = new Transliterator(m_WordObject, out);
-        new HebrewMorphemeGenerator().parse(m_WordObject, xlit, false, 
-            (String)null);
-        return out.toString();
-    }
-    
     public String getGloss()
     {
         return m_Gloss;
@@ -393,7 +381,7 @@ public class Lexeme implements Comparable
                 ("SELECT " + getColumnList() + " " +
                  "FROM lexicon_entries " +
                  "WHERE Lexeme = ?");
-            stmt.setString(1, word.getEMdFValue("lexeme").getString());
+            stmt.setString(1, word.getEMdFValue("lexeme_wit").getString());
             ResultSet rs = sqldb.select();
             
             if (!rs.next()) 
@@ -421,7 +409,7 @@ public class Lexeme implements Comparable
         {
             result = new Lexeme(sqldb);
             result.m_WordObject = word;
-            result.surface = word.getEMdFValue("lexeme").getString();
+            result.surface = word.getEMdFValue("lexeme_wit").getString();
         }
         
         return result;
