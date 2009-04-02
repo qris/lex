@@ -204,6 +204,7 @@ public class TransliteratorTest extends TestCase
 
         addRule("", "\u05bf", "", "");
         addRule("", "\u05bc", "", "");
+        addRule("", "\u05be", "", "-");
         addRule("", "/", "", "");
         Rule sheva1 = addRule("^" + CONSONANT_DAGESH_CANTILLATION, SHEVA, "",
             SUPERSCRIPT_BACKWARDS_E);
@@ -221,9 +222,12 @@ public class TransliteratorTest extends TestCase
         addRule("", HATAPH_QAMETS, "", SUPERSCRIPT_O);
         addRule("", HATAPH_PATAH, "", SUPERSCRIPT_A);
         addRule("", HATAPH_SEGOL, "", SUPERSCRIPT_E);
-        addRule("", TSERE + HE, "$", E_BAR + SUPERSCRIPT_H);
-        addRule("", TSERE + HE + DAGESH, "$", E_BAR + "h");
-        addRule("", TSERE + YOD, "", E_CIRCUMFLEX);
+        addRule("", TSERE + OPTIONAL_CANTILLATION + HE, "$",
+            E_BAR + SUPERSCRIPT_H);
+        addRule("", TSERE + OPTIONAL_CANTILLATION + HE + DAGESH, "$",
+            E_BAR + "h");
+        addRule("", TSERE + OPTIONAL_CANTILLATION + YOD, "",
+            E_CIRCUMFLEX);
         addRule("", TSERE, "", E_BAR);
         addRule("", QAMETS + OPTIONAL_CANTILLATION + HE, "$",
             A_BAR + SUPERSCRIPT_H);
@@ -288,9 +292,12 @@ public class TransliteratorTest extends TestCase
         addRule(VOWEL, DALET + DAGESH, "", "dd");
         // addRule(NOT_VOWEL_BEFORE, DALET + DAGESH, "", "d");
         addRule("", DALET, "", "d");
-        addRule("", SEGOL + HE, "$", "e" + SUPERSCRIPT_H);
-        addRule("", SEGOL + HE + DAGESH, "$", "eh");
-        addRule("", SEGOL + YOD, "", "e" + SUPERSCRIPT_Y);
+        addRule("", SEGOL + OPTIONAL_CANTILLATION + HE, "$",
+            "e" + SUPERSCRIPT_H);
+        addRule("", SEGOL + OPTIONAL_CANTILLATION + HE + DAGESH, "$",
+            "eh");
+        addRule("", SEGOL + OPTIONAL_CANTILLATION + YOD, "",
+            "e" + SUPERSCRIPT_Y);
         addRule("", SEGOL, "", "e");
         addRule("", SIN + DAGESH, "", S_ACUTE + S_ACUTE);
         addRule("", SIN, "", S_ACUTE);
@@ -298,7 +305,7 @@ public class TransliteratorTest extends TestCase
         // addRule(NOT_VOWEL_BEFORE, GIMEL + DAGESH, "", "g");
         addRule("", GIMEL, "", "g");
         addRule("", HE, "", "h");
-        addRule("", HIRIQ + YOD, "", I_CARET);
+        addRule("", HIRIQ + OPTIONAL_CANTILLATION + YOD, "", I_CARET);
         addRule("", HIRIQ, "", "i");
         addRule("", YOD + DAGESH, "", "yy");
         addRule("", YOD, "", "y");
@@ -314,8 +321,10 @@ public class TransliteratorTest extends TestCase
         addRule("", NUN + DAGESH, "", "nn");
         addRule("", NUN, "", "n");
         addRule("", FINAL_NUN, "", "n");
-        addRule("", HOLAM + WAW, "", O_CARET);
-        addRule("", HOLAM + HE, "$", O_BAR + SUPERSCRIPT_H);
+        addRule("", HOLAM + OPTIONAL_CANTILLATION + WAW, "",
+            O_CARET);
+        addRule("", HOLAM + OPTIONAL_CANTILLATION + HE, "$",
+            O_BAR + SUPERSCRIPT_H);
         // addRule("", HOLAM + HE + DAGESH, "$", O_BAR + "h");
         addRule("", HOLAM, "", O_BAR);
         addRule(VOWEL + OPTIONAL_CANTILLATION, PE + DAGESH, "", "pp");
@@ -546,7 +555,20 @@ public class TransliteratorTest extends TestCase
         addTest("בָּרָ֣א", "bārāˀ"); // GEN 1,1
         addTest("שָּׁמַ֖יִם", "ššāmayim"); // GEN 1,1
         addTest("אֲדָמָ֖ה", "ʔᵃdāmāʰ"); // GEN 1,25
-        addTest("ר֣וּחַ", "rû" + SUBSCRIPT_A + "ḥ");
+        addTest("ר֣וּחַ", "rûₐḥ"); // GEN 1,2
+        addTest("רָקִ֖יעַ", "rāqîₐʕ"); // GEN 1,6
+        addTest("פְּנֵ֣י", "pᵊnê"); // GEN 1,2
+        addTest("מִקְוֵ֥ה", "miqwēʰ"); // GEN 1,10
+        addTest("רֵאשִׁ֖ית", "rēˀšît"); // GEN 1,1
+        addTest("חַיֶּֽיךָ", "ḥayyeʸxā"); // GEN 3,14
+        addTest("עֹ֤שֶׂה", "ʕōśeʰ"); // GEN 1,11
+        addTest("אָֽרֶץ", "ʔāreṣ"); // GEN 1,1
+        addTest("אֱלֹהִ֔ים", "ʔᵉlōhîm"); // GEN 1,2
+        addTest("תְהֹ֑ום", "tᵊhôm"); // GEN 1,2
+        addTest("אָכְלָֽה", "ʔoxlāʰ"); // GEN 1,29
+        addTest("לֻֽקֳחָה־", "luqᵒḥāh-"); // GEN 2,23
+        addTest("כִבְשֻׁ֑הָ", "xivšuhā"); // GEN 1,28
+        addTest("בְּ", "bᵊ"); // GEN 1,1
         
         m_sql.commitTransaction();
     }
