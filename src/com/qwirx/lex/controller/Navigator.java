@@ -219,7 +219,8 @@ public class Navigator
             "  graphical_lexeme_utf8, " +
             "  graphical_verbal_ending_utf8, " +
             "  graphical_nominal_ending_utf8, " +
-            "  graphical_pron_suffix_utf8 " +
+            "  graphical_pron_suffix_utf8, " +
+            "  person, number, gender, tense, stem " +
             " ]"+
             "]");
              

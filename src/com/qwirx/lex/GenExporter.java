@@ -55,7 +55,8 @@ public class GenExporter
                 Morpheme morpheme = morphemes.get(i);
                 String hebrew = morpheme.getSurface();
 
-                String translit = transliterator.transliterate(morphemes, i);
+                String translit = transliterator.transliterate(morphemes, i,
+                    object);
                 if (translit.equals("")) translit = "Ø";
                 if (i < morphemes.size() - 1) translit += "-";
                 

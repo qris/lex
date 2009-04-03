@@ -2,11 +2,17 @@ package com.qwirx.lex.translit;
 
 import java.sql.Connection;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
+
+import jemdros.EmdrosException;
+import jemdros.MatchedObject;
+import jemdros.StringListConstIterator;
 
 import org.apache.log4j.Logger;
 
@@ -32,23 +38,37 @@ public class DatabaseTransliterator
                 new DbColumn("Replacement", "TEXT", true),
             }
         ).check(dbconn, true);
+
+        new DbTable("translit_rule_attribs", "utf8",
+            new DbColumn[]{
+                new DbColumn("ID",          "INT(11)", false, true, true),
+                new DbColumn("Rule_ID",     "INT(11)", false), 
+                new DbColumn("Name",        "VARCHAR(20)", false),
+                new DbColumn("Value",       "VARCHAR(20)", false),
+            }
+        ).check(dbconn, true);
     }
     
     public static class Rule
     {
         private Logger m_Log = Logger.getLogger(getClass());
         
-        String precedent, original, succeedent, replacement;
-        Pattern m_BeforePattern, m_AfterPattern, m_ConsumePattern;
+        private int m_Id;
+        private String precedent, original, succeedent, replacement;
+        private Pattern m_BeforePattern, m_AfterPattern, m_ConsumePattern;
+        private Map<String, String> m_Attribs;
         
-        public Rule(String precedent, String original, String succeedent,
-            String replacement)
+        public Rule(int id, String precedent, String original,
+            String succeedent, String replacement, Map<String, String> attribs)
         throws Exception
         {
+            m_Id = id;
             this.precedent = precedent;
             this.original = original;
             this.succeedent = succeedent;
             this.replacement = replacement;
+            m_Attribs = new HashMap<String, String>(attribs);
+            
             try
             {
                 m_BeforePattern = Pattern.compile(precedent + "$");
@@ -74,9 +94,30 @@ public class DatabaseTransliterator
             return m_BeforePattern.matcher(before).find();
         }
         
-        public boolean matches(String before, String after)
+        public boolean matchesAttributes(Map inputAttributes)
         {
-            return matchesEndOf(before) && matchesStartOf(after);
+            for (String ruleAttrName : m_Attribs.keySet())
+            {
+                if (!inputAttributes.containsKey(ruleAttrName))
+                {
+                    return false;
+                }
+
+                String expectedValue = m_Attribs.get(ruleAttrName);
+                if (!inputAttributes.get(ruleAttrName).equals(expectedValue))
+                {
+                    return false;
+                }
+            }
+            
+            return true;
+        }
+        
+        public boolean matches(String before, String after,
+            Map<String, String> inputAttributes)
+        {
+            return matchesEndOf(before) && matchesStartOf(after) &&
+                matchesAttributes(inputAttributes);
         }
         
         public String consumes(String after)
@@ -98,25 +139,101 @@ public class DatabaseTransliterator
     public DatabaseTransliterator(SqlDatabase db)
     throws Exception
     {
+        Map<Integer, Map<String, String>> ruleAttribs =
+            new HashMap<Integer, Map<String, String>>();
+        List<String[]> results = db.getTableAsList("SELECT ID, Rule_ID, " +
+            "Name, Value FROM translit_rule_attribs");
+        for (String [] values : results)
+        {
+            Integer id = Integer.valueOf(values[1]);
+            Map<String, String> attribs = ruleAttribs.get(id);
+            
+            if (attribs == null)
+            {
+                attribs = new HashMap<String, String>();
+                ruleAttribs.put(id, attribs);
+            }
+            
+            String name = values[2];
+            if (attribs.containsKey(name))
+            {
+                throw new IllegalArgumentException("Transliteration rule " + 
+                    id + " has multiple attributes called '" + name + "'");
+            }
+            attribs.put(name, values[3]);
+        }
+        
         m_Rules = new ArrayList<Rule>();
-        List<String[]> results = db.getTableAsList("SELECT Precedent, " +
+        results = db.getTableAsList("SELECT ID, Precedent, " +
                 "Original, Succeedent, Replacement " +
                 "FROM translit_rules ORDER BY Priority, ID");
         
         for (Iterator<String[]> i = results.iterator(); i.hasNext();)
         {
             String [] result = i.next();
-            m_Rules.add(new Rule(result[0], result[1], result[2], result[3]));
+            Integer id = Integer.valueOf(result[0]);
+
+            Map<String, String> attribs = ruleAttribs.get(id);
+            if (attribs == null)
+            {
+                attribs = new HashMap<String, String>();
+            }
+            
+            m_Rules.add(new Rule(id.intValue(), result[1], result[2],
+                result[3], result[4], attribs));
         }
     }
-    
+
     /**
-     * Transliterate the nth morpheme of the given list. Convenience method.
+     * Convenience method. Transliterate the nth morpheme of the given list.
+     * Gets attributes from the supplied MatchedObject which must be a [word].
      * @param morphemes a list of morphemes forming a broken-up word
      * @param index the index of the morpheme to transliterate
      * @return
      */
-    public String transliterate(List<Morpheme> morphemes, int index)
+    public String transliterate(List<Morpheme> morphemes, int index,
+        MatchedObject word)
+    throws EmdrosException
+    {
+        if (! word.getObjectTypeName().equals("word"))
+        {
+            throw new IllegalArgumentException("MatchedObject must be a [word]");
+        }
+        
+        Map<String, String> attributes = new HashMap<String, String>();
+        
+        // not safe
+        /*
+        for (StringListConstIterator i = word.getFeatureList().const_iterator();
+            i.hasNext();)
+        {
+            String feature = i.next();
+            String value = word.getFeatureAsString(word.getEMdFValueIndex(feature));
+            attributes.put("word_" + feature, value);
+        }
+        */
+        
+        String[] featuresToCopy = new String[]{"person", "number",
+            "gender", "tense", "stem"
+        };
+        for (String feature : featuresToCopy)
+        {
+            System.out.println(feature);
+            attributes.put("word_" + feature,
+                word.getFeatureAsString(word.getEMdFValueIndex(feature)));
+        }
+        
+        return transliterate(morphemes, index, attributes);
+    }
+
+    /**
+     * Convenience method. Transliterate the nth morpheme of the given list. 
+     * @param morphemes a list of morphemes forming a broken-up word
+     * @param index the index of the morpheme to transliterate
+     * @return
+     */
+    public String transliterate(List<Morpheme> morphemes, int index,
+        Map<String, String> inputAttributes)
     {
         StringBuffer before = new StringBuffer();
         StringBuffer after = new StringBuffer();
@@ -137,10 +254,11 @@ public class DatabaseTransliterator
         }
         
         return transliterate(morphemes.get(index).getSurface(),
-            before.toString(), after.toString());
+            before.toString(), after.toString(), inputAttributes);
     }
     
     /**
+     * For use in unit tests only!
      * Pass in a morpheme, together with the text which precedes and
      * follows it, as this text may affect the transliteration.
      * @param input
@@ -149,7 +267,7 @@ public class DatabaseTransliterator
      * @return
      */
     public String transliterate(String input, String precedingText,
-        String followingText)
+        String followingText, Map<String, String> inputAttributes)
     {
         StringBuffer output = new StringBuffer();
         
@@ -163,7 +281,7 @@ public class DatabaseTransliterator
             {
                 Rule rule = i.next();
                 
-                if (rule.matches(before, after))
+                if (rule.matches(before, after, inputAttributes))
                 {
                     consumed = rule.consumes(after);
                     result = rule.replacement;

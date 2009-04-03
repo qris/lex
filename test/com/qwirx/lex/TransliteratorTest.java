@@ -2,225 +2,279 @@ package com.qwirx.lex;
 
 import java.sql.PreparedStatement;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
+import jemdros.MatchedObject;
+import jemdros.SetOfMonads;
+import jemdros.Sheaf;
+import jemdros.SheafConstIterator;
+import jemdros.Straw;
+import jemdros.StrawConstIterator;
+import jemdros.StringList;
+import jemdros.StringListConstIterator;
 import junit.framework.TestCase;
 
 import com.qwirx.db.sql.SqlDatabase;
+import com.qwirx.lex.controller.ClauseController;
+import com.qwirx.lex.emdros.EmdrosDatabase;
+import com.qwirx.lex.emdros.EmdrosDatabase.ObjectWithMonadsIn;
+import com.qwirx.lex.hebrew.HebrewConverter;
+import com.qwirx.lex.morph.HebrewMorphemeGenerator;
 import com.qwirx.lex.morph.HebrewMorphemeGenerator.Morpheme;
+import com.qwirx.lex.parser.MorphEdge;
 import com.qwirx.lex.translit.DatabaseTransliterator;
 import com.qwirx.lex.translit.DatabaseTransliterator.Rule;
 
 public class TransliteratorTest extends TestCase
 {
     SqlDatabase m_sql;
+    EmdrosDatabase m_Emdros;
     
     public TransliteratorTest() throws Exception
     {
         m_sql = Lex.getSqlDatabase("test", "test");
+        m_Emdros = Lex.getEmdrosDatabase("test", "test", m_sql);
     }
     
+    private int counter = 1;
+
     private Rule addRule(String precedent, String original, String succeedent,
         String replacement)
     throws Exception
     {
-        /* pattern syntax check */
-        Rule r = new DatabaseTransliterator.Rule(precedent, original,
-            succeedent, replacement);
+        return addRule(precedent, original, succeedent, replacement,
+            new HashMap<String, String>());
+    }
+    
+    private Rule addRule(String precedent, String original, String succeedent,
+        String replacement, Map<String, String> attribs)
+    throws Exception
+    {
         PreparedStatement stmt = m_sql.prepareSelect("INSERT INTO " +
                 "translit_rules SET Precedent = ?, Original = ?, " +
-                "Succeedent = ?, Replacement = ?");
+                "Succeedent = ?, Replacement = ?, Priority = ?");
         stmt.setString(1, precedent);
         stmt.setString(2, original);
         stmt.setString(3, succeedent);
         stmt.setString(4, replacement);
+        stmt.setInt(5, counter++);
         stmt.execute();
         m_sql.finish();
+
+        int id = m_sql.getSingleInteger("SELECT LAST_INSERT_ID()");
+
+        stmt = m_sql.prepareSelect("INSERT INTO translit_rule_attribs " +
+                "SET Rule_ID = ?, Name = ?, Value = ?");
+
+        for (String name : attribs.keySet())
+        {
+            stmt.setInt(1, id);
+            stmt.setString(2, name);
+            stmt.setString(3, attribs.get(name));
+            stmt.execute();
+        }
         
+        m_sql.finish();
+        
+        /* pattern syntax check */
+        Rule r = new DatabaseTransliterator.Rule(id, precedent, original,
+            succeedent, replacement, attribs);
+
         return r;
     }
     
     private DatabaseTransliterator m_trans;
+
+    /* characters and symbols */
+    final String ALEPH = "\u05d0";
+    final String AYIN = "\u05e2";
+    final String PATAH = "\u05b7";
+    final String BET = "\u05d1";
+    final String DAGESH = "\u05bc";
+    final String SHEVA = "\u05b0";
+    final String TSERE = "\u05b5";
+    final String QAMETS = "\u05b8";
+    final String HATAPH_QAMETS = "\u05b3";
+    final String HATAPH_PATAH = "\u05b2";
+    final String HATAPH_SEGOL = "\u05b1";
+    final String SOF_PASUQ = "\u05c3";
+    final String HE = "\u05d4";
+    final String YOD = "\u05d9";
+    final String WAW = "\u05d5";
+    final String KHET = "\u05d7";
+    final String SHIN = "\u05e9\u05c1";
+    final String DALET = "\u05d3";
+    final String SEGOL = "\u05b6";
+    final String SIN = "\u05e9\u05c2";
+    final String GIMEL = "\u05d2";
+    final String HIRIQ = "\u05b4";
+    final String KAPH = "\u05db";
+    final String FINAL_KAPH = "\u05da";
+    final String LAMED ="\u05dc";
+    final String MEM = "\u05de";
+    final String FINAL_MEM = "\u05dd";
+    final String NUN = "\u05e0";
+    final String FINAL_NUN = "\u05df";
+    final String HOLAM = "\u05b9";
+    final String PE = "\u05e4";
+    final String FINAL_PE = "\u05e3";
+    final String QOPH = "\u05e7";
+    final String RESH = "\u05e8";
+    final String SAMEK = "\u05e1";
+    final String TAV = "\u05ea";
+    final String QIBBUTS = "\u05bb";
+    final String TET = "\u05d8";
+    final String TSADE = "\u05e6";
+    final String FINAL_TSADE = "\u05e5";
+    final String ZAYIN = "\u05d6";
     
-    public void testDatabaseTransliterator() throws Exception
+    /* pattern matching rules (regular expressions) */
+    final String CONSONANT = "(" +
+            SHIN + "|" + 
+            SIN + "|" +
+            "[" +
+            ALEPH +
+            AYIN +
+            BET +
+            DALET +
+            GIMEL +
+            HE +
+            YOD +
+            KAPH +
+            FINAL_KAPH +
+            LAMED +
+            MEM +
+            FINAL_MEM +
+            NUN +
+            FINAL_NUN +
+            PE +
+            FINAL_PE +
+            QOPH +
+            RESH +
+            SAMEK +
+            TAV +
+            TET +
+            WAW +
+            KHET +
+            TSADE + /* Y */
+            FINAL_TSADE +
+            ZAYIN + /* Z */
+            "])";
+    final String CANTILLATION = "[" +
+        "\u05c3" +
+        "\u0592" +
+        "\u05ae" +
+        "\u0599" +
+        "\u05a9" +
+        "\u05c0" +
+        "\u059a" +
+        "\u059d" +
+        "\u05ad" +
+        "\u05a0" +
+        "\u05a8" +
+        "\u05c4" +
+        "\u0323" +
+        "\u05ab" +
+        "\u059c" +
+        "\u059e" +
+        "\u05a8" +
+        "\u05ac" +
+        "\u0593" +
+        "\u05a4" +
+        "\u05a5" +
+        "\u05a6" +
+        "\u0596" +
+        "\u05a3" +
+        "\u05bd" +
+        "\u0594" +
+        "\u0597" +
+        "\u0598" +
+        "\u05a1" +
+        "\u059f" +
+        "\u0595" +
+        "\u059b" +
+        "\u0591" +
+        "\u05aa" +
+        "\u05a7" +
+        "\u05bd" +
+        "]";
+    final String OPTIONAL_CANTILLATION = CANTILLATION + "?";
+    final String OPTIONAL_DAGESH = DAGESH + "?";
+    final String CONSONANT_DAGESH_CANTILLATION = CONSONANT +
+        OPTIONAL_DAGESH + OPTIONAL_CANTILLATION;
+    final String CONSONANT_NO_DAGESH_CANTILLATION = CONSONANT +
+        OPTIONAL_CANTILLATION;
+    final String LONG_VOWEL = "(\u05b5|\u05b9|" + WAW + DAGESH + ")"; /* ;|O|W. */
+    final String VOWEL = "([" + TSERE + QAMETS +
+        PATAH + SEGOL + HIRIQ + "\u05b9" /* holam */ +
+        "\u05bb" /* qibbuts */ + "]|" + WAW + DAGESH + ")";
+    final String NOT_VOWEL_BEFORE = "(" +
+            "^" +
+            "|[^" + TSERE + QAMETS + 
+            "\u05b7" /* patah */ + "\u05b6" /* segol */ +
+            "\u05b4" /* hiriq */ + "\u05b9" /* holam */ +
+            "\u05bb" /* qibbuts */ + WAW + "]" +
+            "|(" + WAW + ")" +
+            "|(" + WAW + "[^" + DAGESH + "]))";
+    final String NOT_VOWEL_AFTER = "($" +
+            "|[^" + TSERE + QAMETS + 
+            "\u05b7" /* patah */ + "\u05b6" /* segol */ +
+            "\u05b4" /* hiriq */ + "\u05b9" /* holam */ +
+            "\u05bb" /* qibbuts */ + WAW + "]" +
+            "|(" + WAW + "$)" +
+            "|(" + WAW + "[^" + DAGESH + "]))";
+
+    /* output symbols (transliterations) */
+    final String SUPERSCRIPT_BACKWARDS_E = "\u1d4a";
+    final String SUPERSCRIPT_A = "\u1d43";
+    final String SUPERSCRIPT_E = "\u1d49";
+    final String SUPERSCRIPT_H = "\u02b0";
+    final String SUPERSCRIPT_O = "\u1d52";
+    final String SUPERSCRIPT_Y = "\u02b8";
+    final String SUPERSCRIPT_QUERY = "\u02c0";
+    final String SUBSCRIPT_A = "\u2090";
+    final String A_BAR = "\u0101";
+    final String E_BAR = "\u0113";
+    final String O_BAR = "\u014d";
+    final String E_CIRCUMFLEX = "\u00ea";
+    final String HOOK_RIGHT = "\u0295";
+    final String HOOK_LEFT = "\u0294";
+    final String H_DOT = "\u1e25";
+    final String S_DOT = "\u1e63";
+    final String T_DOT = "\u1e6d";
+    final String S_CARON = "\u0161";
+    final String S_ACUTE = "\u015b";
+    final String I_CARET = "\u00ee";
+    final String O_CARET = "\u00f4";
+    final String U_CARET = "\u00fb";
+
+    Rule sheva1, sheva2, sheva3, sheva4, sheva5, sheva6, sheva7, aleph1;
+
+    public void setUp() 
+    throws Exception
     {
         m_sql.beginTransaction();
         m_sql.executeDirect("DELETE FROM translit_rules");
-
-        /* characters and symbols */
-        final String ALEPH = "\u05d0";
-        final String AYIN = "\u05e2";
-        final String PATAH = "\u05b7";
-        final String BET = "\u05d1";
-        final String DAGESH = "\u05bc";
-        final String SHEVA = "\u05b0";
-        final String TSERE = "\u05b5";
-        final String QAMETS = "\u05b8";
-        final String HATAPH_QAMETS = "\u05b3";
-        final String HATAPH_PATAH = "\u05b2";
-        final String HATAPH_SEGOL = "\u05b1";
-        final String SOF_PASUQ = "\u05c3";
-        final String HE = "\u05d4";
-        final String YOD = "\u05d9";
-        final String WAW = "\u05d5";
-        final String KHET = "\u05d7";
-        final String SHIN = "\u05e9\u05c1";
-        final String DALET = "\u05d3";
-        final String SEGOL = "\u05b6";
-        final String SIN = "\u05e9\u05c2";
-        final String GIMEL = "\u05d2";
-        final String HIRIQ = "\u05b4";
-        final String KAPH = "\u05db";
-        final String FINAL_KAPH = "\u05da";
-        final String LAMED ="\u05dc";
-        final String MEM = "\u05de";
-        final String FINAL_MEM = "\u05dd";
-        final String NUN = "\u05e0";
-        final String FINAL_NUN = "\u05df";
-        final String HOLAM = "\u05b9";
-        final String PE = "\u05e4";
-        final String FINAL_PE = "\u05e3";
-        final String QOPH = "\u05e7";
-        final String RESH = "\u05e8";
-        final String SAMEK = "\u05e1";
-        final String TAV = "\u05ea";
-        final String QIBBUTS = "\u05bb";
-        final String TET = "\u05d8";
-        final String TSADE = "\u05e6";
-        final String FINAL_TSADE = "\u05e5";
-        final String ZAYIN = "\u05d6";
-        
-        /* pattern matching rules (regular expressions) */
-        final String CONSONANT = "(" +
-                SHIN + "|" + 
-                SIN + "|" +
-                "[" +
-                ALEPH +
-                AYIN +
-                BET +
-                DALET +
-                GIMEL +
-                HE +
-                YOD +
-                KAPH +
-                LAMED +
-                MEM +
-                NUN +
-                PE +
-                QOPH +
-                RESH +
-                SAMEK +
-                TAV +
-                TET +
-                WAW +
-                KHET +
-                TSADE + /* Y */
-                ZAYIN + /* Z */
-                "])";
-        final String CANTILLATION = "[" +
-            "\u05c3" +
-            "\u0592" +
-            "\u05ae" +
-            "\u0599" +
-            "\u05a9" +
-            "\u05c0" +
-            "\u059a" +
-            "\u059d" +
-            "\u05ad" +
-            "\u05a0" +
-            "\u05a8" +
-            "\u05c4" +
-            "\u0323" +
-            "\u05ab" +
-            "\u059c" +
-            "\u059e" +
-            "\u05a8" +
-            "\u05ac" +
-            "\u0593" +
-            "\u05a4" +
-            "\u05a5" +
-            "\u05a6" +
-            "\u0596" +
-            "\u05a3" +
-            "\u05bd" +
-            "\u0594" +
-            "\u0597" +
-            "\u0598" +
-            "\u05a1" +
-            "\u059f" +
-            "\u0595" +
-            "\u059b" +
-            "\u0591" +
-            "\u05aa" +
-            "\u05a7" +
-            "\u05bd" +
-            "]";
-        final String OPTIONAL_CANTILLATION = CANTILLATION + "?";
-        final String OPTIONAL_DAGESH = DAGESH + "?";
-        final String CONSONANT_DAGESH_CANTILLATION = CONSONANT +
-            OPTIONAL_DAGESH + OPTIONAL_CANTILLATION;
-        final String CONSONANT_NO_DAGESH_CANTILLATION = CONSONANT +
-            OPTIONAL_CANTILLATION;
-        final String LONG_VOWEL = "(\u05b5|\u05b9|" + WAW + DAGESH + ")"; /* ;|O|W. */
-        final String VOWEL = "([" + TSERE + QAMETS +
-            PATAH + SEGOL + HIRIQ + "\u05b9" /* holam */ +
-            "\u05bb" /* qibbuts */ + "]|" + WAW + DAGESH + ")";
-        final String NOT_VOWEL_BEFORE = "(" +
-                "^" +
-                "|[^" + TSERE + QAMETS + 
-                "\u05b7" /* patah */ + "\u05b6" /* segol */ +
-                "\u05b4" /* hiriq */ + "\u05b9" /* holam */ +
-                "\u05bb" /* qibbuts */ + WAW + "]" +
-                "|(" + WAW + ")" +
-                "|(" + WAW + "[^" + DAGESH + "]))";
-        final String NOT_VOWEL_AFTER = "($" +
-                "|[^" + TSERE + QAMETS + 
-                "\u05b7" /* patah */ + "\u05b6" /* segol */ +
-                "\u05b4" /* hiriq */ + "\u05b9" /* holam */ +
-                "\u05bb" /* qibbuts */ + WAW + "]" +
-                "|(" + WAW + "$)" +
-                "|(" + WAW + "[^" + DAGESH + "]))";
-
-        /* output symbols (transliterations) */
-        final String SUPERSCRIPT_BACKWARDS_E = "\u1d4a";
-        final String SUPERSCRIPT_A = "\u1d43";
-        final String SUPERSCRIPT_E = "\u1d49";
-        final String SUPERSCRIPT_H = "\u02b0";
-        final String SUPERSCRIPT_O = "\u1d52";
-        final String SUPERSCRIPT_Y = "\u02b8";
-        final String SUPERSCRIPT_QUERY = "\u02c0";
-        final String SUBSCRIPT_A = "\u2090";
-        final String A_BAR = "\u0101";
-        final String E_BAR = "\u0113";
-        final String O_BAR = "\u014d";
-        final String E_CIRCUMFLEX = "\u00ea";
-        final String HOOK_RIGHT = "\u0295";
-        final String HOOK_LEFT = "\u0294";
-        final String H_DOT = "\u1e25";
-        final String S_DOT = "\u1e63";
-        final String T_DOT = "\u1e6d";
-        final String S_CARON = "\u0161";
-        final String S_ACUTE = "\u015b";
-        final String I_CARET = "\u00ee";
-        final String O_CARET = "\u00f4";
-        final String U_CARET = "\u00fb";
+        m_sql.executeDirect("DELETE FROM translit_rule_attribs");
 
         addRule("", "\u05bf", "", "");
         addRule("", "\u05bc", "", "");
         addRule("", "\u05be", "", "-");
         addRule("", "/", "", "");
-        Rule sheva1 = addRule("^" + CONSONANT_DAGESH_CANTILLATION, SHEVA, "",
+        sheva1 = addRule("^" + CONSONANT_DAGESH_CANTILLATION, SHEVA, "",
             SUPERSCRIPT_BACKWARDS_E);
-        Rule sheva2 = addRule("", SHEVA, "$", "");
-        Rule sheva3 = addRule(CONSONANT_DAGESH_CANTILLATION, SHEVA,
+        sheva2 = addRule("", SHEVA, "$", "");
+        sheva3 = addRule(CONSONANT_DAGESH_CANTILLATION, SHEVA,
             CONSONANT_DAGESH_CANTILLATION + SHEVA + "$", "");
-        Rule sheva4 = addRule(LONG_VOWEL + CONSONANT_DAGESH_CANTILLATION,
+        sheva4 = addRule(LONG_VOWEL + CONSONANT_DAGESH_CANTILLATION,
             SHEVA, "", SUPERSCRIPT_BACKWARDS_E);
-        Rule sheva5 = addRule(QAMETS + CANTILLATION +
+        sheva5 = addRule(QAMETS + CANTILLATION +
             CONSONANT_DAGESH_CANTILLATION, SHEVA, "", SUPERSCRIPT_BACKWARDS_E);
-        Rule sheva6 = addRule(CONSONANT + DAGESH + OPTIONAL_CANTILLATION,
+        sheva6 = addRule(CONSONANT + DAGESH + OPTIONAL_CANTILLATION,
             SHEVA, "", SUPERSCRIPT_BACKWARDS_E);
-        Rule sheva7 = addRule(CONSONANT + OPTIONAL_CANTILLATION,
+        sheva7 = addRule(CONSONANT + OPTIONAL_CANTILLATION,
             SHEVA, "", "");
         addRule("", HATAPH_QAMETS, "", SUPERSCRIPT_O);
         addRule("", HATAPH_PATAH, "", SUPERSCRIPT_A);
@@ -240,7 +294,114 @@ public class TransliteratorTest extends TestCase
             A_BAR + SUPERSCRIPT_Y);
         addRule("", QAMETS + OPTIONAL_CANTILLATION + YOD, "$",
             A_BAR + SUPERSCRIPT_Y);
+
+        // First versions of this rule look for the verb forms that
+        // are exceptions to the second rule, and replaces with "ā"
+        // instead of "o".
+        
+        // addTestSpecial(1844, "GEN 04,11", "פָּצְתָ֣ה", "pāṣtāʰ");
+        Map<String, String> attribs = new HashMap<String, String>();
+        attribs.put("word_stem", "qal");
+        attribs.put("word_person", "third_person");
+        attribs.put("word_gender", "feminine");
+        attribs.put("word_number", "singular");
+        attribs.put("word_tense", "perfect");
+        addRule("", QAMETS, CONSONANT_DAGESH_CANTILLATION + SHEVA, "ā",
+            attribs);
+        
+        // addTestSpecial(1764, "GEN 04,06", "נָפְל֥וּ", "nāflû");
+        attribs = new HashMap<String, String>();
+        attribs.put("word_stem", "qal");
+        attribs.put("word_person", "third_person");
+        attribs.put("word_number", "plural");
+        attribs.put("word_tense", "perfect");
+        addRule("", QAMETS, CONSONANT_DAGESH_CANTILLATION + SHEVA, "ā",
+            attribs);
+        
+        // addTestSpecial(278881, "EZE 26,21", "תִמָּצְאִ֥י", "timmāṣʔî");
+        attribs = new HashMap<String, String>();
+        attribs.put("word_stem", "nifal");
+        attribs.put("word_person", "second_person");
+        attribs.put("word_gender", "feminine");
+        attribs.put("word_number", "singular");
+        attribs.put("word_tense", "imperfect");
+        addRule("", QAMETS, CONSONANT_DAGESH_CANTILLATION + SHEVA, "ā",
+            attribs);
+
+        // addTestSpecial(8332, "GEN 18,29", "יִמָּצְא֥וּן", "yimmāṣʔûn");
+        attribs = new HashMap<String, String>();
+        attribs.put("word_stem", "nifal");
+        attribs.put("word_person", "third_person");
+        attribs.put("word_gender", "masculine");
+        attribs.put("word_number", "plural");
+        attribs.put("word_tense", "imperfect");
+        addRule("", QAMETS, CONSONANT_DAGESH_CANTILLATION + SHEVA, "ā",
+            attribs);
+        
+        // addTestSpecial(64069, "LEV 19,12", "תִשָּׁבְע֥וּ", "tiššāvʕû");
+        attribs = new HashMap<String, String>();
+        attribs.put("word_stem", "nifal");
+        attribs.put("word_person", "second_person");
+        attribs.put("word_gender", "masculine");
+        attribs.put("word_number", "plural");
+        attribs.put("word_tense", "imperfect");
+        addRule("", QAMETS, CONSONANT_DAGESH_CANTILLATION + SHEVA, "ā",
+            attribs);
+        
+        // addTestSpecial(238777, "JER 06,08", "הִוָּסְרִי֙", "hiûāsrî");
+        attribs = new HashMap<String, String>();
+        attribs.put("word_stem", "nifal");
+        attribs.put("word_person", "second_person");
+        attribs.put("word_gender", "feminine");
+        attribs.put("word_number", "singular");
+        attribs.put("word_tense", "imperative");
+        addRule("", QAMETS, CONSONANT_DAGESH_CANTILLATION + SHEVA, "ā",
+            attribs);
+
+        // addTestSpecial(27772,  "GEN 49,02", "הִקָּבְצ֥וּ", "hiqqāvṣû");
+        attribs = new HashMap<String, String>();
+        attribs.put("word_stem", "nifal");
+        attribs.put("word_person", "second_person");
+        attribs.put("word_gender", "masculine");
+        attribs.put("word_number", "plural");
+        attribs.put("word_tense", "imperative");
+        addRule("", QAMETS, CONSONANT_DAGESH_CANTILLATION + SHEVA, "ā",
+            attribs);
+        
+        // addTestSpecial(8881,   "GEN 19,20", "אִמָּלְטָ֨ה", "ʔimmālṭāʰ");
+        attribs = new HashMap<String, String>();
+        attribs.put("word_stem", "nifal");
+        attribs.put("word_person", "first_person");
+        attribs.put("word_number", "singular");
+        attribs.put("word_tense", "imperfect");
+        Rule r = addRule("", QAMETS, CONSONANT_DAGESH_CANTILLATION + SHEVA +
+            CONSONANT + QAMETS + OPTIONAL_DAGESH + OPTIONAL_CANTILLATION + HE,
+            "ā", attribs);
+        assertTrue(r.matchesEndOf("אִמָּלְטָ֨ה".substring(0,4)));
+        assertTrue(r.matchesStartOf("אִמָּלְטָ֨ה".substring(4)));
+        assertTrue(r.matchesAttributes(attribs));
+        assertTrue(r.matches("אִמָּלְטָ֨ה".substring(0,4), "אִמָּלְטָ֨ה".substring(4),
+            attribs));
+        
+        // addTestSpecial(228251, "JES 43,26", "נִשָּׁפְטָ֖ה", "niššāfṭāʰ");
+        attribs = new HashMap<String, String>();
+        attribs.put("word_stem", "nifal");
+        attribs.put("word_person", "first_person");
+        attribs.put("word_number", "plural");
+        attribs.put("word_tense", "imperfect");
+        r = addRule("", QAMETS, CONSONANT_DAGESH_CANTILLATION + SHEVA +
+            CONSONANT + QAMETS + OPTIONAL_DAGESH + OPTIONAL_CANTILLATION + HE,
+            "ā", attribs);
+        assertTrue(r.matchesEndOf("נִשָּׁפְטָ֖ה".substring(0,5)));
+        assertTrue(r.matchesStartOf("נִשָּׁפְטָ֖ה".substring(5)));
+        assertTrue(r.matchesAttributes(attribs));
+        assertTrue(r.matches("נִשָּׁפְטָ֖ה".substring(0,5), "נִשָּׁפְטָ֖ה".substring(5),
+            attribs));
+
+        // Final version with no attributes picks up all that are 
+        // not matched by the more specific rules above.
         addRule("", QAMETS, CONSONANT_DAGESH_CANTILLATION + SHEVA, "o");
+        
         addRule("", QAMETS, CONSONANT + OPTIONAL_DAGESH + "$", "o");
         addRule("", QAMETS, "", A_BAR);
         addRule("", "\u05c6", "", ""); /* Nun Inversum */
@@ -282,7 +443,7 @@ public class TransliteratorTest extends TestCase
         addRule("", "\u05bd", "", ""); /* meteg, silluq (right) (compare "75") */
         addRule("", AYIN + PATAH, "$", SUBSCRIPT_A + HOOK_RIGHT);
         addRule("", "\u05e2", "", HOOK_RIGHT); /* ayin */
-        Rule aleph1 = addRule(VOWEL + OPTIONAL_CANTILLATION, ALEPH,
+        aleph1 = addRule(VOWEL + OPTIONAL_CANTILLATION, ALEPH,
             NOT_VOWEL_AFTER, SUPERSCRIPT_QUERY);
         addRule("", ALEPH, "", HOOK_LEFT); /* aleph */
         addRule("", KHET + PATAH, "$", SUBSCRIPT_A + H_DOT);
@@ -354,7 +515,11 @@ public class TransliteratorTest extends TestCase
         addRule("", ZAYIN, "", "z");
         
         m_trans = new DatabaseTransliterator(m_sql);
-        
+    }
+    
+
+    public void testDatabaseTransliterator() throws Exception
+    {
         addTest("\u05bf", "");
         addTest("\u05bc", "");
         addTest(ALEPH + SHEVA, HOOK_LEFT + SUPERSCRIPT_BACKWARDS_E);
@@ -373,13 +538,13 @@ public class TransliteratorTest extends TestCase
             HOOK_LEFT);
         addTest(ALEPH + DAGESH + SHEVA + ALEPH, HOOK_LEFT + SUPERSCRIPT_BACKWARDS_E + HOOK_LEFT);
         
-        assertFalse(sheva1.matches(ALEPH + ALEPH, SHEVA + ALEPH));
-        assertFalse(sheva2.matches(ALEPH + ALEPH, SHEVA + ALEPH));
-        assertFalse(sheva3.matches(ALEPH + ALEPH, SHEVA + ALEPH));
-        assertFalse(sheva4.matches(ALEPH + ALEPH, SHEVA + ALEPH));
-        assertFalse(sheva5.matches(ALEPH + ALEPH, SHEVA + ALEPH));
-        assertFalse(sheva6.matches(ALEPH + ALEPH, SHEVA + ALEPH));
-        assertTrue(sheva7.matches(ALEPH + ALEPH, SHEVA + ALEPH));
+        assertFalse(sheva1.matches(ALEPH + ALEPH, SHEVA + ALEPH, ms_EmptyMap));
+        assertFalse(sheva2.matches(ALEPH + ALEPH, SHEVA + ALEPH, ms_EmptyMap));
+        assertFalse(sheva3.matches(ALEPH + ALEPH, SHEVA + ALEPH, ms_EmptyMap));
+        assertFalse(sheva4.matches(ALEPH + ALEPH, SHEVA + ALEPH, ms_EmptyMap));
+        assertFalse(sheva5.matches(ALEPH + ALEPH, SHEVA + ALEPH, ms_EmptyMap));
+        assertFalse(sheva6.matches(ALEPH + ALEPH, SHEVA + ALEPH, ms_EmptyMap));
+        assertTrue(sheva7.matches(ALEPH + ALEPH, SHEVA + ALEPH, ms_EmptyMap));
         addTest(ALEPH + ALEPH + SHEVA + ALEPH, HOOK_LEFT + HOOK_LEFT + HOOK_LEFT);
         
         addTest(HATAPH_QAMETS, SUPERSCRIPT_O);
@@ -396,19 +561,19 @@ public class TransliteratorTest extends TestCase
             "o" + SUPERSCRIPT_QUERY + ":");
         
         assertFalse(sheva1.matches(ALEPH + QAMETS + ALEPH + DAGESH + SOF_PASUQ,
-            SHEVA + ALEPH));
+            SHEVA + ALEPH, ms_EmptyMap));
         assertFalse(sheva2.matches(ALEPH + QAMETS + ALEPH + DAGESH + SOF_PASUQ,
-            SHEVA + ALEPH));
+            SHEVA + ALEPH, ms_EmptyMap));
         assertFalse(sheva3.matches(ALEPH + QAMETS + ALEPH + DAGESH + SOF_PASUQ,
-            SHEVA + ALEPH));
+            SHEVA + ALEPH, ms_EmptyMap));
         assertFalse(sheva4.matches(ALEPH + QAMETS + ALEPH + DAGESH + SOF_PASUQ,
-            SHEVA + ALEPH));
+            SHEVA + ALEPH, ms_EmptyMap));
         assertFalse(sheva5.matches(ALEPH + QAMETS + ALEPH + DAGESH + SOF_PASUQ,
-            SHEVA + ALEPH));
+            SHEVA + ALEPH, ms_EmptyMap));
         assertTrue(sheva6.matches(ALEPH + QAMETS + ALEPH + DAGESH + SOF_PASUQ,
-            SHEVA + ALEPH));
+            SHEVA + ALEPH, ms_EmptyMap));
         assertFalse(sheva7.matches(ALEPH + QAMETS + ALEPH + DAGESH + SOF_PASUQ,
-            SHEVA + ALEPH));
+            SHEVA + ALEPH, ms_EmptyMap));
         addTest(ALEPH + QAMETS + ALEPH + DAGESH + SOF_PASUQ + SHEVA + ALEPH,
             HOOK_LEFT + "o" + SUPERSCRIPT_QUERY + ":" +
             SUPERSCRIPT_BACKWARDS_E + HOOK_LEFT);
@@ -472,7 +637,7 @@ public class TransliteratorTest extends TestCase
         assertFalse(PATAH.matches(NOT_VOWEL_AFTER));
         assertTrue((WAW + DAGESH).matches(VOWEL));
         assertFalse((WAW + DAGESH).matches(NOT_VOWEL_AFTER));
-        assertFalse(aleph1.matches(PATAH, ALEPH + WAW + DAGESH));
+        assertFalse(aleph1.matches(PATAH, ALEPH + WAW + DAGESH, ms_EmptyMap));
         addTest(PATAH + ALEPH + WAW + DAGESH, "a" + HOOK_LEFT + U_CARET);
         addTest(PATAH + ALEPH, "a" + SUPERSCRIPT_QUERY);
         addTest(PATAH + ALEPH + TSERE, "a" + HOOK_LEFT + E_BAR);
@@ -577,18 +742,167 @@ public class TransliteratorTest extends TestCase
         morphs.add(new Morpheme("צַּלְע", "rib", "N/NUC"));
         morphs.add(new Morpheme("ֹתָ֔י", "FplCS", "N/GNS"));
         morphs.add(new Morpheme("ו", "3Msg", "N/POS"));
-        assertEquals("ṣṣalʕ", m_trans.transliterate(morphs, 0));
-        assertEquals("ōtāʸ", m_trans.transliterate(morphs, 1));
-        assertEquals("w", m_trans.transliterate(morphs, 2));
+        assertEquals("ṣṣalʕ", m_trans.transliterate(morphs, 0, ms_EmptyMap));
+        assertEquals("ōtāʸ", m_trans.transliterate(morphs, 1, ms_EmptyMap));
+        assertEquals("w", m_trans.transliterate(morphs, 2, ms_EmptyMap));
         
         m_sql.commitTransaction();
     }
-    
-    public void addTest(String input, String output)
+
+    public void testLongOpenQamesForms()
+    throws Exception
     {
-        assertEquals(output, m_trans.transliterate(input, "", ""));
+        /* Special cases for Long Open Qames verb forms */
+        addTestSpecial(1844,   "GEN 04,11", "פָּצְתָ֣ה", "pāṣtāʰ");
+        addTestSpecial(1764,   "GEN 04,06", "נָפְל֥וּ", "nāflû");
+        addTestSpecial(278881, "EZE 26,21", "תִמָּצְאִ֥י", "timmāṣʔî");
+        addTestSpecial(8332,   "GEN 18,29", "יִמָּצְא֥וּן", "yimmāṣʔûn");
+        addTestSpecial(621,    "GEN 01,29", "אָכְלָֽה", "ʔoxlāʰ"); // exception
+        addTestSpecial(64069,  "LEV 19,12", "תִשָּׁבְע֥וּ", "tiššāvʕû");
+        addTestSpecial(238777, "JER 06,08", "הִוָּסְרִי֙", "hiûāsrî");
+        addTestSpecial(27772,  "GEN 49,02", "הִקָּבְצ֥וּ", "hiqqāvṣû");
+        addTestSpecial(8881,   "GEN 19,20", "אִמָּלְטָ֨ה", "ʔimmālṭāʰ");
+        addTestSpecial(228251, "JES 43,26", "נִשָּׁפְטָ֖ה", "niššāfṭāʰ");
+        addTestSpecial(43805,  "EXO 28,03", "חָכְמָ֑ה", "ḥoxmāʰ"); // exception
+        addTestSpecial(1801,   "GEN 04,08", "יָּ֥קָם", "yyāqom"); // exception
     }
     
+    public void tearDown()
+    throws Exception
+    {
+        m_sql.commitTransaction();
+    }
+    
+    private static final ImmutableMap ms_EmptyMap =
+        new ImmutableMap(new HashMap());
+    
+    private void addTest(String input, String output)
+    {
+        assertEquals(output, m_trans.transliterate(input, "", "", ms_EmptyMap));
+    }
+
+    public void addTestSpecial(int monad, String location, String input,
+        String output)
+    throws Exception
+    {
+        List<ObjectWithMonadsIn> verses = m_Emdros.getObjectsWithMonadsIn(
+            new SetOfMonads(monad), "verse");
+        assertEquals(1, verses.size());
+        
+        Map<String, String> features = m_Emdros.getObjectFeatures("verse",
+            verses.get(0).getId(), new String[]{"verse_label"});
+        assertEquals(" " + location, features.get("verse_label"));
+        
+        List<ObjectWithMonadsIn> clauses = m_Emdros.getObjectsWithMonadsIn(
+            new SetOfMonads(monad), "clause");
+        assertEquals(1, clauses.size());
+
+        List<ObjectWithMonadsIn> words = m_Emdros.getObjectsWithMonadsIn(
+            new SetOfMonads(monad), "word");
+        assertEquals(1, words.size());
+        int wordId = words.get(0).getId();
+
+        ClauseController controller = new ClauseController(m_Emdros, m_sql,
+            clauses.get(0).getId());
+        MatchedObject clause = controller.getClause();
+        assertEquals(clauses.get(0).getId(), clause.getID_D());
+        MatchedObject word = null;
+        
+        for (SheafConstIterator sci1 = clause.getSheaf().const_iterator();
+            sci1.hasNext();)
+        {
+            for (StrawConstIterator swi1 = sci1.next().const_iterator();
+                swi1.hasNext();)
+            {
+                MatchedObject phrase = swi1.next();
+                assertEquals("phrase", phrase.getObjectTypeName());
+                for (SheafConstIterator sci2 = phrase.getSheaf().const_iterator();
+                    sci2.hasNext();)
+                {
+                    for (StrawConstIterator swi2 = sci2.next().const_iterator();
+                        swi2.hasNext();)
+                    {
+                        MatchedObject w = swi2.next();
+                        assertEquals("word", w.getObjectTypeName());
+                        if (w.getID_D() == wordId)
+                        {
+                            word = w; 
+                        }
+                    }
+                }
+            }
+        }
+        
+        assertNotNull(word);
+        List<Morpheme> morphemes = new HebrewMorphemeGenerator().parse(word,
+            true, m_sql);
+        StringBuffer hebrew = new StringBuffer();
+        StringBuffer translit = new StringBuffer();
+        
+        for (int i = 0; i < morphemes.size(); i++)
+        {
+            Morpheme morpheme = morphemes.get(i);
+            hebrew.append(morpheme.getSurface());
+            translit.append(m_trans.transliterate(morphemes, i, word));
+        }
+        
+        assertEquals(input, hebrew.toString());
+        assertEquals(output, translit.toString());
+        assertEquals(output, HebrewConverter.wordTranslitToHtml(word,
+            new HebrewMorphemeGenerator(), m_trans));
+    }
+
+    public void testMorphEdgeAttributesFromEmdros()
+    throws Exception
+    {
+        List<ObjectWithMonadsIn> verses = m_Emdros.getObjectsWithMonadsIn(
+            new SetOfMonads(1844), "verse");
+        assertEquals(1, verses.size());
+        
+        Map<String, String> features = m_Emdros.getObjectFeatures("verse",
+            verses.get(0).getId(), new String[]{"verse_label"});
+        assertEquals(" GEN 04,11", features.get("verse_label"));
+        
+        List<ObjectWithMonadsIn> clauses = m_Emdros.getObjectsWithMonadsIn(
+            new SetOfMonads(1844), "clause");
+        assertEquals(1, clauses.size());
+
+        ClauseController controller = new ClauseController(m_Emdros, m_sql,
+            clauses.get(0).getId());
+        MatchedObject clause = controller.getClause();
+        assertEquals(clauses.get(0).getId(), clause.getID_D());
+        
+        List<MorphEdge> morphEdges = controller.getMorphEdges();
+        assertEquals("pāṣ-", morphEdges.get(3).getHtmlSurface());
+        assertEquals("tāʰ-", morphEdges.get(4).getHtmlSurface());
+        assertEquals("&Oslash;", morphEdges.get(5).getHtmlSurface());
+
+        for (int i = 1; i <= 5; i++)
+        {
+            Map attributes = morphEdges.get(i).attributes();
+            assertEquals("third_person", attributes.get("word_person"));
+            assertEquals("feminine", attributes.get("word_gender"));
+            assertEquals("singular", attributes.get("word_number"));
+            assertEquals("qal", attributes.get("word_stem"));
+            assertEquals("perfect", attributes.get("word_tense"));
+        }
+    }
+
+    public void testIteratingOverFeaturesDoesNotCrashEmdros()
+    throws Exception
+    {
+        List<ObjectWithMonadsIn> clauses = m_Emdros.getObjectsWithMonadsIn(
+            new SetOfMonads(1844), "clause");
+        assertEquals(1, clauses.size());
+        
+        ClauseController controller = new ClauseController(m_Emdros, m_sql,
+            clauses.get(0).getId());
+        
+        for (int j = 0; j < 1000; j++)
+        {
+            controller.getMorphEdges();
+        }
+    }
     public static void main(String[] args)
     {
         junit.textui.TestRunner.run(TransliteratorTest.class);

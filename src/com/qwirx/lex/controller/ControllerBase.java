@@ -1,6 +1,7 @@
 package com.qwirx.lex.controller;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -11,6 +12,8 @@ import jemdros.Sheaf;
 import jemdros.SheafConstIterator;
 import jemdros.Straw;
 import jemdros.StrawConstIterator;
+import jemdros.StringList;
+import jemdros.StringListConstIterator;
 
 import com.qwirx.db.sql.SqlDatabase;
 import com.qwirx.lex.emdros.EmdrosDatabase;
@@ -28,7 +31,7 @@ public abstract class ControllerBase
     protected DatabaseTransliterator m_Transliterator;
     protected Navigator m_Navigator;
     protected Map<String, String> m_PhraseFunctions, m_PhraseTypes,
-        m_PartsOfSpeech;
+        m_PartsOfSpeech,  m_Gender, m_Number, m_Person, m_Stem, m_Tense;
     protected MatchedObject m_Clause;
 
     /**
@@ -72,6 +75,12 @@ public abstract class ControllerBase
         
         m_PartsOfSpeech = m_Emdros.getEnumerationConstants
             ("part_of_speech_e",false);
+        
+        m_Person = m_Emdros.getEnumerationConstants("person_e", false);
+        m_Gender = m_Emdros.getEnumerationConstants("gender_e", false);
+        m_Number = m_Emdros.getEnumerationConstants("number_e", false);
+        m_Tense = m_Emdros.getEnumerationConstants("tense_e", false);
+        m_Stem = m_Emdros.getEnumerationConstants("stem_e", false);
     }
 
     /**
@@ -185,11 +194,11 @@ public abstract class ControllerBase
                 {
                     Morpheme morpheme = morphemes.get(i);
                     String translit = m_Transliterator.transliterate(morphemes,
-                        i);
+                        i, word);
                     translit = HebrewConverter.toHtml(translit);
                     if (translit.equals("")) translit = "&Oslash;";
                     
-                    if (i < morphemes.size())
+                    if (i < morphemes.size() - 1)
                     {
                         translit += "-";
                     }
@@ -197,8 +206,50 @@ public abstract class ControllerBase
                     String gloss = morpheme.getGloss();
                     if (gloss == null) gloss = "";
 
+                    Map<String, String> attributes =
+                        new HashMap<String, String>();
+                    
+                    // not safe, crashes emdros 2.0.6, emailed ulrik 090403
+                    /*
+                    StringList features = word.getFeatureList();
+                    for (StringListConstIterator iter = features.const_iterator();
+                        iter.hasNext();)
+                    {
+                        String feature = iter.next();
+                        attributes.put("word_" + feature,
+                            word.getFeatureAsString(
+                                word.getEMdFValueIndex(feature)));
+                    }
+                    */
+                    
+                    // also not safe
+                    /*
+                    String[] featuresToCopy = new String[]{"person", "number",
+                        "gender", "tense", "stem"
+                    };
+                    for (String feature : featuresToCopy)
+                    {
+                        System.out.println(feature);
+                        attributes.put("word_" + feature,
+                            word.getFeatureAsString(
+                                word.getEMdFValueIndex(feature)));
+                    }
+                    */
+
+                    attributes.put("word_person",
+                        m_Person.get("" + word.getEMdFValue("person").getEnum()));
+                    attributes.put("word_number",
+                        m_Number.get("" + word.getEMdFValue("number").getInt()));
+                    attributes.put("word_gender",
+                        m_Gender.get("" + word.getEMdFValue("gender").getInt()));
+                    attributes.put("word_tense",
+                        m_Tense.get("" + word.getEMdFValue("tense").getInt()));
+                    attributes.put("word_stem",
+                        m_Stem.get("" + word.getEMdFValue("stem").getInt()));
+
                     morphEdges.add(new MorphEdge(morpheme.getNodeSymbol(), 
-                        translit, i));
+                        translit, morphEdges.size(),
+                        i == 0, i == morphemes.size() - 1, attributes));
                 }
             }
         }

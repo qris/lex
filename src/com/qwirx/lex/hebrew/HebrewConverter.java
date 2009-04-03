@@ -76,7 +76,7 @@ public class HebrewConverter
         
         for (int i = 0; i < morphemes.size(); i++)
         {
-            out.append(transliterator.transliterate(morphemes, i));
+            out.append(transliterator.transliterate(morphemes, i, word));
         }
         return toHtml(out.toString());
     }
