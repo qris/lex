@@ -6,6 +6,7 @@
 <%@ page import="com.qwirx.lex.Search.SearchResult" %>
 <%@ page import="com.qwirx.lex.hebrew.*" %>
 <%@ page import="com.qwirx.lex.morph.*" %>
+<%@ page import="com.qwirx.lex.translit.*" %>
 <%@ page import="jemdros.*" %>
 <%@ page import="org.aptivate.webutils.EditField" %>
 
@@ -24,7 +25,7 @@
 		// do nothing
 	}
 	
-	Search search = new Search(emdros);
+	Search search = new Search(emdros, new DatabaseTransliterator(sql));
 	search.setMaxResults(maxResults);
 	List<SearchResult> results = search.advanced("published = 1");
 %>
@@ -57,7 +58,7 @@
 			%>
 			<tr>
 				<td><%=
-					HebrewConverter.toHebrew(result.getPredicate())
+					HebrewConverter.toHtml(result.getPredicate())
 				%></td>
 				<td><%=
 					HebrewConverter.toHtml(result.getLogicalStructure())
