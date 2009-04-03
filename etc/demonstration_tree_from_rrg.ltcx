@@ -282,7 +282,7 @@
 <corpus id="_home_chris_workspace_lex_etc_demonstration_tree_from_rrg.ltcx">
 <head>
 <meta>
-<date>23-Mar-2009</date>
+<date>01-Apr-2009</date>
 <format>3.0</format>
 <display>
 <interlinearline on="true" fontname="SILIPAManuscriptL"/>
@@ -517,7 +517,7 @@
 <nt id="nt10060" treestate="EXPANDED" cat="RRG:CORE">
   <edge idref="nt10055"/>
   <edge idref="nt10046"/>
-  <edge idref="nt10043"/>
+  <edge idref="nt10065"/>
 </nt>
 <nt id="nt10055" treestate="COLLAPSED" cat="RRG:NUC">
   <edge idref="nt10054"/>
@@ -546,19 +546,19 @@
   <edge idref="t10019"/>
   <edge idref="t10020"/>
 </nt>
-<nt id="nt10043" treestate="EXPANDED" cat="Phrase:PP">
-  <edge idref="nt10041"/>
+<nt id="nt10065" treestate="EXPANDED" cat="Phrase:NP">
+  <edge idref="nt10064"/>
   <edge idref="t10026" label="Function:Conj"/>
-  <edge idref="nt10042"/>
+  <edge idref="nt10063"/>
 </nt>
-<nt id="nt10041" treestate="EXPANDED" cat="Phrase:PP">
+<nt id="nt10064" treestate="EXPANDED" cat="Phrase:NP">
   <edge idref="nt10037"/>
   <edge idref="nt10049"/>
 </nt>
 <nt id="nt10037" treestate="COLLAPSED" cat="XBar:P">
   <edge idref="t10021"/>
 </nt>
-<nt id="nt10049" treestate="EXPANDED" cat="Phrase:NP">
+<nt id="nt10049" treestate="COLLAPSED" cat="Phrase:NP">
   <edge idref="nt10048"/>
 </nt>
 <nt id="nt10048" treestate="EXPANDED" cat="RRG:COREN">
@@ -573,7 +573,7 @@
   <edge idref="t10024"/>
   <edge idref="t10025"/>
 </nt>
-<nt id="nt10042" treestate="EXPANDED" cat="Phrase:PP">
+<nt id="nt10063" treestate="EXPANDED" cat="Phrase:NP">
   <edge idref="nt10039"/>
   <edge idref="nt10052"/>
 </nt>
