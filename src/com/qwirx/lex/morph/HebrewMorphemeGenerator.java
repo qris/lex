@@ -46,6 +46,39 @@ public class HebrewMorphemeGenerator
         
         return parse(word, generateGloss, gloss);
     }
+
+    public List<String> getRequiredFeatures(boolean generateGloss)
+    {
+        List<String> requiredFeatures = Arrays.asList(new String[]{
+            "phrase_dependent_part_of_speech",
+            "graphical_preformative_utf8",
+            "graphical_root_formation_utf8",
+            "graphical_lexeme_utf8",
+            "graphical_verbal_ending_utf8",
+            "graphical_nominal_ending_utf8",
+            "graphical_pron_suffix_utf8",
+        });
+        
+        if (generateGloss)
+        {
+            requiredFeatures = new ArrayList<String>(requiredFeatures);
+            requiredFeatures.addAll(Arrays.asList(new String[]{
+                "person",
+                "gender",
+                "number",
+                "state",
+                "wordnet_gloss",
+                "lexeme_wit",
+                "tense",
+                "stem",
+                "suffix_gender",
+                "suffix_number",
+                "suffix_person"
+            }));
+        }
+
+        return requiredFeatures;
+    }
     
     public List<Morpheme> parse(MatchedObject word, boolean generateGloss,
         String gloss)
@@ -204,14 +237,32 @@ public class HebrewMorphemeGenerator
             convert(results, word, "graphical_root_formation_utf8",
                 stem, "V/STM");
             
-            results.add(new Morpheme(
-                word.getEMdFValue("graphical_lexeme_utf8").toString() +
-                word.getEMdFValue("graphical_nominal_ending_utf8").toString(),
-                gloss, "V/NUC"));
+            // Requested by Nicolai: if the verb's tense is "participle",
+            // the graphical_nominal_ending_utf8 goes onto the verbal ending,
+            // otherwise it goes onto the end of the lexeme.
+            
+            if (word.getFeatureAsString(word.getEMdFValueIndex("tense"))
+                .equals("participle"))
+            {
+                convert(results, word, "graphical_lexeme_utf8",
+                    gloss, "V/NUC");
 
-            convert(results, word, "graphical_verbal_ending_utf8",
-                verbEnding, "AG/PSA");
-
+                results.add(new Morpheme(
+                    word.getEMdFValue("graphical_verbal_ending_utf8").toString() +
+                    word.getEMdFValue("graphical_nominal_ending_utf8").toString(),
+                    verbEnding, "AG/PSA"));
+            }
+            else
+            {
+                results.add(new Morpheme(
+                    word.getEMdFValue("graphical_lexeme_utf8").toString() +
+                    word.getEMdFValue("graphical_nominal_ending_utf8").toString(),
+                    gloss, "V/NUC"));
+    
+                convert(results, word, "graphical_verbal_ending_utf8",
+                    verbEnding, "AG/PSA");
+            }
+            
             convert(results, word, "graphical_pron_suffix_utf8",
                 suffixGloss, "PRON/DCA");
         }

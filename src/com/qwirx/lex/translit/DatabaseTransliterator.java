@@ -3,16 +3,17 @@ package com.qwirx.lex.translit;
 import java.sql.Connection;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
 import jemdros.EmdrosException;
 import jemdros.MatchedObject;
-import jemdros.StringListConstIterator;
 
 import org.apache.log4j.Logger;
 
@@ -182,6 +183,24 @@ public class DatabaseTransliterator
             m_Rules.add(new Rule(id.intValue(), result[1], result[2],
                 result[3], result[4], attribs));
         }
+    }
+    
+    public Set<String> getRequiredFeatures()
+    {
+        Set<String> features = new HashSet<String>();
+        
+        for (Rule rule : m_Rules)
+        {
+            for (String attribName : rule.m_Attribs.keySet())
+            {
+                if (attribName.startsWith("word_"))
+                {
+                    features.add(attribName.substring(5));
+                }
+            }
+        }
+        
+        return features;
     }
 
     /**

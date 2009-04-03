@@ -3,8 +3,11 @@ package com.qwirx.lex;
 import java.sql.PreparedStatement;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import jemdros.MatchedObject;
 import jemdros.SetOfMonads;
@@ -12,8 +15,6 @@ import jemdros.Sheaf;
 import jemdros.SheafConstIterator;
 import jemdros.Straw;
 import jemdros.StrawConstIterator;
-import jemdros.StringList;
-import jemdros.StringListConstIterator;
 import junit.framework.TestCase;
 
 import com.qwirx.db.sql.SqlDatabase;
@@ -772,6 +773,65 @@ public class TransliteratorTest extends TestCase
     {
         addTestSpecial(27, "GEN 01,02", "מְרַחֶ֖פֶת", "mᵊraḥefet");
         addTestSpecial(739, "GEN 02,04", "עֲשֹׂ֛ות", "ʕᵃśôt");
+
+        HebrewMorphemeGenerator hmg = new HebrewMorphemeGenerator();
+        MatchedObject word = getWord(27, hmg);
+        List<Morpheme> morphemes = hmg.parse(word, false, "");
+        
+        assertEquals("mᵊ", m_trans.transliterate(morphemes, 0, word));
+        assertEquals("", m_trans.transliterate(morphemes, 1, word));
+        assertEquals("raḥefe", m_trans.transliterate(morphemes, 2, word));
+        assertEquals("t", m_trans.transliterate(morphemes, 3, word));
+        assertEquals("", m_trans.transliterate(morphemes, 4, word));
+
+        word = getWord(739, hmg);
+        morphemes = hmg.parse(word, false, "");
+        
+        assertEquals("", m_trans.transliterate(morphemes, 0, word));
+        assertEquals("", m_trans.transliterate(morphemes, 1, word));
+        assertEquals("ʕᵃśôt", m_trans.transliterate(morphemes, 2, word));
+        assertEquals("", m_trans.transliterate(morphemes, 3, word));
+        assertEquals("", m_trans.transliterate(morphemes, 4, word));
+    }
+
+    private MatchedObject getWord(int monad, HebrewMorphemeGenerator hmg)
+    throws Exception
+    {
+        StringBuffer query = new StringBuffer();
+        query.append("SELECT ALL OBJECTS IN {" + monad + "} " +
+            "WHERE [word GET ");
+        
+        Set<String> features = new HashSet<String>();
+        features.addAll(hmg.getRequiredFeatures(false));
+        features.addAll(m_trans.getRequiredFeatures());
+        
+        for (Iterator<String> i = features.iterator(); i.hasNext();)
+        {
+            String feature = i.next();
+            query.append(feature);
+            if (i.hasNext())
+            {
+                query.append(",");
+            }
+        }
+        
+        query.append("]");
+        Sheaf sheaf = m_Emdros.getSheaf(query.toString());
+        MatchedObject word = null;
+        
+        SheafConstIterator sci = sheaf.const_iterator();
+        
+        if (sci.hasNext()) 
+        {
+            Straw straw = sci.next();
+            StrawConstIterator swci = straw.const_iterator();
+            if (swci.hasNext()) 
+            {
+                return swci.next();
+            }
+        }
+        
+        return null;
     }
     
     public void tearDown()
