@@ -35,8 +35,8 @@
 		class="search_jsp"  href="search.jsp"  >Search</a><a 
 		class="lsedit_jsp"  href="lsedit.jsp"  >Lexicon</a><a  
 		class="parse_jsp"   href="parse.jsp"   >Parser</a><a  
-		class="rules_jsp"   href="rules.jsp"   >Rules</a><a  
-		class="wordnet_jsp" href="wordnet.jsp" >Wordnet</a><%
+		class="rules_jsp"   href="rules.jsp"   >Rules</a><!--<a  
+		class="wordnet_jsp" href="wordnet.jsp" >Wordnet</a>--><%
 		
 		if (request.getRemoteUser() != null)
 		{
