@@ -1528,23 +1528,23 @@ public class ParserTest extends TestCase
         
         List input = new ArrayList();
         
-        input.add(new MorphEdge("CONJ",       "WA-",      0)); 
-        input.add(new MorphEdge("V/TNS",      "J.I",      1)); 
-        input.add(new MorphEdge("V/STM",      "",         2)); 
-        input.add(new MorphEdge("V/LEX",      "V.A62<",   3)); 
-        input.add(new MorphEdge("V/PGN",      "",         4)); 
-        input.add(new MorphEdge("HEAD/NPROP", "J:HW@94H", 5)); 
-        input.add(new MorphEdge("MARK/N",     "",         6)); 
-        input.add(new MorphEdge("HEAD/NPROP", ">:ELOH",   7)); 
-        input.add(new MorphEdge("MARK/N",     "I91Jm",    8)); 
-        input.add(new MorphEdge("HEAD/NCOM",  "G.An&",    9)); 
-        input.add(new MorphEdge("MARK/N",     "",         10)); 
-        input.add(new MorphEdge("P",          "B.:-",     11)); 
-        input.add(new MorphEdge("HEAD/NPROP", "<;73DEn",  12)); 
-        input.add(new MorphEdge("MARK/N",     "",         13)); 
-        input.add(new MorphEdge("P",          "MI-",      14)); 
-        input.add(new MorphEdge("HEAD/NPROP", "Q.E92DEm", 15)); 
-        input.add(new MorphEdge("MARK/N",     "",         16)); 
+        input.add(new MorphEdge("CONJ",       "WA-",      0,  false, false)); 
+        input.add(new MorphEdge("V/TNS",      "J.I",      1,  false, true)); 
+        input.add(new MorphEdge("V/STM",      "",         2,  true,  true)); 
+        input.add(new MorphEdge("V/LEX",      "V.A62<",   3,  true,  true)); 
+        input.add(new MorphEdge("V/PGN",      "",         4,  true,  false)); 
+        input.add(new MorphEdge("HEAD/NPROP", "J:HW@94H", 5,  false, true)); 
+        input.add(new MorphEdge("MARK/N",     "",         6,  true,  false)); 
+        input.add(new MorphEdge("HEAD/NPROP", ">:ELOH",   7,  false, true)); 
+        input.add(new MorphEdge("MARK/N",     "I91Jm",    8,  true,  false)); 
+        input.add(new MorphEdge("HEAD/NCOM",  "G.An&",    9,  false, true)); 
+        input.add(new MorphEdge("MARK/N",     "",         10, true,  false)); 
+        input.add(new MorphEdge("P",          "B.:-",     11, false, false)); 
+        input.add(new MorphEdge("HEAD/NPROP", "<;73DEn",  12, false, true)); 
+        input.add(new MorphEdge("MARK/N",     "",         13, true,  false)); 
+        input.add(new MorphEdge("P",          "MI-",      14, false, false)); 
+        input.add(new MorphEdge("HEAD/NPROP", "Q.E92DEm", 15, false, true)); 
+        input.add(new MorphEdge("MARK/N",     "",         16, true,  false)); 
         
         p.setVerbose(true);
         List edges = p.parseFor(input, "SENTENCE");
@@ -1609,24 +1609,24 @@ public class ParserTest extends TestCase
         
         List input = new ArrayList();
         
-        input.add(new MorphEdge("P",          "B.:-",     0)); 
-        input.add(new MorphEdge("HEAD/NCOM",  "R;>CI73J", 1)); 
-        input.add(new MorphEdge("MARK/N",     "T",        2)); 
-        input.add(new MorphEdge("V/TNS",      "",         3)); 
-        input.add(new MorphEdge("V/STM",      "",         4)); 
-        input.add(new MorphEdge("V/LEX",      "B.@R@74>", 5)); 
-        input.add(new MorphEdge("V/PGN",      "",         6)); 
-        input.add(new MorphEdge("HEAD/NPROP", ">:ELOH",   7)); 
-        input.add(new MorphEdge("MARK/N",     "I92Jm",    8)); 
-        input.add(new MorphEdge("P",          ">;71T",    9)); 
-        input.add(new MorphEdge("DET",        "HA-",      10)); 
-        input.add(new MorphEdge("HEAD/NCOM",  "C.@M",     11)); 
-        input.add(new MorphEdge("MARK/N",     "A73JIm",   12)); 
-        input.add(new MorphEdge("CONJ",       "W:-",      13)); 
-        input.add(new MorphEdge("P",          ">;71T",    14)); 
-        input.add(new MorphEdge("DET",        "H@-",      15)); 
-        input.add(new MorphEdge("HEAD/NCOM",  ">@75REy",  16)); 
-        input.add(new MorphEdge("MARK/N",     "",         17)); 
+        input.add(new MorphEdge("P",          "B.:-",     0,  false, false)); 
+        input.add(new MorphEdge("HEAD/NCOM",  "R;>CI73J", 1,  false, true)); 
+        input.add(new MorphEdge("MARK/N",     "T",        2,  true,  false)); 
+        input.add(new MorphEdge("V/TNS",      "",         3,  false, true)); 
+        input.add(new MorphEdge("V/STM",      "",         4,  true,  true)); 
+        input.add(new MorphEdge("V/LEX",      "B.@R@74>", 5,  true,  true)); 
+        input.add(new MorphEdge("V/PGN",      "",         6,  true,  false)); 
+        input.add(new MorphEdge("HEAD/NPROP", ">:ELOH",   7,  false, true)); 
+        input.add(new MorphEdge("MARK/N",     "I92Jm",    8,  true,  false)); 
+        input.add(new MorphEdge("P",          ">;71T",    9,  false, false)); 
+        input.add(new MorphEdge("DET",        "HA-",      10, false, false)); 
+        input.add(new MorphEdge("HEAD/NCOM",  "C.@M",     11, false, true)); 
+        input.add(new MorphEdge("MARK/N",     "A73JIm",   12, true,  false)); 
+        input.add(new MorphEdge("CONJ",       "W:-",      13, false, false)); 
+        input.add(new MorphEdge("P",          ">;71T",    14, false, false)); 
+        input.add(new MorphEdge("DET",        "H@-",      15, false, false)); 
+        input.add(new MorphEdge("HEAD/NCOM",  ">@75REy",  16, false, true)); 
+        input.add(new MorphEdge("MARK/N",     "",         17, true,  false)); 
         
         p.setVerbose(true);
         List edges = p.parseFor(input, "SENTENCE");

@@ -15,22 +15,20 @@ import java.util.Map.Entry;
 
 import com.qwirx.lex.ImmutableMap;
 import com.qwirx.lex.TreeNode;
-import com.qwirx.lex.hebrew.HebrewConverter;
 import com.qwirx.lex.parser.Rule.Attribute;
 
 public class MorphEdge extends EdgeBase
 {
 	private final String m_Symbol, m_Surface;
     private static final Edge[] m_Parts = new Edge[0];
-    private static final ImmutableMap m_Attribs = 
-        new ImmutableMap(new HashMap());
+    private Map m_Attribs;
     private int m_Position;
     private MorphEdge m_UnboundOriginal = null;
     private final boolean m_HasPrev, m_HasNext;
     
     /**
-     * Default constructor, creates an instance of the given text as a 
-     * "word" object.
+     * Standard constructor, creates an instance of the given text as a 
+     * "word" object, with no attributes.
      * @param symbol   The symbol used to represent this morpheme
      * @param surface  The surface text of the morpheme
      * @param position The morpheme's index in the input string
@@ -40,23 +38,28 @@ public class MorphEdge extends EdgeBase
     public MorphEdge(String symbol, String surface, int position,
         boolean hasPrev, boolean hasNext) 
     {
-		super();
-        m_Symbol   = symbol;
-		m_Surface  = surface;
-        m_Position = position;
-        m_HasPrev  = hasPrev;
-        m_HasNext  = hasNext;
+        this(symbol, surface, position, hasPrev, hasNext, new HashMap());
 	}
 
     /**
-     * Backwards compatibility constructor. Not a good idea to use it.
-     * @param symbol
-     * @param surface
-     * @param position
+     * Standard constructor, creates an instance of the given text as a 
+     * "word" object, with attributes.
+     * @param symbol   The symbol used to represent this morpheme
+     * @param surface  The surface text of the morpheme
+     * @param position The morpheme's index in the input string
+     * @param hasPrev  The morpheme is not the first in its word
+     * @param hasNext  The morpheme is not the last in its word
      */
-    public MorphEdge(String symbol, String surface, int position) 
+    public MorphEdge(String symbol, String surface, int position,
+        boolean hasPrev, boolean hasNext, Map attributes) 
     {
-        this(symbol, surface, position, false, false);
+        super();
+        m_Symbol   = symbol;
+        m_Surface  = surface;
+        m_Position = position;
+        m_HasPrev  = hasPrev;
+        m_HasNext  = hasNext;
+        m_Attribs  = new ImmutableMap(attributes);
     }
 
     public String toString() 
@@ -80,9 +83,13 @@ public class MorphEdge extends EdgeBase
             buf.append('=');
             buf.append(e.getValue());
             if (i.hasNext())
+            {
                 buf.append(',');
+            }
             else
+            {
                 buf.append(' ');
+            }
         }
         
         buf.append('"');
