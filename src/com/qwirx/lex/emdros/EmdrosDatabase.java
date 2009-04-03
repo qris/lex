@@ -11,6 +11,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
@@ -27,7 +28,6 @@ import jemdros.Table;
 import jemdros.TableException;
 import jemdros.TableIterator;
 import jemdros.TableRow;
-import jemdros.TableRowException;
 import jemdros.eCharsets;
 import jemdros.eOutputKind;
 
@@ -159,7 +159,7 @@ public class EmdrosDatabase implements Database
     {
         Table table = getTable(query);
         TableIterator rows = table.iterator();
-        List<String[]> results = new ArrayList();
+        List<String[]> results = new ArrayList<String[]>();
         
         try
         {
@@ -478,11 +478,13 @@ public class EmdrosDatabase implements Database
             throw new DatabaseException("Failed to get monad " +
                     "access control data", e);
         }
+        /*
         catch (BadMonadsException e)
         {
             throw new DatabaseException("Failed to get monad " +
                 "access control: invalid data in access table", e);
         }
+        */
     }
 
     public boolean canWriteTo(MatchedObject object)
@@ -601,5 +603,117 @@ public class EmdrosDatabase implements Database
     public void delete()
     {
         env.delete();
+    }
+    
+    public static class ObjectWithMonadsIn
+    {
+        private String m_Type;
+        private int m_Id, m_Monad;
+        public ObjectWithMonadsIn(String type, int id, int monad)
+        {
+            m_Type = type;
+            m_Id = id;
+            m_Monad = monad;
+        }
+        public String getType() { return m_Type; }
+        public int getId() { return m_Id; }
+        public int getMonad() { return m_Monad; }
+    }
+
+    public List<ObjectWithMonadsIn> getObjectsAt(int monad, String objectType)
+    throws DatabaseException
+    {
+        List<ObjectWithMonadsIn> objects = new ArrayList<ObjectWithMonadsIn>();
+
+        Table table = getTable("SELECT OBJECTS AT MONAD = " + monad + " [" +
+            objectType + "]");
+        TableIterator rows = table.iterator();
+        
+        try
+        {
+            while (rows.hasNext()) 
+            {
+                TableRow row = rows.next();
+                ObjectWithMonadsIn object = new ObjectWithMonadsIn(
+                    objectType,
+                    Integer.parseInt(row.getColumn(1)),
+                    monad);
+                objects.add(object);
+            }
+        }
+        catch (TableException te)
+        {
+            throw new DatabaseException("Failed to read table from Emdros", te);
+        }
+
+        return objects;
+    }
+
+    public List<ObjectWithMonadsIn> getObjectsWithMonadsIn(SetOfMonads monads,
+        String objectType)
+    throws DatabaseException
+    {
+        List<ObjectWithMonadsIn> objects = new ArrayList<ObjectWithMonadsIn>();
+
+        Table table = getTable("SELECT OBJECTS HAVING MONADS IN " +
+            monads + " [" + objectType + "]");
+        TableIterator rows = table.iterator();
+        
+        try
+        {
+            while (rows.hasNext()) 
+            {
+                TableRow row = rows.next();
+                ObjectWithMonadsIn object = new ObjectWithMonadsIn(
+                    row.getColumn(1),
+                    Integer.parseInt(row.getColumn(3)),
+                    Integer.parseInt(row.getColumn(2)));
+                objects.add(object);
+            }
+        }
+        catch (TableException te)
+        {
+            throw new DatabaseException("Failed to read table from Emdros", te);
+        }
+
+        return objects;
+    }
+
+    public Map<String, String> getObjectFeatures(String objectType,
+        int objectId, String [] features)
+    throws DatabaseException
+    {
+        Map<String, String> values = new HashMap<String, String>();
+        StringBuffer query = new StringBuffer();
+        query.append("GET FEATURES ");
+        
+        for (int i = 0; i < features.length; i++)
+        {
+            query.append(features[i]);
+            if (i < features.length - 1)
+            {
+                query.append(", ");
+            }
+        }
+        
+        query.append(" FROM OBJECTS WITH ID_Ds = " + objectId + " ");
+        query.append("[" + objectType + "]");
+        Table table = getTable(query.toString());
+        TableIterator rows = table.iterator();
+        
+        try
+        {
+            TableRow row = rows.next();
+            for (int i = 0; i < features.length; i++)
+            {
+                values.put(features[i], row.getColumn(i + 2));
+            }
+        }
+        catch (TableException te)
+        {
+            throw new DatabaseException("Failed to read table from Emdros", te);
+        }
+
+        return values;
     }
 }
