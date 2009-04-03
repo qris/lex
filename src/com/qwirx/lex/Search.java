@@ -1,6 +1,5 @@
 package com.qwirx.lex;
 
-import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -19,11 +18,9 @@ import jemdros.SheafConstIterator;
 import jemdros.Straw;
 import jemdros.StrawConstIterator;
 import jemdros.Table;
-import jemdros.TableException;
 import jemdros.TableIterator;
 import jemdros.TableRow;
 
-import com.qwirx.db.DatabaseException;
 import com.qwirx.lex.emdros.EmdrosDatabase;
 import com.qwirx.lex.hebrew.HebrewConverter;
 import com.qwirx.lex.morph.HebrewMorphemeGenerator;
