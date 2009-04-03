@@ -65,33 +65,17 @@ public class Clause
             "        ]"+
             "      ]";
         
-        try
-        {
-            Sheaf sheaf = emdros.getSheaf(query);
-            Straw straw = sheaf.const_iterator().next();
-            MatchedObject clause = straw.const_iterator().next();
-            
-            return new Clause(emdros, lexicon, clause, transliterator);
-        }
-        catch (EmdrosException e)
-        {
-            throw new DatabaseException("Failed to find clause " + id, e,
-                query);
-        }
+        Sheaf sheaf = emdros.getSheaf(query);
+        Straw straw = sheaf.const_iterator().next();
+        MatchedObject clause = straw.const_iterator().next();
+        
+        return new Clause(emdros, lexicon, clause, transliterator);
     }
     
     public int getLogicalStructureID()
     throws DatabaseException
     {
-        try
-        {
-            return m_Clause.getEMdFValue("logical_struct_id").getInt();
-        }
-        catch (EmdrosException e)
-        {
-            throw new DatabaseException("Failed to get logical structure ID",
-                e);
-        }
+        return m_Clause.getEMdFValue("logical_struct_id").getInt();
     }
     
     public String getEvaluatedLogicalStructure()
@@ -127,27 +111,8 @@ public class Clause
         SheafConstIterator phrases = m_Clause.getSheaf().const_iterator();
         while (phrases.hasNext())
         {
-            MatchedObject phrase = null;
-            
-            try
-            {
-                phrase = phrases.next().const_iterator().next();
-            }
-            catch (EmdrosException e)
-            {
-                throw new DatabaseException("Failed to get phrase", e);
-            }
-            
-            String argName = null;
-            
-            try
-            {
-                argName = phrase.getEMdFValue("argument_name").toString();
-            }
-            catch (EmdrosException e)
-            {
-                throw new DatabaseException("Failed to get argument name", e);
-            }
+            MatchedObject phrase = phrases.next().const_iterator().next();
+            String argName = phrase.getEMdFValue("argument_name").toString();
 
             if (argName.equals("")) 
             {
@@ -156,16 +121,8 @@ public class Clause
     
                 String function_name = null;
                 
-                try
-                {
-                    function_name = phrase.getFeatureAsString(
-                        phrase.getEMdFValueIndex("phrase_function"));
-                }
-                catch (EmdrosException e)
-                {
-                    throw new DatabaseException("Failed to get phrase " +
-                            "function", e);
-                }
+                function_name = phrase.getFeatureAsString(
+                    phrase.getEMdFValueIndex("phrase_function"));
 
                 if (function_name.equals("Subj") ||
                     function_name.equals("PreS") ||
