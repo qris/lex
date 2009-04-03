@@ -8,7 +8,6 @@
 <%@ page import="com.qwirx.lex.ontology.*" %>
 <%@ page import="com.qwirx.lex.parser.*" %>
 <%@ page import="com.qwirx.lex.wordnet.*" %>
-<%@ page import="com.qwirx.lex.controller.ParseController.HebrewFeatureConverter" %>
 
 <%@ include file="auth.jsp" %>
 <%@ include file="navclause.jsp" %>
@@ -26,43 +25,12 @@
 	}
 	else
 	{
-		List morphEdges = new ArrayList();
-		
-		/* Prescan to list morpheme edges */
-		
-		{
-			TreeNode root = new TreeNode("root");
-			HebrewMorphemeGenerator gen = new HebrewMorphemeGenerator();
-			
-			{
-				SheafConstIterator phrases = clause.getSheaf().const_iterator();
-	
-				while (phrases.hasNext()) 
-				{
-					MatchedObject phrase =
-						phrases.next().const_iterator().next();
-	
-					SheafConstIterator words = phrase.getSheaf().const_iterator();
-					while (words.hasNext()) 
-					{
-						MatchedObject word = words.next().const_iterator().next();
-	
-						HebrewFeatureConverter hfc = 
-							new HebrewFeatureConverter(root, word, morphEdges,
-								transliterator);
-						
-						gen.parse(word, hfc, true, sql);
-					}
-				}
-			}
-		
-			%>
-			<p>
-				Hebrew text:
-				<span class="hebrew"><%= controller.getHebrewText() %></span>
-			</p>
-			<%
-		}
+		%>
+		<p>
+			Hebrew text:
+			<span class="hebrew"><%= controller.getHebrewText() %></span>
+		</p>
+		<%
 		
 		if (request.getParameter("rule_add") != null)
 		{
@@ -89,6 +57,7 @@
 		{
 			Parser p = new Parser(sql);
 			p.setVerbose(true);
+			List<MorphEdge> morphEdges = controller.getMorphEdges();
 			Chart chart = p.parse(morphEdges);
 			List sentences = chart.filter("SENTENCE", morphEdges, false);
 
