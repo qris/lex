@@ -767,6 +767,13 @@ public class TransliteratorTest extends TestCase
         addTestSpecial(1801,   "GEN 04,08", "יָּ֥קָם", "yyāqom"); // exception
     }
     
+    public void testParadigmaticNominalEndingIsAddedToVerbs()
+    throws Exception
+    {
+        addTestSpecial(27, "GEN 01,02", "מְרַחֶ֖פֶת", "mᵊraḥefet");
+        addTestSpecial(739, "GEN 02,04", "עֲשֹׂ֛ות", "ʕᵃśôt");
+    }
+    
     public void tearDown()
     throws Exception
     {

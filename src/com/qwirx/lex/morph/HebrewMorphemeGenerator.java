@@ -204,9 +204,11 @@ public class HebrewMorphemeGenerator
             convert(results, word, "graphical_root_formation_utf8",
                 stem, "V/STM");
             
-            convert(results, word, "graphical_lexeme_utf8", 
-                gloss, "V/NUC");
-            
+            results.add(new Morpheme(
+                word.getEMdFValue("graphical_lexeme_utf8").toString() +
+                word.getEMdFValue("graphical_nominal_ending_utf8").toString(),
+                gloss, "V/NUC"));
+
             convert(results, word, "graphical_verbal_ending_utf8",
                 verbEnding, "AG/PSA");
 
