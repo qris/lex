@@ -416,9 +416,18 @@ public class ClauseController extends ControllerBase
     
     class Cell
     {
-        String label, link, format, html;
+        String label, link, format, html, cssClass;
         int columns;
         List<Cell> subcells = new ArrayList<Cell>();
+        public Cell(String html)
+        {
+            this.html = html;
+        }
+        public Cell(String html, String cssClass)
+        {
+            this.html = html;
+            this.cssClass = cssClass;
+        }
     }
 
     private Cell getLexiconGlossCell(MatchedObject word)
@@ -434,8 +443,6 @@ public class ClauseController extends ControllerBase
             ewgId = Integer.parseInt(ewgString);
         }
 
-        Cell cell = new Cell();
-
         Lexeme lexeme = Lexeme.findOrBuild(m_Sql, word);
 
         if (ewgId == wid &&
@@ -448,6 +455,7 @@ public class ClauseController extends ControllerBase
         }
         
         String lexiconGloss = lexeme.getGloss();
+        Cell cell;
         
         if (ewgId == wid) 
         {
@@ -455,7 +463,7 @@ public class ClauseController extends ControllerBase
             {
                 lexiconGloss = "";
             }
-            cell.html = "<form method=\"post\">\n" +
+            cell = new Cell("<form method=\"post\">\n" +
                 "<input type=\"hidden\" name=\"ewg\"" +
                 " value=\"" + wid + "\">\n" +
                 "<input name=\"gloss\" size=\"10\" value=\"" +
@@ -463,7 +471,7 @@ public class ClauseController extends ControllerBase
                 "\">\n" +
                 "<input type=\"submit\" name=\"ewgs\""+
                 " value=\"Save\">\n" +
-                "</form>";
+                "</form>");
         } 
         else 
         {
@@ -471,8 +479,8 @@ public class ClauseController extends ControllerBase
             {
                 lexiconGloss = "(gloss)";
             }
-            cell.html = "<a href=\"clause.jsp?ewg=" + 
-                wid + "\">" + lexiconGloss + "</a>";
+            cell = new Cell("<a href=\"clause.jsp?ewg=" + 
+                wid + "\">" + lexiconGloss + "</a>");
         }
         
         return cell;
@@ -540,8 +548,7 @@ public class ClauseController extends ControllerBase
             wivuIndex = wivuIndexE.getInt();
         }
         
-        Cell cell = new Cell();
-        cell.html = "[Wivu] ";
+        Cell cell = new Cell("[Wivu] ");
         
         Entry [] entries = Lex.getWivuLexicon().getEntry(
             word.getEMdFValue("lexeme_wit").toString(),
@@ -637,18 +644,18 @@ public class ClauseController extends ControllerBase
     private Cell getDibLookupCell(MatchedObject word)
     throws Exception
     {
-        Cell cell = new Cell();
+        Cell cell;
         
         String gloss = KJV.getDibGloss(word.getEMdFValue("lexeme_wit")
             .getString());
         
         if (gloss == null)
         {
-            cell.html = "";
+            cell = new Cell("");
         }
         else
         {
-            cell.html = "[DiB] " + gloss;
+            cell = new Cell("[DiB] " + gloss);
         }
         
         return cell;
@@ -658,8 +665,7 @@ public class ClauseController extends ControllerBase
     throws Exception
     {
         // Hebrew-English Dictionary lookup
-        Cell cell = new Cell();
-        cell.html = "";
+        Cell cell = new Cell("");
         
         if (m_SwordVerse != null)
         {
@@ -667,11 +673,7 @@ public class ClauseController extends ControllerBase
             String gloss = KJV.getKingJamesGloss(m_SwordVerse,
                 word.getEMdFValue("lexeme_wit").getString());
             
-            if (gloss == null)
-            {
-                cell.html = "";
-            }
-            else
+            if (gloss != null)
             {
                 cell.html = "[KJV] " + gloss;
             }   
@@ -684,8 +686,7 @@ public class ClauseController extends ControllerBase
         boolean canWriteToPhrase)
     throws Exception
     {
-        Cell cell = new Cell();
-        cell.html = "";
+        Cell cell = new Cell("");
 
         if (phrase_type.equals("VP"))
         {
@@ -802,7 +803,7 @@ public class ClauseController extends ControllerBase
                             word.getEMdFValueIndex(
                                 "phrase_dependent_part_of_speech"));
                             
-                        Cell cell = new Cell();
+                        Cell cell = new Cell(null);
                         cell.label = HebrewConverter.wordTranslitToHtml(word,
                             morphemes, m_Transliterator);
                         
@@ -819,7 +820,7 @@ public class ClauseController extends ControllerBase
                 
                 if (type.equals("phrase")) 
                 {
-                    Cell pCell    = new Cell();
+                    Cell pCell    = new Cell(null);
                     pCell.label   = phrase.getEMdFValue("phrase_function").toString();
                     pCell.columns = column - first_col;
                     struct_row.add(pCell);
@@ -841,7 +842,7 @@ public class ClauseController extends ControllerBase
                         ! phrase_type.equals("PP"))
                         continue;
 
-                    Cell varCell = new Cell();
+                    Cell varCell = new Cell(null);
                     pCell.subcells.add(varCell);
 
                     StringBuffer editHtml = new StringBuffer();
@@ -954,7 +955,7 @@ public class ClauseController extends ControllerBase
                 bigRows.add(struct_row);
             }
 
-            Cell filler = new Cell();
+            Cell filler = new Cell(null);
             filler.label = "";
 
             for (int nBigRow = 0; nBigRow < bigRows.size(); nBigRow++)
@@ -1004,7 +1005,12 @@ public class ClauseController extends ControllerBase
                             }
                         }
 
-                        html.append("<td colspan=\"" + topCell.columns + "\">");
+                        html.append("<td colspan=\"" + topCell.columns + "\"");
+                        if (thisCell.cssClass != null)
+                        {
+                            html.append(" class=\"" + thisCell.cssClass + "\"");
+                        }
+                        html.append(">");
 
                         if (thisCell.html != null)
                         {
@@ -1051,11 +1057,11 @@ public class ClauseController extends ControllerBase
             " AND  User_Name   = \"anonymous\"") > 0;
     }
 
-    public List<String[]> getWordColumns()
+    public List<Cell[]> getWordColumns()
     throws Exception
     {
         SheafConstIterator phrases = m_Clause.getSheaf().const_iterator();
-        List<String[]> columns = new ArrayList<String[]>();
+        List<Cell[]> columns = new ArrayList<Cell[]>();
         boolean isFirstWord = true;
         HebrewMorphemeGenerator generator = new HebrewMorphemeGenerator();
 
@@ -1130,12 +1136,18 @@ public class ClauseController extends ControllerBase
                         lastMorpheme = false;
                     }
 
-                    columns.add(new String[]{translit, gloss});
+                    Cell [] cells = new Cell [2];
+                    cells[0] = new Cell(translit, "translit");
+                    cells[1] = new Cell(gloss);
+                    columns.add(cells);
                     
                     if (lastMorpheme && (phrases.hasNext() || words.hasNext()))
                     {
                         // blank cell between words
-                        columns.add(new String[]{"",""});
+                        Cell [] spacer = new Cell [2];
+                        spacer[0] = new Cell("");
+                        spacer[1] = spacer[0];
+                        columns.add(spacer);
                     }
                 }
                 
@@ -1146,17 +1158,22 @@ public class ClauseController extends ControllerBase
         return columns;
     }
 
-    public String getTableRows(List<String[]> wordColumns)
+    public String getTableRows(List<Cell[]> wordColumns)
     {
         StringBuffer html = new StringBuffer();
         
         for (int row = 0; row < 2; row++)
         {
             html.append("\t<tr>\n");
-            for (String [] rows : wordColumns) 
+            for (Cell [] rows : wordColumns) 
             {
-                html.append("\t\t<td>");
-                html.append(rows[row]);
+                html.append("\t\t<td");
+                if (rows[row].cssClass != null)
+                {
+                    html.append(" class=\"" + rows[row].cssClass + "\"");
+                }
+                html.append(">");
+                html.append(rows[row].html);
                 html.append("</td>\n");
             }
             html.append("\t</tr>\n");

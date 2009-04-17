@@ -52,8 +52,13 @@ div.clearer
 .hebrew
 {
 	font-size: x-large;
-	font-family: Charis SIL, Doulos SIL, serif;
+	font-family: Ezra SIL, Doulos SIL, serif;
 }
+
+.translit
+{
+	font-family: Charis SIL;
+}	
 
 .bigborder
 {

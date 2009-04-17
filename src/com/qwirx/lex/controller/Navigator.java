@@ -270,6 +270,7 @@ public class Navigator
 
         SelectBox sb = new SelectBox("clause", clauses, selClauseId + "");
         sb.setAttribute("onChange", "document.forms.nav.submit()");
+        sb.setAttribute("class", "translit");
         return sb.toString();
     }
     
