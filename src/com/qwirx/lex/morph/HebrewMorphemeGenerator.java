@@ -2,35 +2,44 @@ package com.qwirx.lex.morph;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
 import jemdros.EmdrosException;
 import jemdros.MatchedObject;
 
 import com.qwirx.db.sql.SqlDatabase;
 import com.qwirx.lex.lexicon.Lexeme;
+import com.qwirx.lex.translit.DatabaseTransliterator;
 
 public class HebrewMorphemeGenerator
 {
     public static class Morpheme
     {
-        private String m_Surface, m_Gloss, m_Symbol;
+        private String m_Surface, m_Gloss, m_Symbol, m_Translit;
+        private boolean m_IsGraphicalWordEnd;
         
-        public Morpheme(String surface, String gloss, String symbol)
+        public Morpheme(String surface, String gloss, String symbol,
+            boolean isGraphicalWordEnd)
         {
             m_Surface = surface;
             m_Gloss = gloss;
             m_Symbol = symbol;
+            m_IsGraphicalWordEnd = isGraphicalWordEnd;
         }
         
         public String getSurface() { return m_Surface; }
         public String getGloss() { return m_Gloss; }
         public String getNodeSymbol() { return m_Symbol; }
+        public boolean isGraphicalWordEnd() { return m_IsGraphicalWordEnd; }
+        void setTranslit(String translit) { m_Translit = translit; }
+        public String getTranslit() { return m_Translit; }
     }
     
     public List<Morpheme> parse(MatchedObject word, boolean generateGloss,
-        SqlDatabase sql)
+        SqlDatabase sql, DatabaseTransliterator transliterator)
     throws Exception
     {
         String gloss = null;
@@ -44,12 +53,11 @@ public class HebrewMorphemeGenerator
             }
         }
         
-        return parse(word, generateGloss, gloss);
+        return parse(word, generateGloss, gloss, transliterator);
     }
 
-    public List<String> getRequiredFeatures(boolean generateGloss)
-    {
-        List<String> requiredFeatures = Arrays.asList(new String[]{
+    private static final List<String> REQUIRED_FEATURES_BASE =
+        Arrays.asList(new String[]{
             "phrase_dependent_part_of_speech",
             "graphical_preformative_utf8",
             "graphical_root_formation_utf8",
@@ -57,31 +65,56 @@ public class HebrewMorphemeGenerator
             "graphical_verbal_ending_utf8",
             "graphical_nominal_ending_utf8",
             "graphical_pron_suffix_utf8",
+            "graphical_lexeme_wit",
+            "tense",
         });
+
+    private static final List<String> REQUIRED_FEATURES_GLOSS =
+        Arrays.asList(new String[]{
+            "person",
+            "gender",
+            "number",
+            "state",
+            "wordnet_gloss",
+            "lexeme_wit",
+            "stem",
+            "suffix_gender",
+            "suffix_number",
+            "suffix_person"
+        });
+    
+    public List<String> getRequiredFeatures(boolean generateGloss)
+    {
+        List<String> requiredFeatures =
+            new ArrayList<String>(REQUIRED_FEATURES_BASE);
         
         if (generateGloss)
         {
-            requiredFeatures = new ArrayList<String>(requiredFeatures);
-            requiredFeatures.addAll(Arrays.asList(new String[]{
-                "person",
-                "gender",
-                "number",
-                "state",
-                "wordnet_gloss",
-                "lexeme_wit",
-                "tense",
-                "stem",
-                "suffix_gender",
-                "suffix_number",
-                "suffix_person"
-            }));
+            requiredFeatures.addAll(REQUIRED_FEATURES_GLOSS);
         }
 
         return requiredFeatures;
     }
     
+    public String getRequiredFeaturesString(boolean includeGloss)
+    {
+        StringBuffer out = new StringBuffer();
+        List<String> features = getRequiredFeatures(includeGloss);
+        for (String feature : features)
+        {
+            if (out.length() > 0)
+            {
+                out.append(", ");
+            }
+            
+            out.append(feature);
+        }
+        
+        return out.toString();
+    }
+    
     public List<Morpheme> parse(MatchedObject word, boolean generateGloss,
-        String gloss)
+        String gloss, DatabaseTransliterator transliterator)
     throws Exception
     {
         if (!word.getObjectTypeName().equals("word"))
@@ -89,88 +122,58 @@ public class HebrewMorphemeGenerator
             throw new IllegalArgumentException("Can only parse words");
         }
         
-        List<String> requiredFeatures = Arrays.asList(new String[]{
-            "phrase_dependent_part_of_speech",
-            "graphical_preformative_utf8",
-            "graphical_root_formation_utf8",
-            "graphical_lexeme_utf8",
-            "graphical_verbal_ending_utf8",
-            "graphical_nominal_ending_utf8",
-            "graphical_pron_suffix_utf8",
-        });
-        
-        if (generateGloss)
-        {
-            requiredFeatures = new ArrayList<String>(requiredFeatures);
-            requiredFeatures.addAll(Arrays.asList(new String[]{
-                "person",
-                "gender",
-                "number",
-                "state",
-                "wordnet_gloss",
-                "lexeme_wit",
-                "tense",
-                "stem",
-                "suffix_gender",
-                "suffix_number",
-                "suffix_person"
-            }));
-        }
+        List<String> requiredFeatures = getRequiredFeatures(generateGloss);        
+        Map<String, String> features = new HashMap<String, String>();
         
         for (Iterator<String> i = requiredFeatures.iterator(); i.hasNext();)
         {
             String feature = i.next();
-            if (word.getEMdFValue(feature) == null)
+            
+            int index = word.getEMdFValueIndex(feature);
+            if (index == -1)
             {
                 throw new IllegalArgumentException("Word does not have " +
                         "required feature " + feature);
             }
+            
+            String value = word.getFeatureAsString(index);
+            if (value == null)
+            {
+                throw new IllegalArgumentException("Word does not have " +
+                        "required feature " + feature);
+            }
+            
+            features.put(feature, value);
         }
         
-        String psp = word.getFeatureAsString(
-            word.getEMdFValueIndex("phrase_dependent_part_of_speech"));
+        String psp = features.get("phrase_dependent_part_of_speech");
        
         String verbEnding = null;
         String nounEnding = null;
 
-        String suffixText = 
-            word.getEMdFValue("graphical_pron_suffix_utf8").getString();
+        String suffixText = features.get("graphical_pron_suffix_utf8");
         String suffixGloss = null;
         
         List<Morpheme> results = new ArrayList<Morpheme>();
         
         if (generateGloss)
         {
-            String person = word.getFeatureAsString(
-                word.getEMdFValueIndex("person"));
+            String person = features.get("person");
             if      (person.equals("first_person"))  person = "1";
             else if (person.equals("second_person")) person = "2";
             else if (person.equals("third_person"))  person = "3";
             else if (person.equals("unknown"))       person = "";
             
-            String gender;
-            switch (word.getFeatureAsLong(word.getEMdFValueIndex("gender")))
-            {
-            case 2: gender = ""; break;
-            case 3: gender = "M"; break;
-            case 4: gender = "F"; break;
-            default: gender = "=" + word.getFeatureAsLong(
-                word.getEMdFValueIndex("gender"));
-            }
+            String gender = features.get("gender");
+            if      (gender.equals("masculine")) { gender = "M"; }
+            else if (gender.equals("feminine"))  { gender = "F"; }
+            else if (gender.equals("common"))    { gender = "="; }
             
-            String number;
-            switch (word.getFeatureAsLong(word.getEMdFValueIndex("number")))
-            {
-            case 0: number = ""; break;
-            case 3: number = "sg"; break;
-            case 4: number = "pl"; break;
-            case 5: number = "dl"; break;
-            default: number = word.getFeatureAsString(
-                word.getEMdFValueIndex("number"));
-            }
+            String number = features.get("number");
+            if (number.equals("singular")) { number = "sg"; }
+            else if (number.equals("plural")) { number = "pl"; }
             
-            String state = word.getFeatureAsString(
-                word.getEMdFValueIndex("state"));
+            String state = features.get("state");
             if      (state.equals("construct")) { state = "CS"; }
             else if (state.equals("absolute"))  { state = "AB"; }
             
@@ -179,23 +182,20 @@ public class HebrewMorphemeGenerator
             
             if (suffixText.equals(""))
             {
-                suffixGloss = "SUFF";
+                suffixGloss = "CLT";
             }
             else
             {
-                String suffixGender = word.getFeatureAsString(
-                    word.getEMdFValueIndex("suffix_gender"));
+                String suffixGender = features.get("suffix_gender");
                 if      (suffixGender.equals("masculine")) { suffixGender = "M"; }
                 else if (suffixGender.equals("feminine"))  { suffixGender = "F"; }
                 else if (suffixGender.equals("common"))    { suffixGender = "="; }
 
-                String suffixNumber = word.getFeatureAsString(
-                    word.getEMdFValueIndex("suffix_number"));
+                String suffixNumber = features.get("suffix_number");
                 if      (suffixNumber.equals("singular")) { suffixNumber = "sg"; }
                 else if (suffixNumber.equals("plural"))   { suffixNumber = "pl"; }
 
-                String suffixPerson = word.getFeatureAsString(
-                    word.getEMdFValueIndex("suffix_person"));
+                String suffixPerson = features.get("suffix_person");
                 if      (suffixPerson.equals("first_person"))  { suffixPerson = "1"; }
                 else if (suffixPerson.equals("second_person")) { suffixPerson = "2"; }
                 else if (suffixPerson.equals("third_person"))  { suffixPerson = "3"; }
@@ -211,7 +211,7 @@ public class HebrewMorphemeGenerator
             
             if (generateGloss)
             {
-                tense = word.getFeatureAsString(word.getEMdFValueIndex("tense"));
+                tense = features.get("tense");
                 if      (tense.equals("imperfect"))  { tense = "IMPF"; }
                 else if (tense.equals("perfect"))    { tense = "PERF"; }
                 else if (tense.equals("imperative")) { tense = "IMP"; }
@@ -220,7 +220,7 @@ public class HebrewMorphemeGenerator
                 else if (tense.equals("participle")) { tense = "PART"; }
                 else if (tense.equals("wayyiqtol"))  { tense = "NARR"; }
 
-                stem = word.getFeatureAsString(word.getEMdFValueIndex("stem"));
+                stem = features.get("stem");
                 if      (stem.equals("qal"))     { stem = "Qa"; }
                 else if (stem.equals("piel"))    { stem = "Pi"; }
                 else if (stem.equals("hifil"))   { stem = "Hi"; } 
@@ -230,41 +230,41 @@ public class HebrewMorphemeGenerator
                 else if (stem.equals("hofal"))   { stem = "Ho"; }
             }
             
-            convert(results, word, "graphical_preformative_utf8",
-                tense, "V/TAM");
+            convert(results, features, "graphical_preformative_utf8",
+                tense, "V/TAM", false, false);
             
             // String stemNum = word.getEMdFValue("verbal_stem").toString();
-            convert(results, word, "graphical_root_formation_utf8",
-                stem, "V/STM");
+            convert(results, features, "graphical_root_formation_utf8",
+                stem, "V/STM", false, false);
             
             // Requested by Nicolai: if the verb's tense is "participle",
             // the graphical_nominal_ending_utf8 goes onto the verbal ending,
             // otherwise it goes onto the end of the lexeme.
             
-            if (word.getFeatureAsString(word.getEMdFValueIndex("tense"))
-                .equals("participle"))
+            if (features.get("tense").equals("participle"))
             {
-                convert(results, word, "graphical_lexeme_utf8",
-                    gloss, "V/NUC");
+                convert(results, features, "graphical_lexeme_utf8",
+                    gloss, "V/NUC", false, false);
 
                 results.add(new Morpheme(
-                    word.getEMdFValue("graphical_verbal_ending_utf8").toString() +
-                    word.getEMdFValue("graphical_nominal_ending_utf8").toString(),
-                    verbEnding, "AG/PSA"));
+                    features.get("graphical_verbal_ending_utf8") +
+                    features.get("graphical_nominal_ending_utf8"),
+                    getMorphemeTranslitSuffixed(verbEnding, false, false),
+                    "AG/PSA", false));
             }
             else
             {
                 results.add(new Morpheme(
-                    word.getEMdFValue("graphical_lexeme_utf8").toString() +
-                    word.getEMdFValue("graphical_nominal_ending_utf8").toString(),
-                    gloss, "V/NUC"));
+                    features.get("graphical_lexeme_utf8") +
+                    features.get("graphical_nominal_ending_utf8"),
+                    gloss, "V/NUC", false));
     
-                convert(results, word, "graphical_verbal_ending_utf8",
-                    verbEnding, "AG/PSA");
+                convert(results, features, "graphical_verbal_ending_utf8",
+                    verbEnding, "AG/PSA", false, false);
             }
             
-            convert(results, word, "graphical_pron_suffix_utf8",
-                suffixGloss, "PRON/DCA");
+            convert(results, features, "graphical_pron_suffix_utf8",
+                suffixGloss, "PRON/DCA", true, true);
         }
         else if (psp.equals("noun")
             || psp.equals("proper_noun"))
@@ -276,16 +276,17 @@ public class HebrewMorphemeGenerator
                 type = "HEAD/NPROP";
             }
             
-            convert(results, word, "graphical_lexeme_utf8", gloss, type);
-            convert(results, word, "graphical_nominal_ending_utf8",
-                nounEnding, "N/GNS");
-            convert(results, word, "graphical_pron_suffix_utf8",
-                suffixGloss, "N/POS");
+            convert(results, features, "graphical_lexeme_utf8", gloss, type,
+                false, false);
+            convert(results, features, "graphical_nominal_ending_utf8",
+                nounEnding, "N/GNS", false, false);
+            convert(results, features, "graphical_pron_suffix_utf8",
+                suffixGloss, "N/POS", true, true);
         }
         else if (psp.equals("none"))
         {
             // hack for LexemeTest
-            convert(results, word, "lexeme", "none", "none");
+            convert(results, features, "lexeme", "none", "none", true, true);
         }
         else
         {
@@ -344,25 +345,73 @@ public class HebrewMorphemeGenerator
                 throw new IllegalArgumentException("Unknown " +
                     "part of speech: " + psp);
             }
+            
+            // horrible hack to save us from starting a research project
+            // into when articles and prepositions are joined to the next word
+            // and when they are separated.
+            boolean isGraphicalWordEnding =
+                !features.get("graphical_lexeme_wit").endsWith("-");
 
             boolean hasSuffix = !(suffixText.equals(""));
-            convert(results, word, "graphical_lexeme_utf8", type, type);
+            convert(results, features, "graphical_lexeme_utf8", type, type,
+                !hasSuffix, isGraphicalWordEnding && !hasSuffix);
             
             if (hasSuffix)
             {
-                convert(results, word, "graphical_pron_suffix_utf8",
-                    suffixGloss, type + "/SFX");
+                convert(results, features, "graphical_pron_suffix_utf8",
+                    suffixGloss, type + "/SFX", true, isGraphicalWordEnding);
             }
-        }   
+        }
+
+        if (transliterator != null)
+        {
+            // Transliteration rules may require access to surface text in
+            // previous and subsequent morphemes, so transliteration can only
+            // be done once the entire morpheme list has been generated.
+    
+            for (int i = 0; i < results.size(); i++)
+            {
+                String translit = transliterator.transliterate(results, i,
+                    word);
+                
+                Morpheme morpheme = results.get(i);
+                translit = getMorphemeTranslitSuffixed(translit,
+                    i == results.size() - 1, morpheme.isGraphicalWordEnd());
+                morpheme.setTranslit(translit);
+            }
+        }
 
         return results;
     }
     
-    private void convert(List<Morpheme> results, MatchedObject word,
-        String feature, String gloss, String symbol)
+    private String getMorphemeTranslitSuffixed(String translit,
+        boolean isLastMorpheme, boolean isGraphicalWordEnd)
+    {
+        if (translit.equals(""))
+        {
+            translit = "Ø";
+        }
+        
+        if (isLastMorpheme && !isGraphicalWordEnd)
+        {
+            return translit + "=";
+        }
+        else if (!isLastMorpheme)
+        {
+            return translit + "-";
+        }
+        else
+        {
+            return translit;
+        }
+    }
+    
+    private void convert(List<Morpheme> results, Map<String, String> features,
+        String feature, String gloss, String symbol,
+        boolean isLastMorpheme, boolean isGraphicalWordEnd)
     throws EmdrosException
     {
-        results.add(new Morpheme(word.getEMdFValue(feature).toString(),
-            gloss, symbol));
+        results.add(new Morpheme(features.get(feature), gloss, symbol,
+            isGraphicalWordEnd));
     }
 }
