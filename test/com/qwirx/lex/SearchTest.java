@@ -69,15 +69,15 @@ public class SearchTest extends TestCase
             m_Emdros.getVisibleMonads().toString() + " " +
             "WHERE [clause "+
             "       [word " +
-            "        lexeme = '"+query+"' OR " + 
-            "        lexeme = '"+query+"/' OR " +
-            "        lexeme = '"+query+"[' " +
+            "        lexeme_wit = '"+query+"' OR " + 
+            "        lexeme_wit = '"+query+"/' OR " +
+            "        lexeme_wit = '"+query+"[' " +
             "       ]" +
             "      ]"
         );
 
         List<Integer> clauses = new ArrayList<Integer>();
-        
+
         int count = 0;
         
         SheafConstIterator sci = sheaf.const_iterator();
@@ -115,15 +115,9 @@ public class SearchTest extends TestCase
             }
         }
 
-        mql += "[word GET " +
-            "lexeme, " +
-            "phrase_dependent_part_of_speech, " +
-            "graphical_preformative, " +
-            "graphical_root_formation, " +
-            "graphical_lexeme, " +
-            "graphical_verbal_ending, " +
-            "graphical_nominal_ending, " +
-            "graphical_pron_suffix]]]";
+        mql += "[word GET lexeme_wit, " +
+            new HebrewMorphemeGenerator().getRequiredFeaturesString(false) +
+            "]]]";
 
         sheaf = m_Emdros.getSheaf(mql);
         sci = sheaf.const_iterator();
@@ -152,7 +146,8 @@ public class SearchTest extends TestCase
                     MatchedObject word = 
                         word_iter.next().const_iterator().next();
                     
-                    String lexeme = word.getEMdFValue("lexeme").getString();
+                    String lexeme = word.getEMdFValue("lexeme_wit").getString();
+                    
                     boolean isMatch = lexeme.equals(query) ||
                         lexeme.equals(query + "/") ||
                         lexeme.equals(query + "[");
@@ -204,6 +199,12 @@ public class SearchTest extends TestCase
             " more results than expected", actualIterator.hasNext());
     }
 
+    public void testSearchCode1() throws Exception
+    {
+        Search search = new Search(m_Emdros, m_Transliterator);
+        assertSearchResultsMatch("CMJM", search, 100);
+    }
+    
     public void testSearchCode() throws Exception
     {
         assertSearchResultsMatch("CMJM", 1); // noun
@@ -273,9 +274,9 @@ public class SearchTest extends TestCase
         /*
         i.assertSimple("a", "Database Dump", 
             new Attributes().clazz("dump_jsp").href("dump.jsp"));
-        */
         i.assertSimple("a", "Wordnet", 
             new Attributes().clazz("wordnet_jsp").href("wordnet.jsp"));
+        */
         i.assertSimple("a", "Login", 
             new Attributes().clazz("login_jsp").href("login.jsp?next=search.jsp"));
         i.assertEmpty("div", new Attributes().clazz("clearer"));
