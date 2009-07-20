@@ -72,11 +72,12 @@ public class HebrewConverter
     throws Exception
     {
         StringBuffer out = new StringBuffer();
-        List<Morpheme> morphemes = generator.parse(word, false, (String)null);
+        List<Morpheme> morphemes = generator.parse(word, false, (String)null,
+            transliterator);
         
         for (int i = 0; i < morphemes.size(); i++)
         {
-            out.append(transliterator.transliterate(morphemes, i, word));
+            out.append(morphemes.get(i).getTranslit());
         }
         return toHtml(out.toString());
     }
@@ -86,7 +87,8 @@ public class HebrewConverter
     throws Exception
     {
         StringBuffer out = new StringBuffer();
-        List<Morpheme> morphemes = generator.parse(word, false, (String)null);
+        List<Morpheme> morphemes = generator.parse(word, false, (String)null,
+            null);
 
         for (int i = 0; i < morphemes.size(); i++)
         {
