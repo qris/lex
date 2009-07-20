@@ -12,8 +12,6 @@ import jemdros.Sheaf;
 import jemdros.SheafConstIterator;
 import jemdros.Straw;
 import jemdros.StrawConstIterator;
-import jemdros.StringList;
-import jemdros.StringListConstIterator;
 
 import com.qwirx.db.sql.SqlDatabase;
 import com.qwirx.lex.emdros.EmdrosDatabase;
@@ -33,7 +31,7 @@ public abstract class ControllerBase
     protected Map<String, String> m_PhraseFunctions, m_PhraseTypes,
         m_PartsOfSpeech,  m_Gender, m_Number, m_Person, m_Stem, m_Tense;
     protected MatchedObject m_Clause;
-
+    
     /**
      * For unit tests only!
      * @param request
@@ -111,20 +109,11 @@ public abstract class ControllerBase
             "       GET logical_struct_id, logical_structure "+
             "        [phrase GET phrase_type, phrase_function, argument_name, "+
             "                    type_id, macrorole_number "+
-            "          [word GET lexeme_wit, phrase_dependent_part_of_speech, " +
-            "                    tense, stem, wordnet_gloss, wordnet_synset, " +
-            "                    graphical_preformative_utf8, " +
-            "                    graphical_locative_utf8, " +
-            "                    graphical_lexeme_utf8, " +
-            "                    graphical_pron_suffix_utf8, " +
-            "                    graphical_verbal_ending_utf8, " +
-            "                    graphical_root_formation_utf8, " +
-            "                    graphical_nominal_ending_utf8, " +
-            "                    person, number, gender, state, " +
-            "                    suffix_person, suffix_number, suffix_gender " +
-            "          ]"+
-            "        ]"+
-            "      ]"
+            "          [word GET lexeme_wit, wordnet_gloss, wordnet_synset, " +
+            new HebrewMorphemeGenerator().getRequiredFeaturesString(true) + 
+            "]" +
+            "]" +
+            "]"
         );
 
         m_Clause = null;
@@ -161,12 +150,16 @@ public abstract class ControllerBase
             while (words.hasNext()) 
             {
                 MatchedObject word = words.next().const_iterator().next();
-                List<Morpheme> morphemes = generator.parse(word, true, m_Sql);
+                List<Morpheme> morphemes = generator.parse(word, true, m_Sql,
+                    m_Transliterator);
                 for (Morpheme morpheme : morphemes)
                 {
                     hebrew.append(morpheme.getSurface());
+                    if (morpheme.isGraphicalWordEnd())
+                    {
+                        hebrew.append(" ");
+                    }
                 }
-                hebrew.append(" ");
             }
         }
         
@@ -188,14 +181,14 @@ public abstract class ControllerBase
             while (words.hasNext()) 
             {
                 MatchedObject word = words.next().const_iterator().next();
-                List<Morpheme> morphemes = generator.parse(word, true, m_Sql);
+                List<Morpheme> morphemes = generator.parse(word, true, m_Sql,
+                    m_Transliterator);
                 
                 for (int i = 0; i < morphemes.size(); i++)
                 {
                     Morpheme morpheme = morphemes.get(i);
-                    String translit = m_Transliterator.transliterate(morphemes,
-                        i, word);
-                    translit = HebrewConverter.toHtml(translit);
+                    String translit =
+                        HebrewConverter.toHtml(morpheme.getTranslit());
                     if (translit.equals("")) translit = "&Oslash;";
                     
                     if (i < morphemes.size() - 1)
