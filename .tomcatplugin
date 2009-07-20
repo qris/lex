@@ -7,5 +7,5 @@
     <updateXml>true</updateXml>
     <warLocation>/tmp/lex.war</warLocation>
     <extraInfo></extraInfo>
-    <webPath>/lex-new</webPath>
+    <webPath>/lex</webPath>
 </tomcatProjectProperties>
