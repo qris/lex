@@ -213,14 +213,8 @@ public class Navigator
             m_Emdros.intersect(m_VisibleMonads, m_MinM, m_MaxM) +
             " WHERE " +
             "[clause "+
-            " [word GET phrase_dependent_part_of_speech, " +
-            "  graphical_preformative_utf8, " +
-            "  graphical_root_formation_utf8, " +
-            "  graphical_lexeme_utf8, " +
-            "  graphical_verbal_ending_utf8, " +
-            "  graphical_nominal_ending_utf8, " +
-            "  graphical_pron_suffix_utf8, " +
-            "  person, number, gender, tense, stem " +
+            " [word GET " + 
+            new HebrewMorphemeGenerator().getRequiredFeaturesString(false) + 
             " ]"+
             "]");
              
