@@ -1089,8 +1089,7 @@ public class ClauseController extends ControllerBase
                 {
                     Morpheme morpheme = morphemes.get(i);
 
-                    String translit = m_Transliterator.transliterate(morphemes,
-                        i, word);
+                    String translit = morpheme.getTranslit();
                     translit = HebrewConverter.toHtml(translit);
                     if (translit.equals("")) translit = "&Oslash;";
                     
