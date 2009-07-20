@@ -14,6 +14,8 @@ import java.util.regex.PatternSyntaxException;
 
 import jemdros.EmdrosException;
 import jemdros.MatchedObject;
+import jemdros.StringList;
+import jemdros.StringListConstIterator;
 
 import org.apache.log4j.Logger;
 
@@ -221,25 +223,13 @@ public class DatabaseTransliterator
         
         Map<String, String> attributes = new HashMap<String, String>();
         
-        // not safe
-        /*
-        for (StringListConstIterator i = word.getFeatureList().const_iterator();
+        StringList features = word.getFeatureList();
+        for (StringListConstIterator i = features.const_iterator();
             i.hasNext();)
         {
             String feature = i.next();
             String value = word.getFeatureAsString(word.getEMdFValueIndex(feature));
             attributes.put("word_" + feature, value);
-        }
-        */
-        
-        String[] featuresToCopy = new String[]{"person", "number",
-            "gender", "tense", "stem"
-        };
-        for (String feature : featuresToCopy)
-        {
-            System.out.println(feature);
-            attributes.put("word_" + feature,
-                word.getFeatureAsString(word.getEMdFValueIndex(feature)));
         }
         
         return transliterate(morphemes, index, attributes);
