@@ -743,7 +743,7 @@ public class TransliteratorTest extends TestCase
         morphs.add(new Morpheme("צַּלְע", "rib", "N/NUC", true, true));
         morphs.add(new Morpheme("ֹתָ֔י", "FplCS", "N/GNS", true, true));
         morphs.add(new Morpheme("ו", "3Msg", "N/POS", true, true));
-        assertEquals("ṣ-ṣalʕ", m_trans.transliterate(morphs, 0, ms_EmptyMap));
+        assertEquals("ṣṣalʕ", m_trans.transliterate(morphs, 0, ms_EmptyMap));
         assertEquals("ōtāʸ", m_trans.transliterate(morphs, 1, ms_EmptyMap));
         assertEquals("w", m_trans.transliterate(morphs, 2, ms_EmptyMap));
         
