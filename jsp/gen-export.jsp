@@ -2,6 +2,8 @@
 %><%@ page import="com.qwirx.db.sql.*"
 %><%@ page import="com.qwirx.lex.*"
 %><%@ page import="com.qwirx.lex.emdros.*"
+%><%@ page import="com.qwirx.lex.morph.*"
+%><%@ page import="com.qwirx.lex.translit.*"
 %><%@ page import="com.qwirx.crosswire.kjv.KJV"
 %><%@ page import="jemdros.*"
 %><%@ page import="org.crosswire.jsword.book.*"
@@ -24,6 +26,7 @@
 		SqlDatabase sql = Lex.getSqlDatabase(username);
 		emdros = Lex.getEmdrosDatabase(username, hostname, sql);
 		int min_m = emdros.getMinM(), max_m = emdros.getMaxM();
+		HebrewMorphemeGenerator generator = new HebrewMorphemeGenerator();
 
         Sheaf sheaf = emdros.getSheaf
         (
@@ -32,12 +35,7 @@
             "WHERE " +
             "[verse GET book, chapter, verse " +
 			" [clause self = " + clauseIdString + " " +
-            "  [word GET phrase_dependent_part_of_speech, person, gender, " +
-            "            number, state, wordnet_gloss, lexeme, tense, stem, " +
-            "            graphical_preformative, graphical_root_formation, " +
-            "            graphical_lexeme, graphical_verbal_ending, " +
-            "            graphical_nominal_ending, graphical_pron_suffix, " +
-		    "            suffix_person, suffix_number, suffix_gender] " +
+            "  [word GET " + generator.getRequiredFeaturesString(true) + "] " +
             " ]"+
             "]"
         );
@@ -57,7 +55,9 @@
 
         BookData verseData = KJV.getVerse(emdros, bookName,
             verse.getEMdFValue("chapter").getInt(),
-            verse.getEMdFValue("verse").getInt()); 
+            verse.getEMdFValue("verse").getInt());
+            
+        DatabaseTransliterator transliterator = new DatabaseTransliterator(sql);
 
         sci = verse.getSheaf().const_iterator();
 		if (!sci.hasNext()) return;
@@ -70,8 +70,8 @@
 		response.setHeader("Content-disposition", 
 			"attachment; filename=export.gen");
 		response.getWriter().print(
-			new GenExporter().export(clause, verseData, sql,
-			request.getParameter("hebrew").equals("y")));
+			new GenExporter().export(clause, verseData, sql, generator,
+			transliterator, request.getParameter("hebrew").equals("y")));
 	}
 	finally
 	{

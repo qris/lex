@@ -15,6 +15,7 @@ import com.qwirx.crosswire.kjv.KJV;
 import com.qwirx.db.sql.SqlDatabase;
 import com.qwirx.lex.emdros.EmdrosDatabase;
 import com.qwirx.lex.lexicon.Lexeme;
+import com.qwirx.lex.morph.HebrewMorphemeGenerator;
 import com.qwirx.lex.translit.DatabaseTransliterator;
 
 public class GenExporterTest extends TestCase
@@ -57,14 +58,14 @@ public class GenExporterTest extends TestCase
         "\\transliterationfieldisUTF8\n" +
         "\n" +
         "\\morpheme וָ\n" +
-        "\\trans wā-\n" +
+        "\\trans wā=\n" +
         "\\tag tag\n" +
         "\\gloss CONJ\n" +
         "\\lemma lemma\n" +
         "\\re\n" +
         "\n" +
         "\\morpheme אֱ\n" +
-        "\\trans ?ĕ-\n" +
+        "\\trans ʔᵉ-\n" +
         "\\tag tag\n" +
         "\\gloss NARR\n" +
         "\\lemma lemma\n" +
@@ -77,7 +78,7 @@ public class GenExporterTest extends TestCase
         "\\lemma lemma\n" +
         "\\re\n" +
         "\n" +
-        "\\morpheme הִי־\n" +
+        "\\morpheme הִי\n" +
         "\\trans hî-\n" +
         "\\tag tag\n" +
         "\\gloss " + getGloss("HJH[") + "\n" +
@@ -87,18 +88,18 @@ public class GenExporterTest extends TestCase
         "\\morpheme \n" +
         "\\trans Ø-\n" +
         "\\tag tag\n" +
-        "\\gloss 1sg\n" +
+        "\\gloss 1unknownsg\n" +
         "\\lemma lemma\n" +
         "\\re\n" +
         "\n" +
         "\\morpheme \n" + 
         "\\trans Ø\n" +
         "\\tag tag\n" +
-        "\\gloss SUFF\n" +
+        "\\gloss CLT\n" +
         "\\lemma lemma\n" +
         "\\re\n" +
         "\n" +
-        "\\morpheme שָׁם\n" +
+        "\\morpheme שָׁ֖ם\n" +
         "\\trans šām\n" +
         "\\tag tag\n" +
         "\\gloss ADV\n" +
@@ -112,7 +113,7 @@ public class GenExporterTest extends TestCase
         "\\lemma lemma\n" +
         "\\re\n" +
         "\n" +
-        "\\morpheme ִים\n" +
+        "\\morpheme ִ֥ים\n" +
         "\\trans îm-\n" +
         "\\tag tag\n" +
         "\\gloss MplAB\n" +
@@ -122,19 +123,19 @@ public class GenExporterTest extends TestCase
         "\\morpheme \n" + 
         "\\trans Ø\n" +
         "\\tag tag\n" +
-        "\\gloss SUFF\n" +
+        "\\gloss CLT\n" +
         "\\lemma lemma\n" +
         "\\re\n" +
         "\n" +
         "\\morpheme שְׁלֹשׁ\n" + 
-        "\\trans šəlōš-\n" +
+        "\\trans šᵊlōš-\n" +
         "\\tag tag\n" +
         "\\gloss null\n" +
         "\\lemma lemma\n" +
         "\\re\n" +
         "\n" +
-        "\\morpheme ָה\n" +
-        "\\trans āh-\n" +
+        "\\morpheme ָֽה\n" +
+        "\\trans āʰ-\n" +
         "\\tag tag\n" +
         "\\gloss FsgAB\n" +
         "\\lemma lemma\n" +
@@ -143,7 +144,7 @@ public class GenExporterTest extends TestCase
         "\\morpheme \n" + 
         "\\trans Ø\n" +
         "\\tag tag\n" +
-        "\\gloss SUFF\n" +
+        "\\gloss CLT\n" +
         "\\lemma lemma\n" +
         "\\re\n" +
         "\n";
@@ -163,6 +164,7 @@ public class GenExporterTest extends TestCase
     {
         SqlDatabase sql = Lex.getSqlDatabase("test");
         EmdrosDatabase emdros = Lex.getEmdrosDatabase("test", "localhost", sql);
+        HebrewMorphemeGenerator generator = new HebrewMorphemeGenerator();
         DatabaseTransliterator transliterator = new DatabaseTransliterator(sql);
         
         Sheaf sheaf = emdros.getSheaf
@@ -171,17 +173,9 @@ public class GenExporterTest extends TestCase
             "{" + emdros.getMinM() + "-" + emdros.getMaxM() + "} " +
             "WHERE " +
             "[clause self = 1323065 " +
-            " [phrase "+
-            "  [word GET phrase_dependent_part_of_speech, person, gender, " +
-            "            number, state, wordnet_gloss, lexeme_wit, tense, stem, " +
-            "            graphical_preformative_utf8, " +
-            "            graphical_root_formation_utf8, " +
-            "            graphical_lexeme_utf8, " +
-            "            graphical_verbal_ending_utf8, " +
-            "            graphical_nominal_ending_utf8, " +
-            "            graphical_pron_suffix_utf8, " +
-            "            suffix_gender, suffix_number, suffix_person]"+
-            " ]"+
+            " [phrase " +
+            "  [word GET " + generator.getRequiredFeaturesString(true) + "]" +
+            " ]" +
             "]"
         );
 
@@ -197,11 +191,11 @@ public class GenExporterTest extends TestCase
 
         assertEquals(getNehemiah2_11bExportHebrew(), 
             new GenExporter().export(clause, verse,
-                Lex.getSqlDatabase("test"), transliterator, true));
+                Lex.getSqlDatabase("test"), generator, transliterator, true));
 
         assertEquals(getNehemiah2_11bExportHebrewTransliterated(),
             new GenExporter().export(clause, verse,
-                Lex.getSqlDatabase("test"), transliterator, false));
+                Lex.getSqlDatabase("test"), generator, transliterator, false));
     }
     
     public void testGenExportJsp() throws Exception
