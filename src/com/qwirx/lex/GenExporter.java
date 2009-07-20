@@ -15,8 +15,8 @@ import com.qwirx.lex.translit.DatabaseTransliterator;
 public class GenExporter
 {
     public String export(MatchedObject object, BookData verse,
-        SqlDatabase sql, DatabaseTransliterator transliterator,
-        boolean includeHebrew)
+        SqlDatabase sql, HebrewMorphemeGenerator generator,
+        DatabaseTransliterator transliterator, boolean includeHebrew)
     throws Exception
     {
         StringBuffer buf = new StringBuffer();
@@ -34,31 +34,29 @@ public class GenExporter
             "\\transliterationfieldisUTF8\n" +
             "\n");
         
-        exportObject(object, verse, buf, sql, transliterator,
+        exportObject(object, verse, buf, sql, generator, transliterator,
             includeHebrew);
         
         return buf.toString();
     }
     
     private void exportObject(MatchedObject object, BookData verse,
-        StringBuffer buf, SqlDatabase sql,
+        StringBuffer buf, SqlDatabase sql, HebrewMorphemeGenerator generator,
         DatabaseTransliterator transliterator, boolean includeHebrew)
     throws Exception
     {
         if (object.getObjectTypeName().equals("word"))
         {
-            List<Morpheme> morphemes = new HebrewMorphemeGenerator().parse(object,
-                true, sql);
+            List<Morpheme> morphemes = generator.parse(object, true, sql,
+                transliterator);
             
             for (int i = 0; i < morphemes.size(); i++)
             {
                 Morpheme morpheme = morphemes.get(i);
                 String hebrew = morpheme.getSurface();
 
-                String translit = transliterator.transliterate(morphemes, i,
-                    object);
+                String translit = morpheme.getTranslit();
                 if (translit.equals("")) translit = "Ø";
-                if (i < morphemes.size() - 1) translit += "-";
                 
                 if (includeHebrew)
                 {
@@ -83,7 +81,7 @@ public class GenExporter
             while (straws.hasNext())
             {
                 MatchedObject child = straws.next().const_iterator().next();
-                exportObject(child, verse, buf, sql, transliterator,
+                exportObject(child, verse, buf, sql, generator, transliterator,
                     includeHebrew);
             }
         }
