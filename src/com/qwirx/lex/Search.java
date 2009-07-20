@@ -58,9 +58,9 @@ public class Search
     throws Exception
     {
         return advanced("[word " +
-            "lexeme = '"+query+"' OR " +
-            "lexeme = '"+query+"/' OR " +
-            "lexeme = '"+query+"[']");
+            "lexeme_wit = '"+query+"' OR " +
+            "lexeme_wit = '"+query+"/' OR " +
+            "lexeme_wit = '"+query+"[']");
     }
     
     private void addToMonadSet(Sheaf sheaf, SetOfMonads set)
@@ -231,14 +231,15 @@ public class Search
             "GET OBJECTS HAVING MONADS IN " +
             clauseMonads.toString() + 
             "[word GET " +
-            " lexeme, " +
+            " lexeme_wit, " +
+            " tense, " +
             " phrase_dependent_part_of_speech, " +
-            " graphical_preformative_plain, " +
-            " graphical_root_formation_plain, " +
+            " graphical_preformative_utf8, " +
+            " graphical_root_formation_utf8, " +
             " graphical_lexeme_utf8, " +
-            " graphical_verbal_ending_plain, " +
-            " graphical_nominal_ending_plain, " +
-            " graphical_pron_suffix_plain " +
+            " graphical_verbal_ending_utf8, " +
+            " graphical_nominal_ending_utf8, " +
+            " graphical_pron_suffix_utf8 " +
             "]");
         
         FlatSheafConstIterator fsci = flat.const_iterator();
