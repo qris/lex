@@ -269,7 +269,7 @@ public class Lexeme implements Comparable
             
             l.id       = rs.getInt("ID");
             l.surface  = rs.getString("Lexeme");
-            l.m_Gloss    = rs.getString("Gloss");
+            l.m_Gloss  = rs.getString("Gloss");
             l.label    = rs.getString("Domain_Label");
             l.desc     = rs.getString("Domain_Desc");
             l.parentId = rs.getInt("Domain_Parent_ID");
