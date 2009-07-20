@@ -24,6 +24,7 @@ import com.qwirx.db.DatabaseException;
 import com.qwirx.lex.emdros.EmdrosDatabase;
 import com.qwirx.lex.hebrew.HebrewConverter;
 import com.qwirx.lex.morph.HebrewMorphemeGenerator;
+import com.qwirx.lex.morph.HebrewMorphemeGenerator.Morpheme;
 import com.qwirx.lex.translit.DatabaseTransliterator;
 
 public class Navigator
@@ -60,12 +61,12 @@ public class Navigator
         
         value = m_ParamOverrideMap.get(name);
         
-        if (value == null)
+        if (value == null && m_Request != null)
         {
             value = m_Request.getParameter(name);
         }
         
-        if (value == null)
+        if (value == null && m_Session != null)
         {
             value = (String)m_Session.getAttribute(name);
         }
@@ -81,7 +82,11 @@ public class Navigator
     private void setParamOverride(String name, String value)
     {
         m_ParamOverrideMap.put(name, value);
-        m_Session.setAttribute(name, value);
+        
+        if (m_Session != null)
+        {
+            m_Session.setAttribute(name, value);
+        }
     }
 
     private Map<String, String> m_Labels = new HashMap<String, String>();
@@ -225,23 +230,29 @@ public class Navigator
         {
             MatchedObject clause = clause_iter.next().const_iterator().next();
             SheafConstIterator word_iter = clause.getSheaf().const_iterator();
-            String lexemes = "";
+            StringBuffer lexemes = new StringBuffer();
                     
             while (word_iter.hasNext())
             {
                 MatchedObject word = word_iter.next().const_iterator().next();
-                        
-                lexemes += HebrewConverter.wordTranslitToHtml(word, generator,
-                    m_Transliterator);
-                    
-                if (word_iter.hasNext()) 
+                
+                List<Morpheme> morphemes = generator.parse(word, false,
+                    (String)null, m_Transliterator);
+                
+                for (Morpheme morpheme : morphemes)
                 {
-                    lexemes += " ";
+                    lexemes.append(HebrewConverter.toHtml(morpheme.getTranslit()));
+                }
+                
+                if (word_iter.hasNext() &&
+                    morphemes.get(morphemes.size() - 1).isGraphicalWordEnd()) 
+                {
+                    lexemes.append(" ");
                 }
             }
             
             clauses.add(new String[]{ Integer.toString(clause.getID_D()),
-                lexemes });
+                lexemes.toString() });
                 
             int thisClauseId = clause.getID_D();
             if (thisClauseId == selClauseId)

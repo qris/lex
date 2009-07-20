@@ -740,10 +740,10 @@ public class TransliteratorTest extends TestCase
         addTest("בְּ", "bᵊ"); // GEN 1,1
         
         List<Morpheme> morphs = new ArrayList<Morpheme>();
-        morphs.add(new Morpheme("צַּלְע", "rib", "N/NUC"));
-        morphs.add(new Morpheme("ֹתָ֔י", "FplCS", "N/GNS"));
-        morphs.add(new Morpheme("ו", "3Msg", "N/POS"));
-        assertEquals("ṣṣalʕ", m_trans.transliterate(morphs, 0, ms_EmptyMap));
+        morphs.add(new Morpheme("צַּלְע", "rib", "N/NUC", true, true));
+        morphs.add(new Morpheme("ֹתָ֔י", "FplCS", "N/GNS", true, true));
+        morphs.add(new Morpheme("ו", "3Msg", "N/POS", true, true));
+        assertEquals("ṣ-ṣalʕ", m_trans.transliterate(morphs, 0, ms_EmptyMap));
         assertEquals("ōtāʸ", m_trans.transliterate(morphs, 1, ms_EmptyMap));
         assertEquals("w", m_trans.transliterate(morphs, 2, ms_EmptyMap));
         
@@ -776,7 +776,7 @@ public class TransliteratorTest extends TestCase
 
         HebrewMorphemeGenerator hmg = new HebrewMorphemeGenerator();
         MatchedObject word = getWord(27, hmg);
-        List<Morpheme> morphemes = hmg.parse(word, false, "");
+        List<Morpheme> morphemes = hmg.parse(word, false, "", m_trans);
         
         assertEquals("mᵊ", m_trans.transliterate(morphemes, 0, word));
         assertEquals("", m_trans.transliterate(morphemes, 1, word));
@@ -785,7 +785,7 @@ public class TransliteratorTest extends TestCase
         assertEquals("", m_trans.transliterate(morphemes, 4, word));
 
         word = getWord(739, hmg);
-        morphemes = hmg.parse(word, false, "");
+        morphemes = hmg.parse(word, false, "", m_trans);
         
         assertEquals("", m_trans.transliterate(morphemes, 0, word));
         assertEquals("", m_trans.transliterate(morphemes, 1, word));
@@ -817,7 +817,6 @@ public class TransliteratorTest extends TestCase
         
         query.append("]");
         Sheaf sheaf = m_Emdros.getSheaf(query.toString());
-        MatchedObject word = null;
         
         SheafConstIterator sci = sheaf.const_iterator();
         
@@ -902,7 +901,7 @@ public class TransliteratorTest extends TestCase
         
         assertNotNull(word);
         List<Morpheme> morphemes = new HebrewMorphemeGenerator().parse(word,
-            true, m_sql);
+            true, m_sql, m_trans);
         StringBuffer hebrew = new StringBuffer();
         StringBuffer translit = new StringBuffer();
         
@@ -910,7 +909,7 @@ public class TransliteratorTest extends TestCase
         {
             Morpheme morpheme = morphemes.get(i);
             hebrew.append(morpheme.getSurface());
-            translit.append(m_trans.transliterate(morphemes, i, word));
+            translit.append(morpheme.getTranslit());
         }
         
         assertEquals(input, hebrew.toString());

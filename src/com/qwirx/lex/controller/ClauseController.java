@@ -518,9 +518,9 @@ public class ClauseController extends ControllerBase
             wivuIndex = wivuIndexE.getInt();
         }
 
-        Entry [] entries = Lex.getWivuLexicon().getEntry(
-            word.getEMdFValue("lexeme_wit").toString(),
-            getVerbForm(word));
+        String lexeme = word.getEMdFValue("lexeme_wit").toString();
+        String form = getVerbForm(word);
+        Entry [] entries = Lex.getWivuLexicon().getEntry(lexeme, form);
 
         if (entries == null || entries.length == 0)
         {
@@ -1089,7 +1089,7 @@ public class ClauseController extends ControllerBase
                 {
                     Morpheme morpheme = morphemes.get(i);
 
-                    String translit = morpheme.getTranslit();
+                    String translit = morpheme.getTranslitWithMorphemeMarkers();
                     translit = HebrewConverter.toHtml(translit);
                     if (translit.equals("")) translit = "&Oslash;";
                     
@@ -1111,8 +1111,8 @@ public class ClauseController extends ControllerBase
                     }
                     else if (gloss.equals("PERF"))
                     {
-                        if (columns.size() >= 2 &&
-                            columns.get(columns.size() - 2)[1].html.equals("CLM"))
+                        if (columns.size() >= 1 &&
+                            columns.get(columns.size() - 1)[1].html.equals("CLM"))
                         {
                             gloss = "SEQU";
                         }

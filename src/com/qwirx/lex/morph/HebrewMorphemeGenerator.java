@@ -19,14 +19,15 @@ public class HebrewMorphemeGenerator
     public static class Morpheme
     {
         private String m_Surface, m_Gloss, m_Symbol, m_Translit;
-        private boolean m_IsGraphicalWordEnd;
+        private boolean m_IsLastMorpheme, m_IsGraphicalWordEnd;
         
         public Morpheme(String surface, String gloss, String symbol,
-            boolean isGraphicalWordEnd)
+            boolean isLastMorpheme, boolean isGraphicalWordEnd)
         {
             m_Surface = surface;
             m_Gloss = gloss;
             m_Symbol = symbol;
+            m_IsLastMorpheme = isLastMorpheme;
             m_IsGraphicalWordEnd = isGraphicalWordEnd;
         }
         
@@ -36,6 +37,33 @@ public class HebrewMorphemeGenerator
         public boolean isGraphicalWordEnd() { return m_IsGraphicalWordEnd; }
         void setTranslit(String translit) { m_Translit = translit; }
         public String getTranslit() { return m_Translit; }
+        public String getTranslitWithMorphemeMarkers()
+        {
+            if (m_Translit == null)
+            {
+                return null;
+            }
+            
+            String translit = m_Translit;
+            
+            if (translit.equals(""))
+            {
+                translit = "Ø";
+            }
+            
+            if (m_IsLastMorpheme && !m_IsGraphicalWordEnd)
+            {
+                return translit + "=";
+            }
+            else if (!m_IsLastMorpheme)
+            {
+                return translit + "-";
+            }
+            else
+            {
+                return translit;
+            }
+        }
     }
     
     public List<Morpheme> parse(MatchedObject word, boolean generateGloss,
@@ -249,15 +277,14 @@ public class HebrewMorphemeGenerator
                 results.add(new Morpheme(
                     features.get("graphical_verbal_ending_utf8") +
                     features.get("graphical_nominal_ending_utf8"),
-                    getMorphemeTranslitSuffixed(verbEnding, false, false),
-                    "AG/PSA", false));
+                    verbEnding, "AG/PSA", false, false));
             }
             else
             {
                 results.add(new Morpheme(
                     features.get("graphical_lexeme_utf8") +
                     features.get("graphical_nominal_ending_utf8"),
-                    gloss, "V/NUC", false));
+                    gloss, "V/NUC", false, false));
     
                 convert(results, features, "graphical_verbal_ending_utf8",
                     verbEnding, "AG/PSA", false, false);
@@ -372,38 +399,12 @@ public class HebrewMorphemeGenerator
             for (int i = 0; i < results.size(); i++)
             {
                 String translit = transliterator.transliterate(results, i,
-                    word);
-                
-                Morpheme morpheme = results.get(i);
-                translit = getMorphemeTranslitSuffixed(translit,
-                    i == results.size() - 1, morpheme.isGraphicalWordEnd());
-                morpheme.setTranslit(translit);
+                    word);                
+                results.get(i).setTranslit(translit);
             }
         }
 
         return results;
-    }
-    
-    private String getMorphemeTranslitSuffixed(String translit,
-        boolean isLastMorpheme, boolean isGraphicalWordEnd)
-    {
-        if (translit.equals(""))
-        {
-            translit = "Ø";
-        }
-        
-        if (isLastMorpheme && !isGraphicalWordEnd)
-        {
-            return translit + "=";
-        }
-        else if (!isLastMorpheme)
-        {
-            return translit + "-";
-        }
-        else
-        {
-            return translit;
-        }
     }
     
     private void convert(List<Morpheme> results, Map<String, String> features,
@@ -412,6 +413,6 @@ public class HebrewMorphemeGenerator
     throws EmdrosException
     {
         results.add(new Morpheme(features.get(feature), gloss, symbol,
-            isGraphicalWordEnd));
+            isLastMorpheme, isGraphicalWordEnd));
     }
 }
