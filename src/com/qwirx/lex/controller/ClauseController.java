@@ -45,7 +45,6 @@ public class ClauseController extends ControllerBase
     private Map<String, MatchedObject> m_VariableToPhraseMap;
     private Map<Integer, String> m_PhraseIdToVariableMap;
     private int m_SelectedLogicalStructureId; 
-    private Map<String, String> m_StemForms;
 
     private static final String WIVU_SAVE_PARAM = "wivu_save",
         WIVU_WORD_PARAM = "wivu_word", WIVU_INDEX_PARAM = "wivu_index";
@@ -414,10 +413,10 @@ public class ClauseController extends ControllerBase
         return null;
     }
     
-    class Cell
+    public static class Cell
     {
-        String label, link, format, html, cssClass;
-        int columns;
+        public String label, link, format, html, cssClass;
+        public int columns;
         List<Cell> subcells = new ArrayList<Cell>();
         public Cell(String html)
         {
@@ -491,25 +490,24 @@ public class ClauseController extends ControllerBase
     {
         String verbForm = "";
         
-        if (m_StemForms == null)
-        {
-            m_StemForms = m_Emdros.getEnumerationConstants("stem_e",
-                false);
-        }
-        
         String part_of_speech = word.getFeatureAsString(
             word.getEMdFValueIndex("phrase_dependent_part_of_speech"));
 
-        
         if (part_of_speech.equals("verb"))
         {
-            verbForm = m_StemForms.get(word.getEMdFValue("stem").toString());
+            verbForm = m_Stem.get(word.getEMdFValue("stem").toString());
         }
    
         return verbForm;
     }
     
-    private String getWivuGloss(MatchedObject word)
+    /**
+     * Only public for unit tests, do not use!
+     * @param word
+     * @return
+     * @throws Exception
+     */
+    public String getWivuGloss(MatchedObject word)
     throws Exception
     {
         int wivuIndex = 0;
@@ -1057,6 +1055,8 @@ public class ClauseController extends ControllerBase
             " AND  User_Name   = \"anonymous\"") > 0;
     }
 
+    private static Cell EMPTY_CELL = new Cell("");
+    
     public List<Cell[]> getWordColumns()
     throws Exception
     {
@@ -1082,7 +1082,8 @@ public class ClauseController extends ControllerBase
                     wivuGloss = wivuGloss.replaceAll(" ", ".");
                 }
                 
-                List<Morpheme> morphemes = generator.parse(word, true, wivuGloss);
+                List<Morpheme> morphemes = generator.parse(word, true,
+                    wivuGloss, m_Transliterator);
                 
                 for (int i = 0; i < morphemes.size(); i++)
                 {
@@ -1112,41 +1113,26 @@ public class ClauseController extends ControllerBase
                     else if (gloss.equals("PERF"))
                     {
                         if (columns.size() >= 2 &&
-                            columns.get(columns.size() - 2)[1].equals("CLM"))
+                            columns.get(columns.size() - 2)[1].html.equals("CLM"))
                         {
-                            gloss = "SER2";
+                            gloss = "SEQU";
                         }
                     }
                     
                     // desc += ":" + lastMorpheme + ":" + m_IsLastWord;
-                    
-                    boolean lastMorpheme = (i == morphemes.size() - 1);
-                    
-                    if (!lastMorpheme)
-                    {
-                        translit += "-";
-                        if (!gloss.equals(""))
-                        {
-                            gloss += "-";
-                        }
-                    }
-                    else if (translit.endsWith("-"))
-                    {
-                        gloss += "-";
-                        lastMorpheme = false;
-                    }
 
                     Cell [] cells = new Cell [2];
                     cells[0] = new Cell(translit, "translit");
                     cells[1] = new Cell(gloss);
                     columns.add(cells);
                     
-                    if (lastMorpheme && (phrases.hasNext() || words.hasNext()))
+                    if (morpheme.isGraphicalWordEnd() &&
+                        (phrases.hasNext() || words.hasNext()))
                     {
                         // blank cell between words
                         Cell [] spacer = new Cell [2];
-                        spacer[0] = new Cell("");
-                        spacer[1] = spacer[0];
+                        spacer[0] = EMPTY_CELL;
+                        spacer[1] = EMPTY_CELL;
                         columns.add(spacer);
                     }
                 }
