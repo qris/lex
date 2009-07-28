@@ -8,6 +8,8 @@ import jemdros.SheafConstIterator;
 import jemdros.Straw;
 import jemdros.StrawConstIterator;
 
+import org.aptivate.webutils.HtmlIterator;
+
 import com.qwirx.lex.controller.ClauseController;
 import com.qwirx.lex.controller.ClauseController.Cell;
 import com.qwirx.lex.parser.MorphEdge;
@@ -40,13 +42,17 @@ public class ClauseControllerTest extends LexTestBase
         return null;
     }
 
-    public void testWivuGloss() throws Exception
+    public void testWivuGlossCell() throws Exception
     {
         ClauseController controller = new ClauseController(getEmdros(),
             getSql(), 28740);
         MatchedObject word = getWord(27); // merahefet
         String gloss = controller.getWivuGloss(word);
         assertEquals("hover", gloss);
+        
+        Cell glossCell = controller.getWivuLexiconCell(word, true);
+        HtmlIterator i = new HtmlIterator(glossCell.html);
+        
     }
     
     // There should be NO space after certain morphemes, indicated
@@ -72,7 +78,7 @@ public class ClauseControllerTest extends LexTestBase
         ClauseController controller = getController(28951); // Gen 2,24(b)
         List<Cell[]> columns = controller.getWordColumns();
         String [] firstRow = new String[]{
-            "wᵊ=", "Ø-", "Ø-", "dāvaq-", "Ø-", "Ø", "", "bᵊ=", "ʔiš-", "t-", "ô"
+            "wᵊ=", "Ø-", "Ø-", "dāvaq-", "Ø=", "Ø", "", "bᵊ=", "ʔiš-", "t=", "ô"
         };
         String [] secondRow = new String[]{
             "CLM", "SEQU", "Qa", "cling", "3Msg", "CLT", "", "P", "woman",
@@ -103,6 +109,7 @@ public class ClauseControllerTest extends LexTestBase
         assertEquals("", columns.get(12)[1].html);
         assertEquals("P", columns.get(13)[1].html);
         assertEquals("love", columns.get(14)[1].html);
+        assertEquals("āʰ=", columns.get(15)[0].html);
         assertEquals("FsgAB", columns.get(15)[1].html);
         assertEquals("CLT", columns.get(16)[1].html);
         assertEquals(17, columns.size());

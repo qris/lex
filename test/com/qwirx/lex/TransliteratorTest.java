@@ -449,11 +449,19 @@ public class TransliteratorTest extends TestCase
         addRule("", ALEPH, "", HOOK_LEFT); /* aleph */
         addRule("", KHET + PATAH, "$", SUBSCRIPT_A + H_DOT);
         addRule("", PATAH, "", "a");
+        
+        // TODO is this correct?
+        // addRule("^", BET + DAGESH, "", "b-b"); // initial consonant doubled with dash
+        
         addRule(VOWEL + OPTIONAL_CANTILLATION, BET + DAGESH, "", "bb");
         addRule(NOT_VOWEL_BEFORE, BET + DAGESH, "", "b");
         addRule("", BET, "", "v");
         addRule("", SHIN + DAGESH, "", S_CARON + S_CARON);
         addRule("", SHIN, "", S_CARON);
+        
+        // TODO should "d" be doubled at the start of the word?
+        // addRule("^", DALET + DAGESH, "", "d-d"); // initial consonant doubled with dash
+        
         addRule(VOWEL, DALET + DAGESH, "", "dd");
         // addRule(NOT_VOWEL_BEFORE, DALET + DAGESH, "", "d");
         addRule("", DALET, "", "d");
@@ -464,25 +472,38 @@ public class TransliteratorTest extends TestCase
         addRule("", SEGOL + OPTIONAL_CANTILLATION + YOD, "",
             "e" + SUPERSCRIPT_Y);
         addRule("", SEGOL, "", "e");
+        addRule("^", SIN + DAGESH, "", S_ACUTE + "-" + S_ACUTE); // initial consonant doubled with dash
         addRule("", SIN + DAGESH, "", S_ACUTE + S_ACUTE);
         addRule("", SIN, "", S_ACUTE);
+        
+        // TODO should gg be doubled at the start of the word?
+        // addRule("^", GIMEL + DAGESH, "", "g-g"); // initial consonant doubled with dash
+        
         addRule(VOWEL, GIMEL + DAGESH, "", "gg");
         // addRule(NOT_VOWEL_BEFORE, GIMEL + DAGESH, "", "g");
         addRule("", GIMEL, "", "g");
         addRule("", HE, "", "h");
         addRule("", HIRIQ + OPTIONAL_CANTILLATION + YOD, "", I_CARET);
         addRule("", HIRIQ, "", "i");
+        addRule("^", YOD + DAGESH, "", "y-y"); // initial consonant doubled with dash
         addRule("", YOD + DAGESH, "", "yy");
         addRule("", YOD, "", "y");
+        
+        // TODO initial consonant doubled with dash?
+        // addRule("^", KAPH + DAGESH, "", "k-k");
+        
         addRule(VOWEL + OPTIONAL_CANTILLATION, KAPH + DAGESH, "", "kk");
         addRule(NOT_VOWEL_BEFORE, KAPH + DAGESH, "", "k");
         addRule("", KAPH, "", "x");
         addRule("", FINAL_KAPH, "", "x");
+        addRule("^", LAMED + DAGESH, "", "l-l"); // initial consonant doubled with dash
         addRule("", LAMED + DAGESH, "", "ll");
         addRule("", LAMED, "", "l");
+        addRule("^", MEM + DAGESH, "", "m-m"); // initial consonant doubled with dash
         addRule("", MEM + DAGESH, "", "mm");
         addRule("", MEM, "", "m");
         addRule("", FINAL_MEM, "", "m");
+        addRule("^", NUN + DAGESH, "", "n-n"); // initial consonant doubled with dash
         addRule("", NUN + DAGESH, "", "nn");
         addRule("", NUN, "", "n");
         addRule("", FINAL_NUN, "", "n");
@@ -492,52 +513,71 @@ public class TransliteratorTest extends TestCase
             O_BAR + SUPERSCRIPT_H);
         // addRule("", HOLAM + HE + DAGESH, "$", O_BAR + "h");
         addRule("", HOLAM, "", O_BAR);
+        
+        // TODO is this correct?
+        // addRule("^", PE + DAGESH, "", "p-p"); // initial consonant doubled with dash
+        
         addRule(VOWEL + OPTIONAL_CANTILLATION, PE + DAGESH, "", "pp");
         addRule(NOT_VOWEL_BEFORE, PE + DAGESH, "", "p");
         addRule("", PE, "", "f");
         addRule("", FINAL_PE, "", "f");
+        addRule("^", QOPH + DAGESH, "", "q-q"); // initial consonant doubled with dash
         addRule("", QOPH + DAGESH, "", "qq");
         addRule("", QOPH, "", "q");
         addRule("", RESH, "", "r");
+        addRule("^", SAMEK + DAGESH, "", "s-s"); // initial consonant doubled with dash
         addRule("", SAMEK + DAGESH, "", "ss");
         addRule("", SAMEK, "", "s");
+        
+        // TODO is this correct?
+        // addRule("^", TAV + DAGESH, "", "t-t"); // initial consonant doubled with dash
+        
         addRule(VOWEL + OPTIONAL_CANTILLATION, TAV + DAGESH, "", "tt");
         addRule("", TAV, "", "t");
         addRule("", QIBBUTS, "", "u");
+        addRule("^", TET + DAGESH, "", T_DOT + "-" + T_DOT); // initial consonant doubled with dash
         addRule("", TET + DAGESH, "", T_DOT + T_DOT);
         addRule("", TET, "", T_DOT);
         addRule("", WAW + DAGESH, "", U_CARET);
         addRule("", WAW, "", "w");
         addRule("", KHET, "", H_DOT);
+        addRule("^", TSADE + DAGESH, "", S_DOT + "-" + S_DOT); // initial consonant doubled with dash
         addRule("", TSADE + DAGESH, "", S_DOT + S_DOT);
         addRule("", TSADE, "", S_DOT);
         addRule("", FINAL_TSADE, "", S_DOT);
+        addRule("^", ZAYIN + DAGESH, "", "z-z"); // initial consonant doubled with dash
         addRule("", ZAYIN + DAGESH, "", "zz");
         addRule("", ZAYIN, "", "z");
         
         m_trans = new DatabaseTransliterator(m_sql);
     }
-    
 
     public void testDatabaseTransliterator() throws Exception
     {
         addTest("\u05bf", "");
         addTest("\u05bc", "");
-        addTest(ALEPH + SHEVA, HOOK_LEFT + SUPERSCRIPT_BACKWARDS_E);
-        addTest(ALEPH + DAGESH + SHEVA, HOOK_LEFT + SUPERSCRIPT_BACKWARDS_E);
-        addTest(ALEPH + DAGESH + SOF_PASUQ + SHEVA, HOOK_LEFT + ":" + SUPERSCRIPT_BACKWARDS_E);
-        addTest(SHEVA + ALEPH, SHEVA + HOOK_LEFT);
+        addTest(ALEPH + SHEVA,
+            HOOK_LEFT + SUPERSCRIPT_BACKWARDS_E);
+        addTest(ALEPH + DAGESH + SHEVA,
+            HOOK_LEFT + SUPERSCRIPT_BACKWARDS_E);
+        addTest(ALEPH + DAGESH + SOF_PASUQ + SHEVA,
+            HOOK_LEFT + ":" + SUPERSCRIPT_BACKWARDS_E);
+        addTest(SHEVA + ALEPH,
+            SHEVA + HOOK_LEFT);
         addTest(SHEVA, "");
         addTest(ALEPH + ALEPH + SHEVA, HOOK_LEFT + HOOK_LEFT);
         addTest(SHEVA + ALEPH, SHEVA + HOOK_LEFT);
-        addTest(ALEPH + SOF_PASUQ + SHEVA + ALEPH + SOF_PASUQ +
-                SHEVA, HOOK_LEFT + ":" + SUPERSCRIPT_BACKWARDS_E + HOOK_LEFT + ":");
-        addTest(ALEPH + ALEPH + SOF_PASUQ + SHEVA +
-                ALEPH + SOF_PASUQ + SHEVA, HOOK_LEFT + HOOK_LEFT + ":" + HOOK_LEFT + ":");
-        addTest(TSERE + ALEPH + SHEVA + ALEPH, E_BAR + SUPERSCRIPT_QUERY + SUPERSCRIPT_BACKWARDS_E + HOOK_LEFT);
-        addTest(QAMETS + SOF_PASUQ + ALEPH + SHEVA + ALEPH, A_BAR + ":" + SUPERSCRIPT_QUERY + SUPERSCRIPT_BACKWARDS_E +
+        addTest(ALEPH + SOF_PASUQ + SHEVA + ALEPH + SOF_PASUQ + SHEVA,
+            HOOK_LEFT + ":" + SUPERSCRIPT_BACKWARDS_E + HOOK_LEFT + ":");
+        addTest(ALEPH + ALEPH + SOF_PASUQ + SHEVA + ALEPH + SOF_PASUQ + SHEVA,
+            HOOK_LEFT + HOOK_LEFT + ":" + HOOK_LEFT + ":");
+        addTest(TSERE + ALEPH + SHEVA + ALEPH,
+            E_BAR + SUPERSCRIPT_QUERY + SUPERSCRIPT_BACKWARDS_E + HOOK_LEFT);
+        addTest(QAMETS + SOF_PASUQ + ALEPH + SHEVA + ALEPH,
+            A_BAR + ":" + SUPERSCRIPT_QUERY + SUPERSCRIPT_BACKWARDS_E +
             HOOK_LEFT);
-        addTest(ALEPH + DAGESH + SHEVA + ALEPH, HOOK_LEFT + SUPERSCRIPT_BACKWARDS_E + HOOK_LEFT);
+        addTest(ALEPH + DAGESH + SHEVA + ALEPH,
+            HOOK_LEFT + SUPERSCRIPT_BACKWARDS_E + HOOK_LEFT);
         
         assertFalse(sheva1.matches(ALEPH + ALEPH, SHEVA + ALEPH, ms_EmptyMap));
         assertFalse(sheva2.matches(ALEPH + ALEPH, SHEVA + ALEPH, ms_EmptyMap));
@@ -650,6 +690,7 @@ public class TransliteratorTest extends TestCase
         
         addTest(PATAH + SOF_PASUQ + BET + DAGESH, "a:bb");
         addTest(ALEPH + SOF_PASUQ + BET + DAGESH, HOOK_LEFT + ":b");
+        // TODO addTest(BET + DAGESH, "b-b"); // initial double consonants get a dash
         addTest(ALEPH + BET, HOOK_LEFT + "v");
         
         addTest(SHIN + DAGESH, S_CARON + S_CARON);
@@ -657,6 +698,7 @@ public class TransliteratorTest extends TestCase
         
         addTest(PATAH + DALET + DAGESH, "add");
         addTest(ALEPH + DALET + DAGESH, HOOK_LEFT + "d");
+        // TODO addTest(DALET + DAGESH, "d-d"); // initial double consonants get a dash
         addTest(DALET, "d");
 
         addTest(SEGOL + HE, "e" + SUPERSCRIPT_H);
@@ -664,7 +706,8 @@ public class TransliteratorTest extends TestCase
         addTest(SEGOL + YOD + ALEPH, "e" + SUPERSCRIPT_Y + HOOK_LEFT);
         addTest(SEGOL + ALEPH, "e" + SUPERSCRIPT_QUERY);
 
-        addTest(SIN + DAGESH, S_ACUTE + S_ACUTE);
+        addTest(SIN + DAGESH, S_ACUTE + "-" + S_ACUTE); // initial double consonants get a dash
+        addTest(ALEPH + SIN + DAGESH, HOOK_LEFT + S_ACUTE + S_ACUTE);
         addTest(SIN, S_ACUTE);
         addTest(PATAH + GIMEL + DAGESH, "agg");
         addTest(ALEPH + GIMEL + DAGESH, HOOK_LEFT + "g");
@@ -673,19 +716,27 @@ public class TransliteratorTest extends TestCase
         addTest(HE, "h");
         addTest(HIRIQ + YOD, I_CARET);
         addTest(HIRIQ, "i");
-        addTest(YOD + DAGESH, "yy");
+        addTest(YOD + DAGESH, "y-y"); // initial double consonants get a dash
+        addTest(ALEPH + YOD + DAGESH, HOOK_LEFT + "yy");
         addTest(YOD, "y");
         addTest(PATAH + SOF_PASUQ + KAPH + DAGESH, "a:kk");
+        
+        // TODO why is Kaph Dagesh not doubled to kk?
         addTest(ALEPH + KAPH + DAGESH, HOOK_LEFT + "k");
+        // TODO and therefore k-k at the start?
         addTest(KAPH + DAGESH, "k");
+        
         addTest(ALEPH + KAPH, HOOK_LEFT + "x");
         addTest(ALEPH + FINAL_KAPH, HOOK_LEFT + "x");
-        addTest(LAMED + DAGESH, "ll");
+        addTest(LAMED + DAGESH, "l-l"); // initial double consonants get a dash
+        addTest(ALEPH + LAMED + DAGESH, HOOK_LEFT + "ll");
         addTest(LAMED, "l");
-        addTest(MEM + DAGESH, "mm");
+        addTest(MEM + DAGESH, "m-m"); // initial double consonants get a dash
+        addTest(ALEPH + MEM + DAGESH, HOOK_LEFT + "mm");
         addTest(MEM, "m");
         addTest(FINAL_MEM, "m");
-        addTest(NUN + DAGESH, "nn");
+        addTest(NUN + DAGESH, "n-n"); // initial double consonants get a dash
+        addTest(ALEPH + NUN + DAGESH, HOOK_LEFT + "nn"); 
         addTest(NUN, "n");
         addTest(FINAL_NUN, "n");
         addTest(HOLAM + WAW, O_CARET);
@@ -698,24 +749,29 @@ public class TransliteratorTest extends TestCase
         addTest(ALEPH + SOF_PASUQ + PE + DAGESH, HOOK_LEFT + ":p");
         addTest(ALEPH + PE, HOOK_LEFT + "f");
         addTest(ALEPH + FINAL_PE, HOOK_LEFT + "f");
-        addTest(QOPH + DAGESH, "qq");
+        addTest(QOPH + DAGESH, "q-q"); // initial double consonants get a dash
+        addTest(ALEPH + QOPH + DAGESH, HOOK_LEFT + "qq");
         addTest(QOPH, "q");
         addTest(RESH, "r");
-        addTest(SAMEK + DAGESH, "ss");
+        addTest(SAMEK + DAGESH, "s-s"); // initial double consonants get a dash
+        addTest(ALEPH + SAMEK + DAGESH, HOOK_LEFT + "ss");
         addTest(SAMEK, "s");
         addTest(PATAH + SOF_PASUQ + TAV + DAGESH, "a:tt");
         addTest(ALEPH + SOF_PASUQ + TAV + DAGESH, HOOK_LEFT + ":t");
         addTest(TAV, "t");
         addTest(QIBBUTS, "u");
-        addTest(TET + DAGESH, T_DOT + T_DOT);
+        addTest(TET + DAGESH, T_DOT + "-" + T_DOT); // initial double consonants get a dash 
+        addTest(ALEPH + TET + DAGESH, HOOK_LEFT + T_DOT + T_DOT);
         addTest(TET, T_DOT);
         addTest(WAW + DAGESH, U_CARET);
         addTest(WAW, "w");
         addTest(KHET, H_DOT);
-        addTest(TSADE + DAGESH, S_DOT + S_DOT);
+        addTest(TSADE + DAGESH, S_DOT + "-" + S_DOT); // initial double consonants get a dash 
+        addTest(ALEPH + TSADE + DAGESH, HOOK_LEFT + S_DOT + S_DOT);
         addTest(TSADE, S_DOT);
         addTest(FINAL_TSADE, S_DOT);
-        addTest(ZAYIN + DAGESH, "zz");
+        addTest(ZAYIN + DAGESH, "z-z"); // initial double consonants get a dash 
+        addTest(ALEPH + ZAYIN + DAGESH, HOOK_LEFT + "zz");
         addTest(ZAYIN, "z");
         
         addTest("מִצַּלְעֹתָ֔יו", "miṣṣalʕōtāʸw"); // GEN 2,21
@@ -743,7 +799,7 @@ public class TransliteratorTest extends TestCase
         morphs.add(new Morpheme("צַּלְע", "rib", "N/NUC", true, true));
         morphs.add(new Morpheme("ֹתָ֔י", "FplCS", "N/GNS", true, true));
         morphs.add(new Morpheme("ו", "3Msg", "N/POS", true, true));
-        assertEquals("ṣṣalʕ", m_trans.transliterate(morphs, 0, ms_EmptyMap));
+        assertEquals("ṣ-ṣalʕ", m_trans.transliterate(morphs, 0, ms_EmptyMap));
         assertEquals("ōtāʸ", m_trans.transliterate(morphs, 1, ms_EmptyMap));
         assertEquals("w", m_trans.transliterate(morphs, 2, ms_EmptyMap));
         
@@ -969,6 +1025,7 @@ public class TransliteratorTest extends TestCase
             controller.getMorphEdges();
         }
     }
+    
     public static void main(String[] args)
     {
         junit.textui.TestRunner.run(TransliteratorTest.class);

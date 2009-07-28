@@ -224,6 +224,7 @@ public class DatabaseTransliterator
         Map<String, String> attributes = new HashMap<String, String>();
         
         StringList features = word.getFeatureList();
+        /*
         for (StringListConstIterator i = features.const_iterator();
             i.hasNext();)
         {
@@ -231,6 +232,7 @@ public class DatabaseTransliterator
             String value = word.getFeatureAsString(word.getEMdFValueIndex(feature));
             attributes.put("word_" + feature, value);
         }
+        */
         
         return transliterate(morphemes, index, attributes);
     }

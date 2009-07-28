@@ -1,4 +1,4 @@
-#Wed Jan 02 17:36:47 CET 2008
+#Sat Jan 05 16:55:05 CET 2008
 eclipse.preferences.version=1
 encoding//jsp/attributes.jsp=UTF-8
 encoding//jsp/auth.jsp=UTF-8
@@ -18,4 +18,5 @@ encoding//jsp/parse.jsp=UTF-8
 encoding//jsp/published.jsp=UTF-8
 encoding//jsp/rules.jsp=UTF-8
 encoding//jsp/search.jsp=UTF-8
+encoding//jsp/wordnet.jsp=UTF-8
 encoding/<project>=UTF-8

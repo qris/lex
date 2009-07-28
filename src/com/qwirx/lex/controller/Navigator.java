@@ -244,8 +244,9 @@ public class Navigator
                     lexemes.append(HebrewConverter.toHtml(morpheme.getTranslit()));
                 }
                 
-                if (word_iter.hasNext() &&
-                    morphemes.get(morphemes.size() - 1).isGraphicalWordEnd()) 
+                Morpheme lastMorpheme = morphemes.get(morphemes.size() - 1);
+                
+                if (word_iter.hasNext() && !lastMorpheme.isDisplayedWithEquals())
                 {
                     lexemes.append(" ");
                 }

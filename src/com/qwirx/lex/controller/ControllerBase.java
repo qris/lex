@@ -155,7 +155,8 @@ public abstract class ControllerBase
                 for (Morpheme morpheme : morphemes)
                 {
                     hebrew.append(morpheme.getSurface());
-                    if (morpheme.isGraphicalWordEnd())
+                    if (morpheme.isLastMorpheme() && 
+                        !morpheme.isDisplayedWithEquals())
                     {
                         hebrew.append(" ");
                     }
@@ -169,27 +170,34 @@ public abstract class ControllerBase
     public List<MorphEdge> getMorphEdges()
     throws Exception
     {
-        SheafConstIterator phrases = m_Clause.getSheaf().const_iterator();
+        Sheaf sheaf = m_Clause.getSheaf();
+        SheafConstIterator phrases = sheaf.const_iterator();
         HebrewMorphemeGenerator generator = new HebrewMorphemeGenerator();
         List<MorphEdge> morphEdges = new ArrayList<MorphEdge>();
 
         while (phrases.hasNext()) 
         {
-            MatchedObject phrase = phrases.next().const_iterator().next();
-            SheafConstIterator words = phrase.getSheaf().const_iterator();
+            Straw straw = phrases.next();
+            StrawConstIterator swci = straw.const_iterator();
+            MatchedObject phrase = swci.next();
+            Sheaf sheaf2 = phrase.getSheaf();
+            SheafConstIterator words = sheaf2.const_iterator();
             
             while (words.hasNext()) 
             {
-                MatchedObject word = words.next().const_iterator().next();
-                List<Morpheme> morphemes = generator.parse(word, true, m_Sql,
-                    m_Transliterator);
+                Straw straw2 = words.next();
+                StrawConstIterator swci2 = straw2.const_iterator();
+                MatchedObject word = swci2.next();
+                List<Morpheme> morphemes = new ArrayList<Morpheme>();
                 
+                morphemes = generator.parse(word, true, m_Sql,
+                    m_Transliterator);
+
                 for (int i = 0; i < morphemes.size(); i++)
                 {
                     Morpheme morpheme = morphemes.get(i);
                     String translit =
                         HebrewConverter.toHtml(morpheme.getTranslit());
-                    if (translit.equals("")) translit = "&Oslash;";
                     
                     if (i < morphemes.size() - 1)
                     {
@@ -201,33 +209,6 @@ public abstract class ControllerBase
 
                     Map<String, String> attributes =
                         new HashMap<String, String>();
-                    
-                    // not safe, crashes emdros 2.0.6, emailed ulrik 090403
-                    /*
-                    StringList features = word.getFeatureList();
-                    for (StringListConstIterator iter = features.const_iterator();
-                        iter.hasNext();)
-                    {
-                        String feature = iter.next();
-                        attributes.put("word_" + feature,
-                            word.getFeatureAsString(
-                                word.getEMdFValueIndex(feature)));
-                    }
-                    */
-                    
-                    // also not safe
-                    /*
-                    String[] featuresToCopy = new String[]{"person", "number",
-                        "gender", "tense", "stem"
-                    };
-                    for (String feature : featuresToCopy)
-                    {
-                        System.out.println(feature);
-                        attributes.put("word_" + feature,
-                            word.getFeatureAsString(
-                                word.getEMdFValueIndex(feature)));
-                    }
-                    */
 
                     attributes.put("word_person",
                         m_Person.get("" + word.getEMdFValue("person").getEnum()));

@@ -535,10 +535,16 @@ public class ClauseController extends ControllerBase
         return entries[wivuIndex].getGloss();
     }
     
-    private Cell getWivuLexiconCell(MatchedObject word, String part_of_speech,
-        boolean canWrite)
+    /**
+     * Public for unit testing only. Not an API, do not call!
+     * @param word
+     * @param canWrite
+     * @return
+     * @throws Exception
+     */
+    public Cell getWivuLexiconCell(MatchedObject word, boolean canWrite)
     throws Exception
-    {        
+    {
         int wivuIndex = 0;
         EMdFValue wivuIndexE = word.getEMdFValue("wivu_lexicon_id");
         if (wivuIndexE != null)
@@ -797,10 +803,6 @@ public class ClauseController extends ControllerBase
                     
                     if (type.equals("word"))
                     {
-                        String part_of_speech = word.getFeatureAsString(
-                            word.getEMdFValueIndex(
-                                "phrase_dependent_part_of_speech"));
-                            
                         Cell cell = new Cell(null);
                         cell.label = HebrewConverter.wordTranslitToHtml(word,
                             morphemes, m_Transliterator);
@@ -810,7 +812,7 @@ public class ClauseController extends ControllerBase
                         
                         cell.subcells.add(getLexiconGlossCell(word));
                         cell.subcells.add(getWivuLexiconCell(word,
-                            part_of_speech, canWriteToPhrase));
+                            canWriteToPhrase));
                         cell.subcells.add(getDibLookupCell(word));
                         cell.subcells.add(getKingJamesGloss(word));
                     }
@@ -1125,7 +1127,8 @@ public class ClauseController extends ControllerBase
                     cells[1] = new Cell(gloss);
                     columns.add(cells);
                     
-                    if (morpheme.isGraphicalWordEnd() &&
+                    if (!morpheme.isDisplayedWithEquals() &&
+                        morpheme.isLastMorpheme() &&
                         (phrases.hasNext() || words.hasNext()))
                     {
                         // blank cell between words

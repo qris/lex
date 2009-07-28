@@ -86,9 +86,9 @@ public class GenExporterTest extends TestCase
         "\\re\n" +
         "\n" +
         "\\morpheme \n" +
-        "\\trans Ø-\n" +
+        "\\trans Ø=\n" +
         "\\tag tag\n" +
-        "\\gloss 1unknownsg\n" +
+        "\\gloss 1usg\n" +
         "\\lemma lemma\n" +
         "\\re\n" +
         "\n" +
@@ -114,7 +114,7 @@ public class GenExporterTest extends TestCase
         "\\re\n" +
         "\n" +
         "\\morpheme ִ֥ים\n" +
-        "\\trans îm-\n" +
+        "\\trans îm=\n" +
         "\\tag tag\n" +
         "\\gloss MplAB\n" +
         "\\lemma lemma\n" +
@@ -135,7 +135,7 @@ public class GenExporterTest extends TestCase
         "\\re\n" +
         "\n" +
         "\\morpheme ָֽה\n" +
-        "\\trans āʰ-\n" +
+        "\\trans āʰ=\n" +
         "\\tag tag\n" +
         "\\gloss FsgAB\n" +
         "\\lemma lemma\n" +

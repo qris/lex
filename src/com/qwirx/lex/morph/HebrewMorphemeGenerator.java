@@ -19,22 +19,23 @@ public class HebrewMorphemeGenerator
     public static class Morpheme
     {
         private String m_Surface, m_Gloss, m_Symbol, m_Translit;
-        private boolean m_IsLastMorpheme, m_IsGraphicalWordEnd;
+        private boolean m_IsLastMorpheme, m_DisplayWithEquals;
         
         public Morpheme(String surface, String gloss, String symbol,
-            boolean isLastMorpheme, boolean isGraphicalWordEnd)
+            boolean isLastMorpheme, boolean displayWithEquals)
         {
             m_Surface = surface;
             m_Gloss = gloss;
             m_Symbol = symbol;
             m_IsLastMorpheme = isLastMorpheme;
-            m_IsGraphicalWordEnd = isGraphicalWordEnd;
+            m_DisplayWithEquals = displayWithEquals;
         }
         
         public String getSurface() { return m_Surface; }
         public String getGloss() { return m_Gloss; }
         public String getNodeSymbol() { return m_Symbol; }
-        public boolean isGraphicalWordEnd() { return m_IsGraphicalWordEnd; }
+        public boolean isLastMorpheme() { return m_IsLastMorpheme; }
+        public boolean isDisplayedWithEquals() { return m_DisplayWithEquals; }
         void setTranslit(String translit) { m_Translit = translit; }
         public String getTranslit() { return m_Translit; }
         public String getTranslitWithMorphemeMarkers()
@@ -51,7 +52,7 @@ public class HebrewMorphemeGenerator
                 translit = "Ø";
             }
             
-            if (m_IsLastMorpheme && !m_IsGraphicalWordEnd)
+            if (m_DisplayWithEquals)
             {
                 return translit + "=";
             }
@@ -196,6 +197,7 @@ public class HebrewMorphemeGenerator
             if      (gender.equals("masculine")) { gender = "M"; }
             else if (gender.equals("feminine"))  { gender = "F"; }
             else if (gender.equals("common"))    { gender = "="; }
+            else if (gender.equals("unknown"))   { gender = "u"; }
             
             String number = features.get("number");
             if (number.equals("singular")) { number = "sg"; }
@@ -277,7 +279,7 @@ public class HebrewMorphemeGenerator
                 results.add(new Morpheme(
                     features.get("graphical_verbal_ending_utf8") +
                     features.get("graphical_nominal_ending_utf8"),
-                    verbEnding, "AG/PSA", false, false));
+                    verbEnding, "AG/PSA", false, true));
             }
             else
             {
@@ -287,11 +289,11 @@ public class HebrewMorphemeGenerator
                     gloss, "V/NUC", false, false));
     
                 convert(results, features, "graphical_verbal_ending_utf8",
-                    verbEnding, "AG/PSA", false, false);
+                    verbEnding, "AG/PSA", false, true);
             }
             
             convert(results, features, "graphical_pron_suffix_utf8",
-                suffixGloss, "PRON/DCA", true, true);
+                suffixGloss, "PRON/DCA", true, false);
         }
         else if (psp.equals("noun")
             || psp.equals("proper_noun"))
@@ -306,14 +308,14 @@ public class HebrewMorphemeGenerator
             convert(results, features, "graphical_lexeme_utf8", gloss, type,
                 false, false);
             convert(results, features, "graphical_nominal_ending_utf8",
-                nounEnding, "N/GNS", false, false);
+                nounEnding, "N/GNS", false, true);
             convert(results, features, "graphical_pron_suffix_utf8",
-                suffixGloss, "N/POS", true, true);
+                suffixGloss, "N/POS", true, false);
         }
         else if (psp.equals("none"))
         {
             // hack for LexemeTest
-            convert(results, features, "lexeme", "none", "none", true, true);
+            convert(results, features, "lexeme", "none", "none", true, false);
         }
         else
         {
@@ -381,12 +383,12 @@ public class HebrewMorphemeGenerator
 
             boolean hasSuffix = !(suffixText.equals(""));
             convert(results, features, "graphical_lexeme_utf8", type, type,
-                !hasSuffix, isGraphicalWordEnding && !hasSuffix);
+                !hasSuffix, !isGraphicalWordEnding && !hasSuffix);
             
             if (hasSuffix)
             {
                 convert(results, features, "graphical_pron_suffix_utf8",
-                    suffixGloss, type + "/SFX", true, isGraphicalWordEnding);
+                    suffixGloss, type + "/SFX", true, !isGraphicalWordEnding);
             }
         }
 
