@@ -225,6 +225,8 @@ public class SearchTest extends TestCase
         WebResponse response = conv.getResponse("http://localhost:8080/lex/" +
             "search.jsp");
         HtmlIterator i = new HtmlIterator(response.getText());
+        i.assertDTD("html", "-//W3C//DTD XHTML 1.0 Strict//EN",
+            "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd");
         i.assertStart("html");
         i.assertStart("head");
         i.assertSimple("title", "Lex: Search");
@@ -381,7 +383,7 @@ public class SearchTest extends TestCase
         i.assertText("&copy;");
         i.assertSimple("a", "Lex Project", 
             new Attributes().href("http://rrg.qwirx.com/trac/lex"));
-        i.assertText("2005-2008.");
+        i.assertText("2005-2009.");
         i.assertEnd("p");
         i.assertEnd("body");
         i.assertEnd("html");
