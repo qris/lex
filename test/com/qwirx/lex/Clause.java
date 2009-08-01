@@ -40,7 +40,7 @@ public class Clause
     
     public static Clause find(EmdrosDatabase emdros, SqlDatabase lexicon,
         DatabaseTransliterator transliterator, int id)
-    throws DatabaseException
+    throws DatabaseException, EmdrosException
     {
         String query = 
             "SELECT ALL OBJECTS IN " +
@@ -73,7 +73,7 @@ public class Clause
     }
     
     public int getLogicalStructureID()
-    throws DatabaseException
+    throws DatabaseException, EmdrosException
     {
         return m_Clause.getEMdFValue("logical_struct_id").getInt();
     }
