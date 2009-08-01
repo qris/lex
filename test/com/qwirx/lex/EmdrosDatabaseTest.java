@@ -8,15 +8,26 @@ package com.qwirx.lex;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.HashMap;
 import java.util.Iterator;
+import java.util.Map;
 
+import jemdros.EmdrosEnv;
 import jemdros.EmdrosException;
+import jemdros.MatchedObject;
 import jemdros.SetOfMonads;
+import jemdros.Sheaf;
+import jemdros.SheafConstIterator;
+import jemdros.Straw;
+import jemdros.StrawConstIterator;
+import jemdros.StringList;
+import jemdros.StringListConstIterator;
 import jemdros.Table;
 import jemdros.TableIterator;
 import jemdros.TableRow;
 import jemdros.TableRowIterator;
-import junit.framework.TestCase;
+import jemdros.eCharsets;
+import jemdros.eOutputKind;
 
 import com.qwirx.db.Change;
 import com.qwirx.db.ChangedRow;
@@ -24,9 +35,7 @@ import com.qwirx.db.ChangedValue;
 import com.qwirx.db.ChangedValueString;
 import com.qwirx.db.DatabaseException;
 import com.qwirx.db.sql.SqlChange;
-import com.qwirx.db.sql.SqlDatabase;
 import com.qwirx.lex.emdros.EmdrosChange;
-import com.qwirx.lex.emdros.EmdrosDatabase;
 
 /**
  * @author chris
@@ -34,18 +43,20 @@ import com.qwirx.lex.emdros.EmdrosDatabase;
  * TODO To change the template for this generated type comment go to
  * Window - Preferences - Java - Code Style - Code Templates
  */
-public class EmdrosDatabaseTest extends TestCase 
+public class EmdrosDatabaseTest extends LexTestBase
 {
-	private final SqlDatabase    logDb;
-	private final EmdrosDatabase emdros;
+    public EmdrosDatabaseTest() throws Exception
+    {
+    
+    }
     
     public void setUp() throws Exception
     {
-        if (logDb.getSingleInteger("SELECT COUNT(1) FROM user_text_access " +
+        if (getSql().getSingleInteger("SELECT COUNT(1) FROM user_text_access " +
             "WHERE User_Name = \"test\" AND Monad_First = 1000000 " +
             "AND Monad_Last = 1000005 AND Write_Access = 1") == 0)
         {
-            Change ch = logDb.createChange(SqlChange.INSERT,
+            Change ch = getSql().createChange(SqlChange.INSERT,
                 "user_text_access", null);
             ch.setString("User_Name", "test");
             ch.setInt("Monad_First", 1000000);
@@ -54,12 +65,6 @@ public class EmdrosDatabaseTest extends TestCase
             ch.execute();
         }
     }
-	
-	public EmdrosDatabaseTest() throws Exception 
-    {
-		logDb  = Lex.getSqlDatabase("test");
-		emdros = Lex.getEmdrosDatabase("test", "localhost", logDb);
-	}
 	
 	/* Crashes Emdros
 	public void testRetrieveColumnZeroShouldNotCrash() 
@@ -74,15 +79,15 @@ public class EmdrosDatabaseTest extends TestCase
 	public void testSimpleQueryShouldWork() 
 	throws DatabaseException
     {
-		emdros.getTable("SELECT OBJECTS AT MONAD = 1 [Word] GO");
-		emdros.getTable("SELECT OBJECTS HAVING MONADS IN {1-10} [ALL] GO");
-		emdros.getSheaf("SELECT ALL OBJECTS IN {1-10} WHERE [Word] GO");
+		getEmdros().getTable("SELECT OBJECTS AT MONAD = 1 [Word] GO");
+        getEmdros().getTable("SELECT OBJECTS HAVING MONADS IN {1-10} [ALL] GO");
+        getEmdros().getSheaf("SELECT ALL OBJECTS IN {1-10} WHERE [Word] GO");
 	}
 	
 	public void testTableIteratorShouldWork()
 	throws Exception
     {
-		Table table = emdros.getTable("SELECT OBJECTS HAVING MONADS " +
+		Table table = getEmdros().getTable("SELECT OBJECTS HAVING MONADS " +
 				"IN {1-10} [ALL] GO");
 		
 		// Print table
@@ -107,7 +112,7 @@ public class EmdrosDatabaseTest extends TestCase
 	public void testWordShouldHaveMoreThanOneFeature()
 	throws DatabaseException
     {
-		Table table = emdros.getTable("SELECT FEATURES FROM [word] GO");
+		Table table = getEmdros().getTable("SELECT FEATURES FROM [word] GO");
 		assertTrue("Not enough features in object type 'word'",
 				table.size() > 1);
 		/*
@@ -122,14 +127,14 @@ public class EmdrosDatabaseTest extends TestCase
 	public void testWordShouldStillHaveFeaturesAfterQueries()
 	throws Exception 
 	{
-		emdros.getSheaf("SELECT ALL OBJECTS IN {1-28735} "+
+        getEmdros().getSheaf("SELECT ALL OBJECTS IN {1-28735} "+
 				"WHERE [verse "+
 				"       book    = Genesis AND "+
 				"       chapter = 2 AND "+
 				"       verse   = 4 "+
-				"       [clause [word get lexeme]]]");
+				"       [clause [word get lexeme_wit]]]");
 		
-		Table table = emdros.getTable("SELECT FEATURES FROM [word] GO");
+		Table table = getEmdros().getTable("SELECT FEATURES FROM [word] GO");
 		assertTrue("Not enough features in object type 'word'",
 				table.size() > 1);
 		
@@ -157,7 +162,7 @@ public class EmdrosDatabaseTest extends TestCase
 	}
     */
 	
-	public void assertCurrentValues(int objectID_D, String objectType, 
+	private void assertCurrentValues(int objectID_D, String objectType, 
 			ChangedRow cr) 
 	throws DatabaseException, EmdrosException
 	{
@@ -171,7 +176,7 @@ public class EmdrosDatabaseTest extends TestCase
 		
 		query.append(" FROM OBJECT WITH ID_D = "+objectID_D+" ["+objectType+"]");
 		
-		Table currentValues = emdros.getTable(query.toString());
+		Table currentValues = getEmdros().getTable(query.toString());
 		TableRow tr = currentValues.iterator().current();
 		int i = 0;
 		
@@ -185,11 +190,9 @@ public class EmdrosDatabaseTest extends TestCase
 			String curValue = tr.getColumn(++i + 1);
 			assertEquals("Column "+colName+" has wrong value", expValue, curValue);
 		}
-
-		logDb.finish();
 	}
 	
-	public void assertChanges(int rowLogId, ChangedRow originalCr) 
+	private void assertChanges(int rowLogId, ChangedRow originalCr) 
 	throws DatabaseException, SQLException
 	{
         ChangedRow cr = new ChangedRow(originalCr);
@@ -197,11 +200,11 @@ public class EmdrosDatabaseTest extends TestCase
 		System.out.println("SELECT ID, Col_Name, Old_Value, " +
 				"New_Value FROM changed_values WHERE Row_ID = " + rowLogId);
 		
-		logDb.prepareSelect(
+		getSql().prepareSelect(
 				"SELECT ID, Col_Name, Old_Value, " +
 				"New_Value FROM changed_values WHERE Row_ID = " + rowLogId);
 		
-		ResultSet rs = logDb.select();
+		ResultSet rs = getSql().select();
 		while (rs.next())
         {
 			String colName  = rs.getString(2);
@@ -241,7 +244,7 @@ public class EmdrosDatabaseTest extends TestCase
 			
 			cr.remove(colName);
 		}
-		logDb.finish();
+		getSql().finish();
 
 		Iterator i = cr.iterator();
 		if (i.hasNext()) 
@@ -259,14 +262,14 @@ public class EmdrosDatabaseTest extends TestCase
         
         if (byMonads)
         {
-            ch = (EmdrosChange)emdros.createChange(EmdrosChange.UPDATE,
+            ch = (EmdrosChange)getEmdros().createChange(EmdrosChange.UPDATE,
                 objectType, null);
-            ch.setMonads(emdros.getObjectMonads(objectType, 
+            ch.setMonads(getEmdros().getObjectMonads(objectType, 
                 new int[]{cr.getUniqueID()}));
         }
         else
         {
-            ch = (EmdrosChange)emdros.createChange(EmdrosChange.UPDATE,
+            ch = (EmdrosChange)getEmdros().createChange(EmdrosChange.UPDATE,
 				objectType, new int[]{cr.getUniqueID()});
         }
         
@@ -289,18 +292,18 @@ public class EmdrosDatabaseTest extends TestCase
 	private int getFirstChangedRowLogId(int logId) 
 	throws DatabaseException, SQLException
     {
-		logDb.prepareSelect(
+		getSql().prepareSelect(
 				"SELECT ID FROM changed_rows WHERE Log_ID = "+logId);
-		ResultSet rs = logDb.select();
+		ResultSet rs = getSql().select();
 		rs.next();
 		int id = rs.getInt(1);
-		logDb.finish();
+		getSql().finish();
 		return id;
 	}
 	
 	public void testUpdate() throws Exception
 	{
-        EmdrosChange ch = (EmdrosChange)emdros.createChange(
+        EmdrosChange ch = (EmdrosChange)getEmdros().createChange(
             EmdrosChange.CREATE, "phrase", null);
         ch.setMonads(new SetOfMonads(1000000, 1000005));
         ch.execute();
@@ -347,16 +350,15 @@ public class EmdrosDatabaseTest extends TestCase
         }
         finally
         {
-            ch = (EmdrosChange)emdros.createChange(EmdrosChange.DELETE,
+            ch = (EmdrosChange)getEmdros().createChange(EmdrosChange.DELETE,
                 "phrase", new int[]{testPhraseId});
             ch.execute();
         }
 	}
-
+    
 	public static void main(String[] args)
     {
 		junit.textui.TestRunner.run(EmdrosDatabaseTest.class);
 	}
-
 }
 
