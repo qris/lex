@@ -478,13 +478,11 @@ public class EmdrosDatabase implements Database
             throw new DatabaseException("Failed to get monad " +
                     "access control data", e);
         }
-        /*
         catch (BadMonadsException e)
         {
             throw new DatabaseException("Failed to get monad " +
                 "access control: invalid data in access table", e);
         }
-        */
     }
 
     public boolean canWriteTo(MatchedObject object)
