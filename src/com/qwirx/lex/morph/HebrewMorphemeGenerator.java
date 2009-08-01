@@ -95,6 +95,7 @@ public class HebrewMorphemeGenerator
             "graphical_nominal_ending_utf8",
             "graphical_pron_suffix_utf8",
             "graphical_lexeme_wit",
+            "wivu_alternate_gloss",
             "tense",
         });
 
