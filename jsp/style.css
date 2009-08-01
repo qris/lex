@@ -110,6 +110,13 @@ table.search_results td, table.search_results th
 	text-align: left;
 }
 	
+form.blue
+{
+	margin: 0.5em;
+	border: 2px solid #bbf;
+	padding: 0.5em;
+	background-color: #eef;
+}	
 
 .errormsg
 {
