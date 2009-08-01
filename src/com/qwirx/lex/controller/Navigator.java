@@ -17,8 +17,8 @@ import jemdros.Table;
 import jemdros.TableIterator;
 import jemdros.TableRow;
 
-import org.aptivate.webutils.EditField;
-import org.aptivate.webutils.EditField.SelectBox;
+import org.aptivate.web.controls.SelectBox;
+import org.aptivate.web.utils.EditField;
 
 import com.qwirx.db.DatabaseException;
 import com.qwirx.lex.emdros.EmdrosDatabase;
