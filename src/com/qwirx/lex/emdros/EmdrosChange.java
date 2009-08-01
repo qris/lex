@@ -64,7 +64,8 @@ public final class EmdrosChange implements Change
     }
     
 	private Type   changeType;
-	private Map    features, featureIsConstant;
+	private Map<String, Object> features;
+    private Map<String, Boolean> featureIsConstant;
 	private String username, database, objectType;
 	private EmdrosDatabase emdros;
 	private Integer id;
@@ -85,8 +86,8 @@ public final class EmdrosChange implements Change
 		this.emdros     = emdros;
 		this.logDb      = logDb;
 
-		this.features          = new Hashtable();
-		this.featureIsConstant = new Hashtable();
+		this.features          = new Hashtable<String, Object>();
+		this.featureIsConstant = new Hashtable<String, Boolean>();
 	}
 
 	final static class Type implements ChangeType
@@ -179,7 +180,26 @@ public final class EmdrosChange implements Change
 		return logObjectEntryId;
 	}			
 
-	private void captureValues(boolean createRowChangeLogs, boolean storeAsNewValue) 
+    /**
+     * Captures the current values of all features, or only the changed
+     * features, from all matching objects, and stores them as either
+     * old or new values in the change_log table.
+     * @param createRowChangeLogs true if new change_log rows should be created;
+     * false if existing rows should be found and updated instead (for UPDATE
+     * queries).
+     * @param storeAsNewValue true if the current value should be stored
+     * as the New_Value in the change_log (CREATE, and second half of UPDATE);
+     * false if it should be stored as the Old_Value (DELETE, and first half
+     * of UPDATE).
+     * @param captureAllFeatures true if all feature values should be captured
+     * (CREATE and DELETE queries); false if only the values which have
+     * explicitly been changed should be captured (UPDATE queries). 
+     * @throws SQLException
+     * @throws DatabaseException
+     * @throws EmdrosException
+     */
+	private void captureValues(boolean createRowChangeLogs,
+        boolean storeAsNewValue, boolean captureAllFeatures) 
 	throws SQLException, DatabaseException, EmdrosException
     {
 		/*
@@ -196,43 +216,51 @@ public final class EmdrosChange implements Change
         {
 			throw new AssertionError("objectIds must be a non-empty array");
 		}
-		
-		Table allFeatureNames = emdros.getTable(
-				"SELECT FEATURES FROM ["+objectType+"]");
-		List<String> featureNames = new ArrayList<String>();
-		
-		for (TableIterator rows = allFeatureNames.iterator(); 
-			rows.hasNext(); ) 
-		{
-			TableRow row      = rows.next(); 
-			String   name     = row.getColumn(1);
-			String   computed = row.getColumn(4);
-			
-			if (computed.equals("true"))
-            {
-				continue;
-			}
-            else if (computed.equals("false"))
-            {
-				featureNames.add(name);
-			}
-            else
-            {
-				throw new AssertionError("feature computed column " +
-						"must be 'true' or 'false'");
-			}
-		}
-		
-		if (featureNames.size() == 0) return;
+
+        List<String> featureNamesToTrack = new ArrayList<String>();
+
+        if (captureAllFeatures)
+        {
+    		Table allFeatureNames = emdros.getTable(
+    				"SELECT FEATURES FROM ["+objectType+"]");
+    		
+    		for (TableIterator rows = allFeatureNames.iterator(); 
+    			rows.hasNext(); ) 
+    		{
+    			TableRow row      = rows.next(); 
+    			String   name     = row.getColumn(1);
+    			String   computed = row.getColumn(4);
+    			
+    			if (computed.equals("true"))
+                {
+    				continue;
+    			}
+                else if (computed.equals("false"))
+                {
+    				featureNamesToTrack.add(name);
+    			}
+                else
+                {
+    				throw new AssertionError("feature computed column " +
+    						"must be 'true' or 'false'");
+    			}
+    		}
+        }
+        else
+        {
+            featureNamesToTrack = new ArrayList<String>(features.keySet());
+        }
+        
+		if (featureNamesToTrack.size() == 0) return;
 
         if (monads != null)
         {
-            captureValuesByMonads(featureNames, createRowChangeLogs,
+            captureValuesByMonads(featureNamesToTrack, createRowChangeLogs,
                 storeAsNewValue);
         }
         else
         {
-            captureValuesByIds(featureNames, createRowChangeLogs,
+            captureValuesByIds(featureNamesToTrack, createRowChangeLogs,
                 storeAsNewValue);
         }
     }
@@ -248,7 +276,7 @@ public final class EmdrosChange implements Change
             fquery.append(i.next());
             if (i.hasNext())
             {
-                fquery.append(",");
+                fquery.append(", ");
             }
         }
 
@@ -439,24 +467,24 @@ public final class EmdrosChange implements Change
 	throws DatabaseException, SQLException, EmdrosException
     {
 		if (changeType != UPDATE && changeType != DELETE)
+        {
 			throw new AssertionError("this method can only be used "+
 					"when the command type is UPDATE or DELETE");
-		
-		captureValues(true, false);
+        }
+        
+		captureValues(true, false, changeType == DELETE);
 	}
 	
 	private void captureNewValues() 
 	throws SQLException, DatabaseException, EmdrosException
 	{
 		if (changeType != CREATE && changeType != UPDATE)
+        {
 			throw new AssertionError("this method can only be used "+
 					"when the command type is CREATE or UPDATE");
-		
-		if (changeType == CREATE) {
-			captureValues(true, true);
-		} else {
-			captureValues(false, true);
-		}
+        }
+        
+		captureValues(changeType == CREATE, true, changeType == CREATE);
 	}
 
 	public void execute() throws DatabaseException 
@@ -550,8 +578,7 @@ public final class EmdrosChange implements Change
 					Map.Entry e = (Map.Entry)( i.next() );
 					sb.append(e.getKey() + " := ");
 					
-					Boolean isConstant = (Boolean)(
-							featureIsConstant.get(e.getKey()));
+					Boolean isConstant = featureIsConstant.get(e.getKey());
 					String value = (String)( e.getValue() );
 					if (isConstant == Boolean.FALSE) {
 						sb.append("\"" + 
