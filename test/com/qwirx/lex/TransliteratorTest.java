@@ -821,7 +821,7 @@ public class TransliteratorTest extends TestCase
         addTestSpecial(8881,   "GEN 19,20", "אִמָּלְטָ֨ה", "ʔimmālṭāʰ");
         addTestSpecial(228251, "JES 43,26", "נִשָּׁפְטָ֖ה", "niššāfṭāʰ");
         addTestSpecial(43805,  "EXO 28,03", "חָכְמָ֑ה", "ḥoxmāʰ"); // exception
-        addTestSpecial(1801,   "GEN 04,08", "יָּ֥קָם", "yyāqom"); // exception
+        addTestSpecial(1801,   "GEN 04,08", "יָּ֥קָם", "y-yāqom"); // exception
     }
     
     public void testParadigmaticNominalEndingIsAddedToVerbs()
@@ -995,9 +995,6 @@ public class TransliteratorTest extends TestCase
         assertEquals(clauses.get(0).getId(), clause.getID_D());
         
         List<MorphEdge> morphEdges = controller.getMorphEdges();
-        assertEquals("pāṣ-", morphEdges.get(3).getHtmlSurface());
-        assertEquals("tāʰ-", morphEdges.get(4).getHtmlSurface());
-        assertEquals("&Oslash;", morphEdges.get(5).getHtmlSurface());
 
         for (int i = 1; i <= 5; i++)
         {
@@ -1008,6 +1005,10 @@ public class TransliteratorTest extends TestCase
             assertEquals("qal", attributes.get("word_stem"));
             assertEquals("perfect", attributes.get("word_tense"));
         }
+
+        assertEquals("pāṣ-", morphEdges.get(3).getHtmlSurface());
+        assertEquals("tāʰ-", morphEdges.get(4).getHtmlSurface());
+        assertEquals("", morphEdges.get(5).getHtmlSurface());
     }
 
     public void testIteratingOverFeaturesDoesNotCrashEmdros()
