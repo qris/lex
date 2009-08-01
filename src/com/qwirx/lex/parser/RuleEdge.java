@@ -7,6 +7,7 @@
 package com.qwirx.lex.parser;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -135,37 +136,44 @@ public class RuleEdge extends EdgeBase implements Cloneable
         
         if (withAttributes)
         {
-    		Map attribs = null;
+    		Map<String, String> attribs = null;
             
             try 
             {
                 attribs = attributes();
+                List<String> keys =  new ArrayList<String>(attribs.keySet());
+                Collections.sort(keys);
     
-                for (Iterator i = attribs.entrySet().iterator(); i.hasNext(); ) 
+                for (Iterator<String> i = keys.iterator(); i.hasNext(); ) 
                 {
-                    Entry e = (Entry)( i.next() );
-                    buf.append(e.getKey());
+                    String name = i.next();
+                    String value = attribs.get(name);
+                    buf.append(name);
                     buf.append('=');
                     
-                    if (e.getValue() == null)
+                    if (value == null)
                     {
                         buf.append("unknown");
                     }
-                    else if (e.getValue().toString().contains(","))
+                    else if (value.contains(","))
                     {
                         buf.append('"');
-                        buf.append(e.getValue());
+                        buf.append(value);
                         buf.append('"');
                     }
                     else
                     {
-                        buf.append(e.getValue());
+                        buf.append(value);
                     }
                     
                     if (i.hasNext())
+                    {
                         buf.append(',');
+                    }
                     else
+                    {
                         buf.append(' ');
+                    }
                 }
             }
             catch (UnificationException e)
@@ -338,10 +346,10 @@ public class RuleEdge extends EdgeBase implements Cloneable
         m_EdgeAttributes.add(attr);
     }
     
-    private void mergeAttributeInto(Attribute in, Map out)
+    private void mergeAttributeInto(Attribute in, Map<String, String> out)
     {
         String name = in.getName();
-        String oldValue = (String)out.get(name);
+        String oldValue = out.get(name);
         String newValue = in.getValue(this);
         
         if (out.containsKey(name) && oldValue != null && 
@@ -369,7 +377,7 @@ public class RuleEdge extends EdgeBase implements Cloneable
         }
     }
 
-	public Map attributes() 
+	public Map<String, String> attributes() 
     {
 		Map attribs = new HashMap();
 		
