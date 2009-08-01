@@ -119,6 +119,11 @@ public class WivuLexicon
     
     public Entry [] getEntry(String lexeme, String form)
     {
+        if (form.equals("piel"))
+        {
+            form = "pi";
+        }
+        
         Key key = new Key(lexeme, form);
         return m_LexiconEntries.get(key);
     }
