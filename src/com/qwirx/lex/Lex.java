@@ -126,6 +126,8 @@ public class Lex
             emdrosDb.createFeatureIfMissing("word",  "wordnet_gloss",    "string");
             emdrosDb.createFeatureIfMissing("word",  "wordnet_synset",   "integer");
             emdrosDb.createFeatureIfMissing("word",  "wivu_lexicon_id",  "integer");
+            emdrosDb.createFeatureIfMissing("word",  "wivu_alternate_gloss",
+                "string");
             
             return emdrosDb;
         }
