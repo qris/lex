@@ -169,14 +169,14 @@ public class JswordExamples extends TestCase
     
     public void testLookupGlossFromSurfaceConsonants() throws Exception
     {
-        Table table = m_Emdros.getTable("GET FEATURES lexeme " +
-            "FROM OBJECT WITH ID_D = 410609 [word]");
+        Table table = m_Emdros.getTable("GET FEATURES lexeme_wit " +
+            "FROM OBJECT WITH ID_D = 413449 [word]"); // RICHT06,11(e)
         
         String surface = null;
         for (TableIterator ti = table.iterator(); ti.hasNext();)
         {
             TableRow tr = ti.next();
-            assertEquals("410609", tr.getColumn(1));
+            assertEquals("413449", tr.getColumn(1));
             surface = tr.getColumn(2);
         }
         
