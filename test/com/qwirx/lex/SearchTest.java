@@ -22,34 +22,31 @@ import com.qwirx.lex.hebrew.HebrewConverter;
 import com.qwirx.lex.morph.HebrewMorphemeGenerator;
 import com.qwirx.lex.translit.DatabaseTransliterator;
 
-public class SearchTest extends TestCase
+public class SearchTest extends LexTestBase
 {
-    private EmdrosDatabase m_Emdros;
+    public SearchTest() throws Exception
+    {
+        
+    }
+
     private DatabaseTransliterator m_Transliterator;
     
     public void setUp() throws Exception
     {
-        SqlDatabase sql = Lex.getSqlDatabase("test");
-        m_Emdros = Lex.getEmdrosDatabase("chris", "test", sql);
-        m_Transliterator = new DatabaseTransliterator(sql);
-    }
-    
-    public void tearDown()
-    {
-        Lex.putEmdrosDatabase(m_Emdros);
+        m_Transliterator = new DatabaseTransliterator(getSql());
     }
     
     private void assertSearchResultsMatch(String query)
     throws Exception
     {
-        Search search = new Search(m_Emdros, m_Transliterator);
+        Search search = new Search(getEmdros(), m_Transliterator);
         assertSearchResultsMatch(query, search, 100);
     }
     
     private void assertSearchResultsMatch(String query, int limit)
     throws Exception
     {
-        Search search = new Search(m_Emdros, m_Transliterator);
+        Search search = new Search(getEmdros(), m_Transliterator);
         search.setMaxResults(limit);
         assertSearchResultsMatch(query, search, limit);
     }
@@ -63,10 +60,10 @@ public class SearchTest extends TestCase
         
         HebrewMorphemeGenerator generator = new HebrewMorphemeGenerator();
         
-        Sheaf sheaf = m_Emdros.getSheaf
+        Sheaf sheaf = getEmdros().getSheaf
         (
             "SELECT ALL OBJECTS IN " +
-            m_Emdros.getVisibleMonads().toString() + " " +
+            getEmdros().getVisibleMonads().toString() + " " +
             "WHERE [clause "+
             "       [word " +
             "        lexeme_wit = '"+query+"' OR " + 
@@ -93,7 +90,7 @@ public class SearchTest extends TestCase
         }
         
         String mql = "SELECT ALL OBJECTS IN " +
-            m_Emdros.getVisibleMonads().toString() + " " +
+            getEmdros().getVisibleMonads().toString() + " " +
             "WHERE " +
             "[verse GET book, chapter, verse, verse_label " +
             " [clause ";
@@ -119,7 +116,7 @@ public class SearchTest extends TestCase
             new HebrewMorphemeGenerator().getRequiredFeaturesString(false) +
             "]]]";
 
-        sheaf = m_Emdros.getSheaf(mql);
+        sheaf = getEmdros().getSheaf(mql);
         sci = sheaf.const_iterator();
         
         while (sci.hasNext())
@@ -183,7 +180,7 @@ public class SearchTest extends TestCase
                     actual.getDescription());
                 assertEquals(actual.getLocation(),
                     "clause.jsp?book=" + 
-                    m_Emdros.getEnumConstNameFromValue("book_name_e",
+                    getEmdros().getEnumConstNameFromValue("book_name_e",
                         verse.getEMdFValue("book").getInt()) +
                     "&amp;chapter=" + verse.getEMdFValue("chapter") +
                     "&amp;verse="   + verse.getEMdFValue("verse") +
@@ -201,7 +198,7 @@ public class SearchTest extends TestCase
 
     public void testSearchCode1() throws Exception
     {
-        Search search = new Search(m_Emdros, m_Transliterator);
+        Search search = new Search(getEmdros(), m_Transliterator);
         assertSearchResultsMatch("CMJM", search, 100);
     }
     
@@ -225,64 +222,8 @@ public class SearchTest extends TestCase
         WebResponse response = conv.getResponse("http://localhost:8080/lex/" +
             "search.jsp");
         HtmlIterator i = new HtmlIterator(response.getText());
-        i.assertDTD("html", "-//W3C//DTD XHTML 1.0 Strict//EN",
-            "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd");
-        i.assertStart("html");
-        i.assertStart("head");
-        i.assertSimple("title", "Lex: Search");
-        i.assertEmpty("link", new Attributes().add("rel", "stylesheet")
-            .add("href", "style.css"));
-        i.assertSimple("style", 
-            "div.topmenu a.search_jsp { " +
-            "background-color: white; " +
-            "text-decoration: none; }",
-            new Attributes().type("text/css"));
-        i.assertEnd("head");
-        i.assertStart("body");
-        
-        i.assertStart("h1");
-        i.assertText("Lex");
-        i.assertStart("span", 
-            new Attributes().style("font-size: medium"));
-        i.assertText("by");
-        i.assertSimple("a", "Chris Wilson", 
-            new Attributes().href("http://www.qwirx.com"));
-        i.assertEnd("span");
-        i.assertEnd("h1");
-        
-        i.assertStart("h2");
-        i.assertText("RLM for BH:");
-        i.assertSimple("a", "Nicolai Winther-Nielsen",
-            new Attributes().href("http://3bm.dk/index.php?p=3"));
-        i.assertEnd("h2");
 
-        i.assertStart("div", new Attributes().clazz("topmenu"));
-        i.assertSimple("a", "Home", 
-            new Attributes().clazz("index_jsp").href("index.jsp"));
-        i.assertSimple("a", "Databases", 
-            new Attributes().clazz("db_jsp").href(null));
-        i.assertSimple("a", "Published", 
-            new Attributes().clazz("published_jsp").href("published.jsp"));
-        i.assertSimple("a", "Browse", 
-            new Attributes().clazz("clause_jsp").href("clause.jsp"));
-        i.assertSimple("a", "Search", 
-            new Attributes().clazz("search_jsp").href("search.jsp"));
-        i.assertSimple("a", "Lexicon", 
-            new Attributes().clazz("lsedit_jsp").href("lsedit.jsp"));
-        i.assertSimple("a", "Parser", 
-            new Attributes().clazz("parse_jsp").href("parse.jsp"));
-        i.assertSimple("a", "Rules", 
-            new Attributes().clazz("rules_jsp").href("rules.jsp"));
-        /*
-        i.assertSimple("a", "Database Dump", 
-            new Attributes().clazz("dump_jsp").href("dump.jsp"));
-        i.assertSimple("a", "Wordnet", 
-            new Attributes().clazz("wordnet_jsp").href("wordnet.jsp"));
-        */
-        i.assertSimple("a", "Login", 
-            new Attributes().clazz("login_jsp").href("login.jsp?next=search.jsp"));
-        i.assertEmpty("div", new Attributes().clazz("clearer"));
-        i.assertEnd("div", new Attributes().clazz("topmenu"));
+        assertPageHeader(i);
         
         i.assertEmpty("script", new Attributes().type("text/javascript"));
         
@@ -314,7 +255,7 @@ public class SearchTest extends TestCase
             .add("onclick", "return enableLimitControls()"));
         i.assertText("Limit search to");
         
-        List books = m_Emdros.getEnumerationConstantNames("book_name_e");
+        List books = getEmdros().getEnumerationConstantNames("book_name_e");
         i.assertSelectFromList("book", "", books, false, 0);
         i.assertEnd("p");
         i.assertStart("p");
@@ -378,16 +319,7 @@ public class SearchTest extends TestCase
         
         i.assertEmpty("script", new Attributes().type("text/javascript"));
 
-        i.assertEmpty("hr");
-        i.assertStart("p");
-        i.assertText("&copy;");
-        i.assertSimple("a", "Lex Project", 
-            new Attributes().href("http://rrg.qwirx.com/trac/lex"));
-        i.assertText("2005-2009.");
-        i.assertEnd("p");
-        i.assertEnd("body");
-        i.assertEnd("html");
-        i.assertEndDocument();
+        assertPageFooter(i);
     }
     
     public static void main(String[] args)
