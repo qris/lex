@@ -8,7 +8,7 @@
 <%@ page import="com.qwirx.lex.morph.*" %>
 <%@ page import="com.qwirx.lex.translit.*" %>
 <%@ page import="jemdros.*" %>
-<%@ page import="org.aptivate.webutils.EditField" %>
+<%@ page import="org.aptivate.web.utils.EditField" %>
 
 <script type="text/javascript"><!--
 
