@@ -10,8 +10,8 @@ import jemdros.SheafConstIterator;
 import jemdros.Straw;
 import junit.framework.TestCase;
 
-import org.aptivate.webutils.HtmlIterator;
-import org.aptivate.webutils.HtmlIterator.Attributes;
+import org.aptivate.web.utils.HtmlIterator;
+import org.aptivate.web.utils.HtmlIterator.Attributes;
 
 import com.meterware.httpunit.WebConversation;
 import com.meterware.httpunit.WebResponse;
