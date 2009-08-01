@@ -112,13 +112,14 @@ public class Rule
                     continue;
                 
                 Edge partEdge = edge.parts()[p];
-                
-                String value = (String)partEdge.attributes().get(name);
-                
-                if (value == null) 
+                Map attributes = partEdge.attributes();
+                if (!attributes.containsKey(name))   
                 {
                     throw new MissingAttributeException(this);
                 }
+                
+                String value = (String)partEdge.attributes().get(name);
+                // Null means "unknown value", not "missing"
                 
                 return value;
             }
