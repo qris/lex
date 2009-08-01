@@ -43,7 +43,8 @@
 			%><a class="dump_jsp" href="dump.jsp">Database Dump</a><%
 		}
 	
-		%><a class="login_jsp" <%
+		%><a 
+		class="login_jsp" <%
 		
 		if (request.getRemoteUser() != null)
 		{
@@ -60,7 +61,8 @@
 			%>href="login.jsp?next=<%= URLEncoder.encode(ownUrl) %>">Login<%
 		}
 	
-	%></a><div class="clearer"></div>
+	%></a><div 
+	class="clearer"></div>
 </div>
 <%
 
