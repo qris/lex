@@ -1,32 +1,39 @@
 package com.qwirx.lex;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import jemdros.MatchedObject;
 import jemdros.Sheaf;
 import jemdros.SheafConstIterator;
 import jemdros.Straw;
 import jemdros.StrawConstIterator;
+import jemdros.Table;
+import jemdros.TableIterator;
+import jemdros.TableRow;
 
-import org.aptivate.webutils.HtmlIterator;
+import org.aptivate.web.utils.HtmlIterator;
 
+import com.meterware.httpunit.HttpUnitOptions;
+import com.meterware.httpunit.WebConversation;
+import com.meterware.httpunit.WebForm;
+import com.meterware.httpunit.WebResponse;
+import com.qwirx.db.Change;
 import com.qwirx.lex.controller.ClauseController;
 import com.qwirx.lex.controller.ClauseController.Cell;
+import com.qwirx.lex.emdros.EmdrosChange;
+import com.qwirx.lex.morph.HebrewMorphemeGenerator;
 import com.qwirx.lex.parser.MorphEdge;
 
 public class ClauseControllerTest extends LexTestBase
 {
     public ClauseControllerTest() throws Exception { }
     
-    private MatchedObject getWord(int monad)
-    throws Exception
+    private Map<String, Integer> m_Location = new HashMap<String, Integer>();
+
+    private MatchedObject getNestedObject(Sheaf sheaf)
     {
-        StringBuffer query = new StringBuffer();
-        query.append("SELECT ALL OBJECTS IN {" + monad + "} " +
-            "WHERE [word GET lexeme_wit, wivu_lexicon_id, " +
-            "phrase_dependent_part_of_speech, stem]");
-        Sheaf sheaf = getEmdros().getSheaf(query.toString());
-        
         SheafConstIterator sci = sheaf.const_iterator();
         
         if (sci.hasNext()) 
@@ -38,21 +45,113 @@ public class ClauseControllerTest extends LexTestBase
                 return swci.next();
             }
         }
-        
+
         return null;
+    }
+    
+    private MatchedObject getWord(int monad)
+    throws Exception
+    {
+        HebrewMorphemeGenerator hmg = new HebrewMorphemeGenerator();
+        String query = "SELECT ALL OBJECTS IN {" + monad + "} " +
+            "WHERE [word GET " + hmg.getRequiredFeaturesString(true) + "]";
+        Sheaf sheaf = getEmdros().getSheaf(query);
+        MatchedObject word = getNestedObject(sheaf);
+        
+        Table table = getEmdros().getTable("SELECT OBJECTS HAVING MONADS IN {" + 
+            monad + "} [ALL]");
+        for (TableIterator ti = table.iterator(); ti.hasNext();)
+        {
+            TableRow row = ti.next();
+            String type = row.getColumn(1);
+            Integer id_d = Integer.valueOf(row.getColumn(3));
+            m_Location.put(type, Integer.valueOf(id_d));
+        }
+        
+        return word;
+    }
+    
+    private void assertGlossCell(Cell cell, MatchedObject word)
+    throws Exception
+    {
+        HtmlIterator i = new HtmlIterator("<td>" + cell.html + "</td>");
+        i.assertStart("td");
+        i.assertSimple("p", "[Wivu] hover");
+        i.assertStart("form").assertAttribute("method", "post")
+            .assertAttribute("name", "wage_28")
+            .assertAttribute("class", "blue");
+        i.assertText("Or enter a replacement:");
+        i.assertFormHidden("wagw", "28");
+        i.assertFormTextField("wagv", 
+            word.getEMdFValue("wivu_alternate_gloss").getString());
+        i.assertFormSubmit("wags", "Save");
+        i.assertEnd("form");
+        i.assertEnd("td");
+        i.assertEndDocument();   
     }
 
     public void testWivuGlossCell() throws Exception
     {
         ClauseController controller = new ClauseController(getEmdros(),
             getSql(), 28740);
+
         MatchedObject word = getWord(27); // merahefet
+        Change ch = getEmdros().createChange(EmdrosChange.UPDATE, "word", 
+            new int[]{word.getID_D()});
+        ch.setString("wivu_alternate_gloss", "");
+        ch.execute();
+        
+        word = getWord(27);
         String gloss = controller.getWivuGloss(word);
         assertEquals("hover", gloss);
+
+        Cell cell = controller.getWivuLexiconCell(word, true);
+        assertGlossCell(cell, word);
         
-        Cell glossCell = controller.getWivuLexiconCell(word, true);
-        HtmlIterator i = new HtmlIterator(glossCell.html);
+        HttpUnitOptions.setExceptionsThrownOnScriptError(false);
+        WebConversation wc = new WebConversation();
+        WebResponse resp = wc.getResponse("http://localhost:8080/lex/clause.jsp");
+
+        wc.setExceptionsThrownOnErrorStatus(false);
+        resp = wc.getResponse("http://localhost:8080/lex/" +
+                "login.jsp?next=clause.jsp");
+        assertEquals(401, resp.getResponseCode());
         
+        wc.setExceptionsThrownOnErrorStatus(true);
+        wc.setAuthorization("test", "test");
+        resp = wc.getResponse("http://localhost:8080/lex/" +
+                "login.jsp?next=clause.jsp");
+        
+        resp = wc.getResponse(
+            "http://localhost:8080/lex/clause.jsp" +
+            "?book="    + m_Location.get("book") +
+            "&chapter=" + m_Location.get("chapter") +
+            "&verse="   + m_Location.get("verse") +
+            "&clause="  + m_Location.get("clause"));
+        WebForm glossForm = resp.getFormWithName("wage_28");
+        assertNotNull(glossForm);
+        
+        glossForm.setParameter("wagv", "Hello");
+        glossForm.submit();
+
+        word = getWord(27);
+        assertEquals("Hello", 
+            word.getEMdFValue("wivu_alternate_gloss").getString());
+
+        cell = controller.getWivuLexiconCell(word, true);
+        assertGlossCell(cell, word);
+        assertEquals("Hello", controller.getWivuGloss(word));
+        
+        HtmlIterator i = new HtmlIterator("<td>" + 
+            controller.getWivuLexiconCell(word, false).html + "</td>");
+        i.assertStart("td");
+        i.assertStart("p");
+        i.assertText("[Override]");
+        i.assertSimple("strong", "Hello");
+        i.assertEnd("p");
+        i.assertSimple("p", "[Wivu] hover");
+        i.assertEnd("td");
+        i.assertEndDocument();
     }
     
     // There should be NO space after certain morphemes, indicated

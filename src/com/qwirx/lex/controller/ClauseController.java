@@ -17,8 +17,7 @@ import jemdros.EMdFValue;
 import jemdros.MatchedObject;
 import jemdros.SheafConstIterator;
 
-import org.aptivate.webutils.EditField;
-import org.aptivate.webutils.EditField.SelectBox;
+import org.aptivate.web.utils.EditField;
 import org.crosswire.jsword.book.BookData;
 import org.crosswire.jsword.book.OSISUtil;
 
@@ -129,6 +128,14 @@ public class ClauseController extends ControllerBase
             Change ch = m_Emdros.createChange(EmdrosChange.UPDATE, "word",
                 new int[]{wivuWord});
             ch.setInt("wivu_lexicon_id", wivuIndex);
+            ch.execute();
+        }
+        
+        if (request.getParameter("wags") != null) // WIVU alternate gloss save
+        {
+            Change ch = emdros.createChange(EmdrosChange.UPDATE, "word", 
+                new int[]{Integer.parseInt(request.getParameter("wagw"))});
+            ch.setString("wivu_alternate_gloss", request.getParameter("wagv"));
             ch.execute();
         }
 
@@ -510,6 +517,12 @@ public class ClauseController extends ControllerBase
     public String getWivuGloss(MatchedObject word)
     throws Exception
     {
+        String gloss = word.getEMdFValue("wivu_alternate_gloss").getString();
+        if (!gloss.equals(""))
+        {
+            return gloss;
+        }
+        
         int wivuIndex = 0;
         EMdFValue wivuIndexE = word.getEMdFValue("wivu_lexicon_id");
 
@@ -552,7 +565,19 @@ public class ClauseController extends ControllerBase
             wivuIndex = wivuIndexE.getInt();
         }
         
-        Cell cell = new Cell("[Wivu] ");
+        Cell cell = new Cell("");
+        
+        if (!canWrite)
+        {
+            String override = word.getEMdFValue("wivu_alternate_gloss").getString();
+            if (!override.equals(""))
+            {
+                cell.html += "<p>[Override] <strong>" + override + "</strong>" +
+                    "</p>\n";
+            }
+        }
+        
+        cell.html += "<p>[Wivu] ";
         
         Entry [] entries = Lex.getWivuLexicon().getEntry(
             word.getEMdFValue("lexeme_wit").toString(),
@@ -561,18 +586,24 @@ public class ClauseController extends ControllerBase
         
         if (entries == null)
         {
-            cell.html += "not found";
+            cell.html += "not found</p>\n";
         }
         else if (entries.length == 1)
         {
-            cell.html += EditField.escapeEntities(entries[0].getGloss());
+            cell.html += EditField.escapeEntities(entries[0].getGloss()) + 
+                "</p>\n";
         }
         else if (!canWrite)
         {
             // just list all possible meanings
             if (wivuIndex < entries.length)
             {
-                cell.html += EditField.escapeEntities(entries[wivuIndex].getGloss());
+                cell.html += EditField.escapeEntities(entries[wivuIndex].getGloss()) +
+                    "</p>\n";
+            }
+            else
+            {
+                cell.html += "</p>\n";
             }
             
             boolean first = true;
@@ -583,7 +614,7 @@ public class ClauseController extends ControllerBase
                 {
                     if (first)
                     {
-                        cell.html += " (alternatives: ";
+                        cell.html += "<p>(alternatives: ";
                     }
                     else
                     {
@@ -597,32 +628,8 @@ public class ClauseController extends ControllerBase
             
             if (!first)
             {
-                cell.html += ")";
+                cell.html += ")</p>";
             }
-            
-            /*
-            cell.html += "<ul class=\"mini\">\n";
-            
-            for (int i = 0; i < entries.length; i++)
-            {
-                cell.html += "<li>";
-
-                if (i == wivuIndex)
-                {
-                    cell.html += "<strong>";
-                }
-                
-                cell.html += EditField.escapeEntities(entries[i].getGloss());
-
-                if (i == wivuIndex)
-                {
-                    cell.html += "</strong>";
-                }
-
-                cell.html += "</li>\n";
-            }
-            cell.html += "</ul>";
-            */            
         }
         else
         {
@@ -631,15 +638,31 @@ public class ClauseController extends ControllerBase
                 meanings.add(new String[]{Integer.toString(i),
                     entries[i].getGloss()});
             }
-            
             EditField form = new EditField(m_Request);
-            cell.html += "<form method=\"post\">\n";
-            cell.html += form.hidden(WIVU_WORD_PARAM, word.getID_D());
-            SelectBox sel = form.select(WIVU_INDEX_PARAM, meanings);
-            sel.setDefaultValue(wivuIndex);
-            cell.html += sel.toString();
-            cell.html += form.submit(WIVU_SAVE_PARAM, "Save");
-            cell.html += "</form>";
+            cell.html += "<form method=\"post\" class=\"blue\">\n" +
+                "Choose a different meaning:\n" +
+                form.hidden(WIVU_WORD_PARAM).setDefaultValue("" + 
+                    word.getID_D()) +
+                form.select(WIVU_INDEX_PARAM, meanings)
+                    .setDefaultValue("" + wivuIndex) +
+                form.submit(WIVU_SAVE_PARAM, "Save") +
+                "</form>";
+        }
+        
+        if (canWrite)
+        {
+            /* don't copy value from request, as field name is duplicated */
+            EditField form = new EditField(null);
+            cell.html +=
+                "<form name=\"wage_" + word.getID_D() + "\" method=\"post\" " +
+                        "class=\"blue\">\n" +
+                "Or enter a replacement:\n" +
+                form.hidden("wagw", "" + word.getID_D()) + "\n" +
+                form.text("wagv").setDefaultValue(
+                    word.getEMdFValue("wivu_alternate_gloss").getString()) + 
+                "\n" +
+                form.submit("wags", "Save") + "\n" +
+                "</form>\n";
         }
         
         return cell;
@@ -1005,7 +1028,8 @@ public class ClauseController extends ControllerBase
                             }
                         }
 
-                        html.append("<td colspan=\"" + topCell.columns + "\"");
+                        html.append("<td colspan=\"" + topCell.columns + "\" " +
+                                "valign=\"top\"");
                         if (thisCell.cssClass != null)
                         {
                             html.append(" class=\"" + thisCell.cssClass + "\"");
