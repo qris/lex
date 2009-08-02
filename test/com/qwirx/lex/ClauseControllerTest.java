@@ -1,17 +1,20 @@
 package com.qwirx.lex;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import jemdros.FlatSheaf;
+import jemdros.FlatSheafConstIterator;
+import jemdros.FlatStraw;
+import jemdros.FlatStrawConstIterator;
 import jemdros.MatchedObject;
+import jemdros.SetOfMonads;
 import jemdros.Sheaf;
 import jemdros.SheafConstIterator;
 import jemdros.Straw;
 import jemdros.StrawConstIterator;
-import jemdros.Table;
-import jemdros.TableIterator;
-import jemdros.TableRow;
 
 import org.aptivate.web.utils.HtmlIterator;
 
@@ -20,10 +23,10 @@ import com.meterware.httpunit.WebConversation;
 import com.meterware.httpunit.WebForm;
 import com.meterware.httpunit.WebResponse;
 import com.qwirx.db.Change;
+import com.qwirx.db.sql.SqlChange;
 import com.qwirx.lex.controller.ClauseController;
 import com.qwirx.lex.controller.ClauseController.Cell;
 import com.qwirx.lex.emdros.EmdrosChange;
-import com.qwirx.lex.morph.HebrewMorphemeGenerator;
 import com.qwirx.lex.parser.MorphEdge;
 
 public class ClauseControllerTest extends LexTestBase
@@ -49,6 +52,25 @@ public class ClauseControllerTest extends LexTestBase
         i.assertEndDocument();   
     }
 
+    private WebConversation assertLogIn() throws Exception
+    {
+        HttpUnitOptions.setExceptionsThrownOnScriptError(false);
+        WebConversation wc = new WebConversation();
+        WebResponse resp = wc.getResponse("http://localhost:8080/lex/clause.jsp");
+
+        wc.setExceptionsThrownOnErrorStatus(false);
+        resp = wc.getResponse("http://localhost:8080/lex/" +
+                "login.jsp?next=clause.jsp");
+        assertEquals(401, resp.getResponseCode());
+        
+        wc.setExceptionsThrownOnErrorStatus(true);
+        wc.setAuthorization("test", "test");
+        resp = wc.getResponse("http://localhost:8080/lex/" +
+                "login.jsp?next=clause.jsp");
+
+        return wc;
+    }
+    
     public void testWivuGlossCell() throws Exception
     {
         ClauseController controller = new ClauseController(getEmdros(),
@@ -67,21 +89,8 @@ public class ClauseControllerTest extends LexTestBase
         Cell cell = controller.getWivuLexiconCell(word, true);
         assertGlossCell(cell, word);
         
-        HttpUnitOptions.setExceptionsThrownOnScriptError(false);
-        WebConversation wc = new WebConversation();
-        WebResponse resp = wc.getResponse("http://localhost:8080/lex/clause.jsp");
-
-        wc.setExceptionsThrownOnErrorStatus(false);
-        resp = wc.getResponse("http://localhost:8080/lex/" +
-                "login.jsp?next=clause.jsp");
-        assertEquals(401, resp.getResponseCode());
-        
-        wc.setExceptionsThrownOnErrorStatus(true);
-        wc.setAuthorization("test", "test");
-        resp = wc.getResponse("http://localhost:8080/lex/" +
-                "login.jsp?next=clause.jsp");
-        
-        resp = wc.getResponse(
+        WebConversation wc = assertLogIn();        
+        WebResponse resp = wc.getResponse(
             "http://localhost:8080/lex/clause.jsp" +
             "?book="    + m_Location.get("book") +
             "&chapter=" + m_Location.get("chapter") +
@@ -188,6 +197,152 @@ public class ClauseControllerTest extends LexTestBase
         assertEquals("N/NUC",    morphEdges.get(7).symbol());
         assertEquals("N/GNS",    morphEdges.get(8).symbol());
         assertEquals("N/POS",    morphEdges.get(9).symbol());
+    }
+    
+    private void assertPublishedPage(WebResponse resp, int expectedClauseId,
+        boolean expectFound) throws Exception
+    {
+        HtmlIterator i = new HtmlIterator(resp.getText());
+        assertPageHeader(i, "Published Data", "published");
+        i.assertSimple("h3", "Published Clauses");
+        
+        Sheaf sheaf = getEmdros().getSheaf("SELECT ALL OBJECTS IN " +
+            "{" + getEmdros().getMinM() + "-" + getEmdros().getMaxM() + "} " +
+            "WHERE [clause published = 1 GET predicate, logical_structure]");
+        
+        List<MatchedObject> results = new ArrayList<MatchedObject>();
+        Map<Integer, String> clauseToVerseMap = new HashMap<Integer, String>();
+        
+        boolean expectedClauseFound = false;
+        
+        for (SheafConstIterator sci = sheaf.const_iterator(); sci.hasNext();)
+        {
+            Straw straw = sci.next();
+            for (StrawConstIterator swci = straw.const_iterator();
+                swci.hasNext();)
+            {
+                MatchedObject clause = swci.next();
+                
+                if (clause.getID_D() == expectedClauseId)
+                {
+                    expectedClauseFound = true;
+                }
+                
+                results.add(clause);
+                
+                FlatSheaf fs = getEmdros().getFlatSheaf("GET OBJECTS " +
+                        "HAVING MONADS IN " + clause.getMonads().toString() +
+                        " [verse GET verse_label]");
+                for (FlatSheafConstIterator fsci = fs.const_iterator(); 
+                    fsci.hasNext();)
+                {
+                    FlatStraw fsw = fsci.next();
+                    for (FlatStrawConstIterator fswci = fsw.const_iterator();
+                        fswci.hasNext();)
+                    {
+                        MatchedObject verse = fswci.next();
+                        
+                        clauseToVerseMap.put(clause.getID_D(),
+                            verse.getEMdFValue("verse_label").getString()
+                            .replaceFirst("^ ", ""));
+                    }
+                }
+            }
+        }
+        
+        assertEquals(expectFound, expectedClauseFound);
+        
+        i.assertSimple("h4", "Displaying first " + results.size() + " of " +
+            results.size() + " results.");
+        
+        i.assertStart("table").assertAttribute("class", "search_results");
+        i.assertStart("tr");
+        i.assertSimple("th", "Verb");
+        i.assertSimple("th", "Logical Structure");
+        i.assertSimple("th", "Reference");
+        i.assertEnd("tr");
+        
+        for (MatchedObject clause : results)
+        {
+            i.assertStart("tr");
+            i.assertSimple("td", clause.getEMdFValue("predicate").toString());
+            i.assertSimple("td", clause.getEMdFValue("logical_structure").toString());
+            i.assertStart("td");
+            i.assertSimple("a", clauseToVerseMap.get(clause.getID_D()));
+            i.assertEnd("td");
+            i.assertEnd("tr");
+        }
+        
+        i.assertEnd("table");
+        
+        assertPageFooter(i);
+    }
+    
+    public void testPublishFeature() throws Exception
+    {
+        final int clauseId = 121803; // EXO 01,01(a)
+        MatchedObject clause = getClause(clauseId, new String[]{"published"});
+
+        Change ch = getSql().createChange(SqlChange.DELETE,
+            "user_text_access", 
+            "Monad_First = " + clause.getMonads().first() + " AND " +
+            "Monad_Last = " + clause.getMonads().last() + " AND " + 
+            "User_Name = \"test\"");
+        ch.execute();
+
+        ch = getSql().createChange(SqlChange.INSERT,
+            "user_text_access", null);
+        ch.setInt("Monad_First", clause.getMonads().first());
+        ch.setInt("Monad_Last",  clause.getMonads().last());
+        ch.setString("User_Name",   "test");
+        ch.setInt("Write_Access", 1);
+        ch.execute();
+
+        ch = getSql().createChange(SqlChange.DELETE,
+            "user_text_access", 
+            "Monad_First = " + clause.getMonads().first() + " AND " +
+            "Monad_Last = " + clause.getMonads().last() + " AND " + 
+            "User_Name = \"anonymous\"");
+        ch.execute();
+
+        if (clause.getFeatureAsLong(0) != 0)
+        {
+            ch = getEmdros().createChange(EmdrosChange.UPDATE, "clause", 
+                new int[]{clauseId});
+            ch.setInt("published", 0);
+            ch.execute();
+        }
+        
+        SetOfMonads visible = getUserEmdrosDatabase("anonymous").getVisibleMonads();
+        SetOfMonads overlap = SetOfMonads.intersect(visible,
+            clause.getMonads());
+        assertTrue(overlap.toString(), overlap.isEmpty());
+        
+        WebConversation anon = new WebConversation();
+        WebResponse response = anon.getResponse("http://localhost:8080/lex/" +
+                "published.jsp");
+        assertPublishedPage(response, clauseId, false);
+
+        WebConversation loggedin = assertLogIn();        
+        loggedin.getResponse(
+            "http://localhost:8080/lex/clause.jsp" +
+            "?book="    + m_Location.get("book") +
+            "&chapter=" + m_Location.get("chapter") +
+            "&verse="   + m_Location.get("verse") +
+            "&clause="  + m_Location.get("clause") +
+            "&publish=Publish");
+        
+        clause = getClause(clauseId, new String[]{"published"});
+        assertEquals(1, clause.getFeatureAsLong(0));
+        
+        visible = getUserEmdrosDatabase("anonymous").getVisibleMonads();
+        overlap = SetOfMonads.intersect(visible, clause.getMonads());
+        assertFalse(overlap.toString(), overlap.isEmpty());
+        assertEquals(clause.getMonads().toString(), overlap.toString());
+        
+        response = anon.getResponse("http://localhost:8080/lex/" +
+            "published.jsp");
+        assertPublishedPage(response, clauseId, true);
     }
     
     public static void main(String[] args)

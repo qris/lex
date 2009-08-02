@@ -223,7 +223,7 @@ public class SearchTest extends LexTestBase
             "search.jsp");
         HtmlIterator i = new HtmlIterator(response.getText());
 
-        assertPageHeader(i);
+        assertPageHeader(i, "Search", "search");
         
         i.assertEmpty("script", new Attributes().type("text/javascript"));
         

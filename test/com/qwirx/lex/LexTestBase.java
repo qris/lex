@@ -138,17 +138,18 @@ public class LexTestBase extends TestCase
         return clause;
     }
     
-    protected void assertPageHeader(HtmlIterator i)
+    protected void assertPageHeader(HtmlIterator i, String pageTitle,
+        String pageName)
     {
         i.assertDTD("html", "-//W3C//DTD XHTML 1.0 Strict//EN",
             "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd");
         i.assertStart("html");
         i.assertStart("head");
-        i.assertSimple("title", "Lex: Search");
+        i.assertSimple("title", "Lex: " + pageTitle);
         i.assertEmpty("link", new Attributes().add("rel", "stylesheet")
             .add("href", "style.css"));
         i.assertSimple("style", 
-            "div.topmenu a.search_jsp { " +
+            "div.topmenu a." + pageName + "_jsp { " +
             "background-color: white; " +
             "text-decoration: none; }",
             new Attributes().type("text/css"));
@@ -195,7 +196,8 @@ public class LexTestBase extends TestCase
             new Attributes().clazz("wordnet_jsp").href("wordnet.jsp"));
         */
         i.assertSimple("a", "Login", 
-            new Attributes().clazz("login_jsp").href("login.jsp?next=search.jsp"));
+            new Attributes().clazz("login_jsp").href("login.jsp?next=" +
+                    pageName + ".jsp"));
         i.assertEmpty("div", new Attributes().clazz("clearer"));
         i.assertEnd("div", new Attributes().clazz("topmenu"));
     }
