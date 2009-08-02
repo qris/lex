@@ -4,8 +4,12 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
+import org.apache.log4j.Logger;
+
 public class Chart
 {
+    private Logger m_LOG = Logger.getLogger(getClass());
+    
     private List m_Edges = new ArrayList();
     
     public List getEdges()
@@ -65,7 +69,7 @@ public class Chart
             {
                 if (verbose)
                 {
-                    System.out.println("Rejected non-goal edge: " + edge);
+                    m_LOG.debug("Rejected non-goal edge: " + edge);
                 }   
                 
                 continue;
@@ -81,7 +85,7 @@ public class Chart
                     hasHoles = true;
                     if (verbose)
                     {
-                        System.out.println("Rejected edge: " + edge +
+                        m_LOG.debug("Rejected edge: " + edge +
                             ": does not contain " + required);
                     }
                     break;
@@ -97,7 +101,7 @@ public class Chart
 
             if (verbose)
             {
-                System.out.println("Accepted edge: " + edge);
+                m_LOG.info("Accepted edge: " + edge);
             }   
         }
         
