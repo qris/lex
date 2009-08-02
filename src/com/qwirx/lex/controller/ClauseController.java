@@ -257,7 +257,14 @@ public class ClauseController extends ControllerBase
                 ch = m_Emdros.createChange(EmdrosChange.UPDATE, "clause", 
                     new int[]{m_Clause.getID_D()});
                 ch.setInt("published", 1);
-                ch.setString("predicate", getPredicateText());
+                
+                String predicate = getPredicateText();
+                if (predicate == null)
+                {
+                    predicate = "";
+                }
+                
+                ch.setString("predicate", predicate);
                 ch.execute();
             }
             else if (request.getParameter("unpublish") != null)
