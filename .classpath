@@ -9,14 +9,14 @@
 	<classpathentry path="jsp/WEB-INF/lib/log4j-1.2.8.jar" kind="lib"/>
 	<classpathentry path="jsp/WEB-INF/lib/jdom-1.0.jar" kind="lib"/>
 	<classpathentry path="/jemdros" combineaccessrules="false" kind="src"/>
-	<classpathentry path="/haobackend" combineaccessrules="false" kind="src"/>
 	<classpathentry path="TOMCAT_HOME/common/lib/servlet-api.jar" kind="var"/>
 	<classpathentry path="TOMCAT_HOME/common/lib/jasper-runtime.jar" kind="var"/>
 	<classpathentry path="TOMCAT_HOME/common/lib/jsp-api.jar" kind="var"/>
 	<classpathentry path="/jsword-common" combineaccessrules="false" kind="src"/>
 	<classpathentry path="/jsword-jsword" combineaccessrules="false" kind="src"/>
-	<classpathentry path="/httpunit-1.6.2" combineaccessrules="false" kind="src"/>
-	<classpathentry sourcepath="/haobackend" path="jsp/WEB-INF/lib/org.aptivate.haobackend.jar" kind="lib"/>
 	<classpathentry path="jsp/WEB-INF/lib/jwnl-1.4rc2.jar" kind="lib"/>
+	<classpathentry path="/httpunit-svn" combineaccessrules="false" kind="src"/>
+	<classpathentry path="jsp/WEB-INF/lib/org.aptivate.database.jar" kind="lib"/>
+	<classpathentry path="jsp/WEB-INF/lib/org.aptivate.webutils.jar" kind="lib"/>
 	<classpathentry path="jsp/WEB-INF/classes" kind="output"/>
 </classpath>
