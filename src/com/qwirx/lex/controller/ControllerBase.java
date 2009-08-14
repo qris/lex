@@ -8,6 +8,7 @@ import java.util.Map;
 import javax.servlet.http.HttpServletRequest;
 
 import jemdros.MatchedObject;
+import jemdros.SetOfMonads;
 import jemdros.Sheaf;
 import jemdros.SheafConstIterator;
 import jemdros.Straw;
@@ -54,7 +55,10 @@ public abstract class ControllerBase
     {
         this(request, emdros, sql);
         m_Navigator = navigator;
-        m_Transliterator = navigator.getTransliterator();
+        if (navigator != null)
+        {
+            m_Transliterator = navigator.getTransliterator();
+        }
     }
     
     private ControllerBase(HttpServletRequest request, EmdrosDatabase emdros,
@@ -90,21 +94,19 @@ public abstract class ControllerBase
     protected void loadClause()
     throws Exception
     {
-        loadClause(m_Navigator.getMinM(), m_Navigator.getMaxM(),
-            m_Navigator.getClauseId());
+        loadClause(m_Navigator.getFocusMonads(), m_Navigator.getClauseId());
     }
     
     /**
      * For unit tests only!
      * @throws Exception
      */
-    protected void loadClause(int minM, int maxM, int clauseId)
+    protected void loadClause(SetOfMonads focusMonads, int clauseId)
     throws Exception
     {
         Sheaf sheaf = m_Emdros.getSheaf
         (
-            "SELECT ALL OBJECTS IN " +
-            "{" + minM + "-" + maxM + "} " + 
+            "SELECT ALL OBJECTS IN " + focusMonads.toString() +
             "WHERE [clause self = " + clauseId +
             "       GET logical_struct_id, logical_structure "+
             "        [phrase GET phrase_type, phrase_function, argument_name, "+

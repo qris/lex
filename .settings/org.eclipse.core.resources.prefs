@@ -1,19 +1,21 @@
-#Sat Jan 05 16:55:05 CET 2008
+#Thu Aug 13 12:15:54 BST 2009
 eclipse.preferences.version=1
 encoding//jsp/attributes.jsp=UTF-8
-encoding//jsp/auth.jsp=UTF-8
 encoding//jsp/clause.jsp=UTF-8
-encoding//jsp/cleanup.jsp=UTF-8
 encoding//jsp/dump.jsp=UTF-8
 encoding//jsp/error.jsp=UTF-8
 encoding//jsp/export.jsp=UTF-8
-encoding//jsp/footer.jsp=UTF-8
 encoding//jsp/gen-export.jsp=UTF-8
-encoding//jsp/header2.jsp=UTF-8
+encoding//jsp/include/auth.jsp=UTF-8
+encoding//jsp/include/cleanup.jsp=UTF-8
+encoding//jsp/include/footer.jsp=UTF-8
+encoding//jsp/include/header.jsp=UTF-8
+encoding//jsp/include/navclause_body.jsp=UTF-8
+encoding//jsp/include/navclause_head.jsp=UTF-8
+encoding//jsp/include/setup.jsp=UTF-8
 encoding//jsp/index.jsp=UTF-8
+encoding//jsp/lexicon.jsp=UTF-8
 encoding//jsp/login.jsp=UTF-8
-encoding//jsp/lsedit.jsp=UTF-8
-encoding//jsp/navclause.jsp=UTF-8
 encoding//jsp/parse.jsp=UTF-8
 encoding//jsp/published.jsp=UTF-8
 encoding//jsp/rules.jsp=UTF-8

@@ -11,6 +11,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Hashtable;
 import java.util.List;
@@ -337,11 +338,19 @@ public class EmdrosDatabase implements Database
     }
     
     public SetOfMonads intersect(SetOfMonads set, int min_m, int max_m)
-    throws EmdrosException
+    throws DatabaseException
     {
         System.out.println(set.toString());
         System.out.println(min_m + " : " + max_m);
-    	return SetOfMonads.intersect(set, new SetOfMonads(min_m, max_m));
+        try
+        {
+            return SetOfMonads.intersect(set, new SetOfMonads(min_m, max_m));
+        }
+        catch (EmdrosException e)
+        {
+            throw new DatabaseException("Failed to calculate " +
+                    "monad intersection", e);
+        }
     }
     
 	public Change createChange(ChangeType changeType, String objectType, 
@@ -356,9 +365,22 @@ public class EmdrosDatabase implements Database
             {
                 if (id_ds != null && !canWriteTo(objectType, id_ds))
                 {
+                    StringBuffer objectIdsString = new StringBuffer();
+                    
+                    int [] objectIdsArray = (int [])objectIds;
+                    
+                    for (int id : objectIdsArray)
+                    {
+                        if (objectIdsString.length() > 0)
+                        {
+                            objectIdsString.append(", ");
+                        }
+                        objectIdsString.append(id);
+                    }
+                    
                     throw new DatabaseException("You do not have permission "+
                         "to modify this object", changeType + " " + objectType +
-                        " " + objectIds);
+                        " [" + objectIdsString.toString() + "]");
                 }
                 // must check access to monads later
             }

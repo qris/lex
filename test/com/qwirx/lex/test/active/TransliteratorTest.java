@@ -1,4 +1,4 @@
-package com.qwirx.lex;
+package com.qwirx.lex.test.active;
 
 import java.sql.PreparedStatement;
 import java.util.ArrayList;
@@ -18,6 +18,8 @@ import jemdros.StrawConstIterator;
 import junit.framework.TestCase;
 
 import com.qwirx.db.sql.SqlDatabase;
+import com.qwirx.lex.ImmutableMap;
+import com.qwirx.lex.Lex;
 import com.qwirx.lex.controller.ClauseController;
 import com.qwirx.lex.emdros.EmdrosDatabase;
 import com.qwirx.lex.emdros.EmdrosDatabase.ObjectWithMonadsIn;
@@ -925,7 +927,7 @@ public class TransliteratorTest extends TestCase
         int wordId = words.get(0).getId();
 
         ClauseController controller = new ClauseController(m_Emdros, m_sql,
-            clauses.get(0).getId());
+            m_Emdros.getVisibleMonads(), clauses.get(0).getId());
         MatchedObject clause = controller.getClause();
         assertEquals(clauses.get(0).getId(), clause.getID_D());
         MatchedObject word = null;
@@ -990,7 +992,7 @@ public class TransliteratorTest extends TestCase
         assertEquals(1, clauses.size());
 
         ClauseController controller = new ClauseController(m_Emdros, m_sql,
-            clauses.get(0).getId());
+            m_Emdros.getVisibleMonads(), clauses.get(0).getId());
         MatchedObject clause = controller.getClause();
         assertEquals(clauses.get(0).getId(), clause.getID_D());
         
@@ -1019,7 +1021,7 @@ public class TransliteratorTest extends TestCase
         assertEquals(1, clauses.size());
         
         ClauseController controller = new ClauseController(m_Emdros, m_sql,
-            clauses.get(0).getId());
+            m_Emdros.getVisibleMonads(), clauses.get(0).getId());
         
         for (int j = 0; j < 1000; j++)
         {

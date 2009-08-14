@@ -14,11 +14,11 @@ import java.util.regex.PatternSyntaxException;
 
 import jemdros.EmdrosException;
 import jemdros.MatchedObject;
-import jemdros.StringListConstIterator;
 import jemdros.StringVector;
 
 import org.apache.log4j.Logger;
 
+import com.qwirx.db.DatabaseException;
 import com.qwirx.db.sql.DbColumn;
 import com.qwirx.db.sql.DbTable;
 import com.qwirx.db.sql.SqlDatabase;
@@ -214,7 +214,7 @@ public class DatabaseTransliterator
      */
     public String transliterate(List<Morpheme> morphemes, int index,
         MatchedObject word)
-    throws EmdrosException
+    throws DatabaseException
     {
         if (! word.getObjectTypeName().equals("word"))
         {
@@ -227,7 +227,18 @@ public class DatabaseTransliterator
         for (int i = 0; i < features.size(); i++)
         {
             String feature = features.get(i);
-            String value = word.getFeatureAsString(i);
+            String value;
+            
+            try
+            {
+                value = word.getFeatureAsString(i);
+            }
+            catch (EmdrosException e)
+            {
+                throw new DatabaseException("Failed to get value for " +
+                        "feature '" + feature + "'", e);
+            }
+            
             attributes.put("word_" + feature, value);
         }
         

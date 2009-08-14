@@ -1,8 +1,9 @@
-package com.qwirx.lex;
+package com.qwirx.lex.test.active;
 
 import jemdros.SetOfMonads;
 
 import com.qwirx.lex.controller.Navigator;
+import com.qwirx.lex.test.base.LexTestBase;
 import com.qwirx.lex.translit.DatabaseTransliterator;
 
 public class NavigatorTest extends LexTestBase

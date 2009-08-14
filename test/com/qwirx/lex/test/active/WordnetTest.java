@@ -1,4 +1,4 @@
-package com.qwirx.lex;
+package com.qwirx.lex.test.active;
 
 import junit.framework.TestCase;
 import net.didion.jwnl.data.POS;

@@ -1,4 +1,4 @@
-package com.qwirx.lex;
+package com.qwirx.lex.test.active;
 
 import com.qwirx.lex.hebrew.WivuLexicon;
 import com.qwirx.lex.hebrew.WivuLexicon.Entry;

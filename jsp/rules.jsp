@@ -1,5 +1,8 @@
+<%@ include file="include/setup.jsp" %>
+<%@ include file="include/auth.jsp" %>
+
 <% String pageTitle = "Parser Rules"; %>
-<%@ include file="header2.jsp" %>
+<%@ include file="include/header.jsp" %>
 
 <%@ page import="java.util.*" %>
 <%@ page import="java.sql.ResultSet" %>
@@ -18,8 +21,6 @@
 	
 //-->
 </script>
-
-<%@ include file="auth.jsp" %>
 
 <%
 
@@ -128,4 +129,4 @@
     }	
 %>
 
-<%@ include file="footer.jsp" %>
+<%@ include file="include/footer.jsp" %>

@@ -1,5 +1,8 @@
+<%@ include file="include/setup.jsp" %>
+<%@ include file="include/auth.jsp" %>
+
 <% String pageTitle = "Parser Testing"; %>
-<%@ include file="header2.jsp" %>
+<%@ include file="include/header.jsp" %>
 
 <%@ page import="java.util.*" %>
 <%@ page import="jemdros.*" %>
@@ -9,8 +12,8 @@
 <%@ page import="com.qwirx.lex.parser.*" %>
 <%@ page import="com.qwirx.lex.wordnet.*" %>
 
-<%@ include file="auth.jsp" %>
-<%@ include file="navclause.jsp" %>
+<%@ include file="include/navclause_head.jsp" %>
+<%@ include file="include/navclause_body.jsp" %>
 
 <script language="javascript" src="js/parsetree.js"></script>
 	
@@ -417,4 +420,4 @@
 	
 %>
 
-<%@ include file="footer.jsp" %>
+<%@ include file="include/footer.jsp" %>

@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Hashtable;
 import java.util.Iterator;
@@ -50,7 +51,7 @@ public class Lexeme implements Comparable
         this.m_sqldb = sqldb;
     }
     
-    public int    id, parentId, numSyntacticArgs;
+    private int m_LexiconId, parentId, m_NumSyntacticArgs;
     public String label, desc, surface, m_Gloss;
     public Lexeme parent;
     public List   children  = new Vector();
@@ -218,7 +219,7 @@ public class Lexeme implements Comparable
     
     public boolean equals(Lexeme that)
     {
-        if (this.id != that.id) return false;
+        if (this.m_LexiconId != that.m_LexiconId) return false;
         if (!compareMaybeNull(this.getLogicalStructure(), 
             that.getLogicalStructure()))
             return false;
@@ -257,7 +258,7 @@ public class Lexeme implements Comparable
     
     public int getID()
     {
-        return id;
+        return m_LexiconId;
     }
 
     private static Lexeme load(SqlDatabase sqldb, ResultSet rs) 
@@ -267,13 +268,13 @@ public class Lexeme implements Comparable
         {
             Lexeme l = new Lexeme(sqldb);
             
-            l.id       = rs.getInt("ID");
+            l.m_LexiconId       = rs.getInt("ID");
             l.surface  = rs.getString("Lexeme");
             l.m_Gloss  = rs.getString("Gloss");
             l.label    = rs.getString("Domain_Label");
             l.desc     = rs.getString("Domain_Desc");
             l.parentId = rs.getInt("Domain_Parent_ID");
-            l.numSyntacticArgs = rs.getInt("Syntactic_Args");
+            l.m_NumSyntacticArgs = rs.getInt("Syntactic_Args");
     
             l.setCaused         (rs.getInt("Caused")           == 1);
             l.setPunctual       (rs.getInt("Punctual")         == 1);
@@ -343,13 +344,18 @@ public class Lexeme implements Comparable
     throws DatabaseException, SQLException
     {
         Lexeme result = null;
-        
+
+        if (predicate == null)
+        {
+            predicate = "";
+        }
+
         try 
         {
             PreparedStatement stmt = sqldb.prepareSelect
                 ("SELECT " + getColumnList() + " " +
                  "FROM lexicon_entries " +
-                 "WHERE Lexeme = ?");
+                 "WHERE Lexeme = ? LIMIT 1");
             stmt.setString(1, predicate);
             ResultSet rs = sqldb.select();
             
@@ -366,6 +372,38 @@ public class Lexeme implements Comparable
         }
         
         return result;
+    }
+
+    public static Lexeme[] loadAll(SqlDatabase sqldb, String predicate)
+    throws DatabaseException, SQLException
+    {
+        List<Lexeme> results = new ArrayList<Lexeme>();
+        
+        if (predicate == null)
+        {
+            predicate = "";
+        }
+        
+        try 
+        {
+            PreparedStatement stmt = sqldb.prepareSelect
+                ("SELECT " + getColumnList() + " " +
+                 "FROM lexicon_entries " +
+                 "WHERE Lexeme = ?");
+            stmt.setString(1, predicate);
+            ResultSet rs = sqldb.select();
+
+            while (rs.next())
+            {
+                results.add(load(sqldb, rs));
+            }
+        } 
+        finally 
+        {
+            sqldb.finish();
+        }
+        
+        return results.toArray(new Lexeme[results.size()]);
     }
 
     private MatchedObject m_WordObject = null;
@@ -432,13 +470,13 @@ public class Lexeme implements Comparable
             {
                 Lexeme l = load(sqldb, rs); 
                 
-                if (l.id == 0) 
+                if (l.m_LexiconId == 0) 
                 {
                     System.err.println("Bad ID 0 for "+l.desc);
                     continue;
                 }
     
-                m.put(l.id + "", l);
+                m.put(l.m_LexiconId + "", l);
             }
         } 
         finally 
@@ -473,7 +511,7 @@ public class Lexeme implements Comparable
     public void save() throws DatabaseException
     {
         Change ch;
-        if (id == 0)
+        if (m_LexiconId == 0)
         {
             ch = m_sqldb.createChange(SqlChange.INSERT, "lexicon_entries", 
                 null);
@@ -482,7 +520,7 @@ public class Lexeme implements Comparable
         else
         {
             ch = m_sqldb.createChange(SqlChange.UPDATE, "lexicon_entries", 
-                "ID = " + id);
+                "ID = " + m_LexiconId);
         }
 
         ch.setString("Gloss",      m_Gloss);
@@ -530,21 +568,21 @@ public class Lexeme implements Comparable
         */
         
         ch.execute();
-        if (id == 0)
+        if (m_LexiconId == 0)
         {
-            id = ((SqlChange)ch).getInsertedRowId();
+            m_LexiconId = ((SqlChange)ch).getInsertedRowId();
         }
     }
 
     public void delete() throws DatabaseException
     {
-        if (id == 0)
+        if (m_LexiconId == 0)
         {
             throw new AssertionError("Cannot delete a Lexeme without an ID");
         }
         
         Change ch = m_sqldb.createChange(SqlChange.DELETE, "lexicon_entries", 
-            "ID = " + id);
+            "ID = " + m_LexiconId);
         ch.execute();
     }
     
@@ -605,7 +643,7 @@ public class Lexeme implements Comparable
 
         protected void visit(Lexeme e, String parentPath) throws IOException
         {
-            if (e.id == m_lsIdToFind)
+            if (e.m_LexiconId == m_lsIdToFind)
             {
                 m_found = e;
             }
@@ -630,7 +668,7 @@ public class Lexeme implements Comparable
                 ("SELECT ID,Name,Value "+
                  "FROM   lexicon_variables "+
                  "WHERE  Lexeme_ID = ?");
-            stmt.setInt(1, id);
+            stmt.setInt(1, m_LexiconId);
             ResultSet rs = sql.select();
             
             while (rs.next()) 
@@ -638,7 +676,7 @@ public class Lexeme implements Comparable
                 Variable v = new Variable(
                     rs.getString("Name"), 
                     rs.getString("Value"));
-                v.lexemeId = id;
+                v.lexemeId = m_LexiconId;
                 v.id = rs.getInt   ("ID");
                 
                 if (vars.get(v.name) == null) 
@@ -697,5 +735,10 @@ public class Lexeme implements Comparable
         }
 
         return logic;
+    }
+    
+    public int getNumSyntacticArgs()
+    {
+        return m_NumSyntacticArgs;
     }
 }

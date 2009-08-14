@@ -31,6 +31,7 @@ import com.qwirx.lex.hebrew.WivuLexicon;
 import com.qwirx.lex.lexicon.Lexicon;
 import com.qwirx.lex.ontology.OntologyDb;
 import com.qwirx.lex.parser.Parser;
+import com.qwirx.lex.test.unfinished.LexTest;
 import com.qwirx.lex.translit.DatabaseTransliterator;
 
 /**

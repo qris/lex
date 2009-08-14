@@ -1,5 +1,7 @@
+<%@ include file="include/setup.jsp" %>
+
 <% String pageTitle = "Home Page"; %>
-<%@ include file="header2.jsp" %>
+<%@ include file="include/header.jsp" %>
 
 <p>You should really start at the <a href="clause.jsp">text browser</a>.</p>
 
@@ -11,4 +13,4 @@ best rendering:</p>
 	<li><a href="http://scripts.sil.org/cms/scripts/page.php?site_id=nrsi&item_id=SILHebrUnic2#3fee5fec">Ezra SIL</a></li>
 </ul>
 
-<%@ include file="footer.jsp" %>
+<%@ include file="include/footer.jsp" %>

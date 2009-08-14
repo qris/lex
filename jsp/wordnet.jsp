@@ -1,5 +1,5 @@
 <% String pageTitle = "Text Browser with Wordnet"; %>
-<%@ include file="header2.jsp" %>
+<%@ include file="include/header.jsp" %>
 
 <%@ page import="java.util.*" %>
 <%@ page import="java.util.regex.*" %>
@@ -1303,7 +1303,7 @@
 			{
 				%>
 		<td>
-			<form name="editls" method="get" action="lsedit.jsp">
+			<form name="editls" method="get" action="lexicon.jsp">
 			<input type="hidden" name="lsid" value="<%= currentLsId %>">
 			<input type="submit" name="submit" value="Edit...">
 			</form>
@@ -1553,4 +1553,4 @@ Verse   <%= session.getAttribute("verseNum") %>,
 Clause  <%= session.getAttribute("clauseId") %>
 </form>
 
-<%@ include file="footer.jsp" %>
+<%@ include file="include/footer.jsp" %>

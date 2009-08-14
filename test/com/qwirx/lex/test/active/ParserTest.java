@@ -3,7 +3,7 @@
  *
  * Unit tests for the Lex parser code.
  */
-package com.qwirx.lex;
+package com.qwirx.lex.test.active;
 
 import java.util.ArrayList;
 import java.util.Hashtable;

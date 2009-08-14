@@ -1,14 +1,9 @@
-function doFilter(inputbox, list, source) 
+function doFilter(inputbox, list, source, originalValue) 
 {
 	if (source == null) return;
 	
 	var query = inputbox.value;
-	var oldid = -1;
-	
-	if (list.selectedIndex >= 0)
-	{
-		oldid = list.options[list.selectedIndex].value;
-	}
+	var oldid = originalValue;
 	
 	list.options.length = 0;
 	var optIndex = 0;

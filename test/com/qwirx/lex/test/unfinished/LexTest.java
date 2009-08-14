@@ -1,4 +1,4 @@
-package com.qwirx.lex;
+package com.qwirx.lex.test.unfinished;
 import junit.framework.TestCase;
 
 /*

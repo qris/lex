@@ -10,6 +10,7 @@ import java.util.Map;
 import jemdros.EmdrosException;
 import jemdros.MatchedObject;
 
+import com.qwirx.db.DatabaseException;
 import com.qwirx.db.sql.SqlDatabase;
 import com.qwirx.lex.lexicon.Lexeme;
 import com.qwirx.lex.translit.DatabaseTransliterator;
@@ -145,7 +146,7 @@ public class HebrewMorphemeGenerator
     
     public List<Morpheme> parse(MatchedObject word, boolean generateGloss,
         String gloss, DatabaseTransliterator transliterator)
-    throws Exception
+    throws DatabaseException
     {
         if (!word.getObjectTypeName().equals("word"))
         {
@@ -159,18 +160,29 @@ public class HebrewMorphemeGenerator
         {
             String feature = i.next();
             
-            int index = word.getEMdFValueIndex(feature);
-            if (index == -1)
-            {
-                throw new IllegalArgumentException("Word does not have " +
-                        "required feature " + feature);
-            }
+            int index;
+            String value;
             
-            String value = word.getFeatureAsString(index);
-            if (value == null)
+            try
             {
-                throw new IllegalArgumentException("Word does not have " +
-                        "required feature " + feature);
+                index = word.getEMdFValueIndex(feature);
+                if (index == -1)
+                {
+                    throw new IllegalArgumentException("Word does not have " +
+                            "required feature " + feature);
+                }
+                
+                value = word.getFeatureAsString(index);
+                if (value == null)
+                {
+                    throw new IllegalArgumentException("Word does not have " +
+                            "required feature " + feature);
+                }
+            }
+            catch (EmdrosException e)
+            {
+                throw new DatabaseException("Failed to retrieve feature '" +
+                    feature + "' from word " + word.getID_D(), e);
             }
             
             features.put(feature, value);
@@ -413,7 +425,6 @@ public class HebrewMorphemeGenerator
     private void convert(List<Morpheme> results, Map<String, String> features,
         String feature, String gloss, String symbol,
         boolean isLastMorpheme, boolean isGraphicalWordEnd)
-    throws EmdrosException
     {
         results.add(new Morpheme(features.get(feature), gloss, symbol,
             isLastMorpheme, isGraphicalWordEnd));

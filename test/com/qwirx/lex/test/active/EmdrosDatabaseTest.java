@@ -4,7 +4,7 @@
  * TODO To change the template for this generated file go to
  * Window - Preferences - Java - Code Style - Code Templates
  */
-package com.qwirx.lex;
+package com.qwirx.lex.test.active;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -36,6 +36,7 @@ import com.qwirx.db.ChangedValueString;
 import com.qwirx.db.DatabaseException;
 import com.qwirx.db.sql.SqlChange;
 import com.qwirx.lex.emdros.EmdrosChange;
+import com.qwirx.lex.test.base.LexTestBase;
 
 /**
  * @author chris

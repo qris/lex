@@ -1,4 +1,4 @@
-package com.qwirx.lex;
+package com.qwirx.lex.test.active;
 
 import java.awt.Font;
 import java.awt.Graphics2D;

@@ -1,5 +1,8 @@
+<%@ include file="include/setup.jsp" %>
+<%@ include file="include/auth.jsp" %>
+
 <% String pageTitle = "Emdros Database Dump"; %>
-<%@ include file="header2.jsp" %>
+<%@ include file="include/header.jsp" %>
 
 <%@ page import="java.util.Enumeration" %>
 <%@ page import="java.util.Hashtable" %>
@@ -12,9 +15,8 @@
 <%@ page import="com.qwirx.db.sql.*" %>
 <%@ page import="com.qwirx.lex.emdros.*" %>
 	
-<%@ include file="auth.jsp" %>
-
-<%@ include file="navclause.jsp" %>
+<%@ include file="include/navclause_head.jsp" %>
+<%@ include file="include/navclause_body.jsp" %>
 
 <%
 	if (username.equals("anonymous"))
@@ -319,5 +321,4 @@
 		%>No objects found<%
 	}
 %>
-</body></html>
-<%@ include file="cleanup.jsp" %>
+<%@ include file="include/footer.jsp" %>

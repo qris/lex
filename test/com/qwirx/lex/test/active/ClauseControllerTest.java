@@ -1,4 +1,4 @@
-package com.qwirx.lex;
+package com.qwirx.lex.test.active;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -16,7 +16,9 @@ import jemdros.SheafConstIterator;
 import jemdros.Straw;
 import jemdros.StrawConstIterator;
 
+import org.aptivate.web.controls.SelectBox;
 import org.aptivate.web.utils.HtmlIterator;
+import org.aptivate.web.utils.HtmlIterator.StartElementNode;
 
 import com.meterware.httpunit.HttpUnitOptions;
 import com.meterware.httpunit.WebConversation;
@@ -25,9 +27,14 @@ import com.meterware.httpunit.WebResponse;
 import com.qwirx.db.Change;
 import com.qwirx.db.sql.SqlChange;
 import com.qwirx.lex.controller.ClauseController;
+import com.qwirx.lex.controller.Navigator;
 import com.qwirx.lex.controller.ClauseController.Cell;
 import com.qwirx.lex.emdros.EmdrosChange;
+import com.qwirx.lex.emdros.EmdrosDatabase;
+import com.qwirx.lex.lexicon.Lexeme;
 import com.qwirx.lex.parser.MorphEdge;
+import com.qwirx.lex.test.base.LexTestBase;
+import com.qwirx.lex.translit.DatabaseTransliterator;
 
 public class ClauseControllerTest extends LexTestBase
 {
@@ -71,10 +78,18 @@ public class ClauseControllerTest extends LexTestBase
         return wc;
     }
     
+    private SetOfMonads getAllMonads()
+    throws Exception
+    {
+        return new SetOfMonads(getEmdros().getMinM(), getEmdros().getMaxM());
+    }
+    
     public void testWivuGlossCell() throws Exception
     {
-        ClauseController controller = new ClauseController(getEmdros(),
-            getSql(), 28740);
+        EmdrosDatabase emdros = getEmdros();
+        
+        ClauseController controller = new ClauseController(emdros, getSql(), 
+            getAllMonads(), 28740);
 
         MatchedObject word = getWord(27); // merahefet
         Change ch = getEmdros().createChange(EmdrosChange.UPDATE, "word", 
@@ -130,14 +145,15 @@ public class ClauseControllerTest extends LexTestBase
     {
         String expected = "בְּרֵאשִׁ֖ית בָּרָ֣א אֱלֹהִ֑ים אֵ֥ת הַשָּׁמַ֖יִם וְאֵ֥ת הָאָֽרֶץ "; // Gen 1,1a
         ClauseController controller = new ClauseController(getEmdros(),
-            getSql(), 28737);
+            getSql(), getAllMonads(), 28737);
         assertEquals(expected, controller.getHebrewText());
     }
     
     private ClauseController getController(int clauseId)
     throws Exception
     {
-        return new ClauseController(getEmdros(), getSql(), clauseId);
+        return new ClauseController(getEmdros(), getSql(), getAllMonads(),
+            clauseId);
     }
     
     public void testGloss() throws Exception
@@ -268,7 +284,18 @@ public class ClauseControllerTest extends LexTestBase
             i.assertSimple("td", clause.getEMdFValue("predicate").toString());
             i.assertSimple("td", clause.getEMdFValue("logical_structure").toString());
             i.assertStart("td");
-            i.assertSimple("a", clauseToVerseMap.get(clause.getID_D()));
+            StartElementNode node = i.assertSimple("a",
+                clauseToVerseMap.get(clause.getID_D()));
+            
+            if (clause.getID_D() == expectedClauseId)
+            {
+                node.assertAttribute("href", "clause.jsp" +
+                    "?book=" +    m_Location.get("book") +
+                    "&chapter=" + m_Location.get("chapter") +
+                    "&verse=" +   m_Location.get("verse") +
+                    "&clause=" +  expectedClauseId);
+            }
+            
             i.assertEnd("td");
             i.assertEnd("tr");
         }
@@ -276,6 +303,15 @@ public class ClauseControllerTest extends LexTestBase
         i.assertEnd("table");
         
         assertPageFooter(i);
+    }
+    
+    private String getClauseUrl()
+    {
+        return "http://localhost:8080/lex/clause.jsp" +
+            "?book="    + m_Location.get("book") +
+            "&chapter=" + m_Location.get("chapter") +
+            "&verse="   + m_Location.get("verse") +
+            "&clause="  + m_Location.get("clause");
     }
     
     public void testPublishFeature() throws Exception
@@ -324,13 +360,7 @@ public class ClauseControllerTest extends LexTestBase
         assertPublishedPage(response, clauseId, false);
 
         WebConversation loggedin = assertLogIn();        
-        loggedin.getResponse(
-            "http://localhost:8080/lex/clause.jsp" +
-            "?book="    + m_Location.get("book") +
-            "&chapter=" + m_Location.get("chapter") +
-            "&verse="   + m_Location.get("verse") +
-            "&clause="  + m_Location.get("clause") +
-            "&publish=Publish");
+        loggedin.getResponse(getClauseUrl() + "&publish=Publish");
         
         clause = getClause(clauseId, new String[]{"published"});
         assertEquals(1, clause.getFeatureAsLong(0));
@@ -343,6 +373,63 @@ public class ClauseControllerTest extends LexTestBase
         response = anon.getResponse("http://localhost:8080/lex/" +
             "published.jsp");
         assertPublishedPage(response, clauseId, true);
+        
+        Navigator navigator = new Navigator(null, null, getEmdros(), 
+            visible, new DatabaseTransliterator(getSql()));
+        navigator.setParamOverride("book", m_Location.get("book").toString());
+        navigator.setParamOverride("chapter", m_Location.get("chapter").toString());
+        navigator.setParamOverride("verse", m_Location.get("verse").toString());
+        navigator.setParamOverride("clause", m_Location.get("clause").toString());
+        
+        navigator.getObjectNavigator("book", "book");
+        assertTrue(clause.getMonads() + " is not part of " +
+            navigator.getFocusMonads(),
+            clause.getMonads().part_of(navigator.getFocusMonads()));
+        
+        navigator.getObjectNavigator("chapter", "chapter");
+        assertTrue(clause.getMonads() + " is not part of " +
+            navigator.getFocusMonads(),
+            clause.getMonads().part_of(navigator.getFocusMonads()));
+
+        navigator.getObjectNavigator("verse",
+            new String[]{"verse_label", "verse"});
+        assertTrue(clause.getMonads() + " is not part of " +
+            navigator.getFocusMonads(),
+            clause.getMonads().part_of(navigator.getFocusMonads()));
+
+        navigator.getClauseNavigator();
+        assertTrue(clause.getMonads() + " is not part of " +
+            navigator.getFocusMonads(),
+            clause.getMonads().part_of(navigator.getFocusMonads()));
+    }
+    
+    public void testCreateLogicalStructure() throws Exception
+    {
+        final int clauseId = 28974; // GEN 03,05(f)
+        MatchedObject clause = getClause(clauseId, new String[]{});
+        ClauseController clauseController = getController(clauseId);
+
+        WebConversation loggedin = assertLogIn();        
+        WebResponse resp = loggedin.getResponse(getClauseUrl());
+        
+        WebForm form = resp.getFormWithName("changels");
+        form.setParameter("lsid", "add");
+
+        int oldCount = getSql().getSingleInteger("SELECT COUNT(1) FROM " +
+            "lexicon_entries");
+        resp = form.submit();
+        assertEquals(oldCount + 1, getSql().getSingleInteger("SELECT COUNT(1) " +
+            "FROM lexicon_entries"));
+        int newLsId = getSql().getSingleInteger("SELECT MAX(ID) " +
+            "FROM lexicon_entries");
+        assertEquals("http://localhost:8080/lex/lexicon.jsp?lsid=" + newLsId,
+            resp.getURL().toString());
+
+        clause = getClause(clauseId, new String[]{"logical_struct_id"});
+        assertEquals(newLsId, clause.getEMdFValue("logical_struct_id").getInt());
+        
+        Lexeme lexeme = Lexeme.load(getSql(), newLsId);
+        assertEquals(clauseController.getPredicateText(), lexeme.getPredicate());
     }
     
     public static void main(String[] args)

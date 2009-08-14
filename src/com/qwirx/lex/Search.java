@@ -159,6 +159,7 @@ public class Search
         table = m_Emdros.getTable(verseMonadsQuery.toString());
         Map<Integer,SetOfMonads> verseIdToMonadsMap =
             new HashMap<Integer,SetOfMonads>();
+        SetOfMonads allResultMonads = new SetOfMonads();
         
         for (TableIterator ti = table.iterator(); ti.hasNext();)
         {
@@ -166,6 +167,7 @@ public class Search
             int ID_D = Integer.parseInt(tr.getColumn(1));
             
             SetOfMonads som = verseIdToMonadsMap.get(new Integer(ID_D));
+            
             if (som == null)
             {
                 som = new SetOfMonads();
@@ -174,6 +176,42 @@ public class Search
             
             som.add(Integer.parseInt(tr.getColumn(2)),
                 Integer.parseInt(tr.getColumn(3)));
+            
+            allResultMonads.unionWith(som);
+        }
+        
+        String [] objectTypesToGet = new String [] {"book", "chapter", "verse"};
+        
+        for (String objectType : objectTypesToGet)
+        {
+            // TODO could get "verse_label" at the same time as "verse"
+            String verseContainerQuery = "GET OBJECTS HAVING MONADS IN " +
+                allResultMonads.toString() + " [" + objectType + "]";
+            FlatSheaf flat = m_Emdros.getFlatSheaf(verseContainerQuery);
+            FlatStraw straw = flat.const_iterator().next();
+            for (FlatStrawConstIterator fsci = straw.const_iterator();
+                fsci.hasNext();)
+            {
+                MatchedObject object = fsci.next();
+                // TODO fix another horribly slow algorithm
+                for (Iterator<ResultBase> i = resultBases.iterator(); i.hasNext();)
+                {
+                    ResultBase base = i.next();
+                    if (base.monads.part_of(object.getMonads()))
+                    {
+                        if (base.url == null)
+                        {
+                            base.url = "clause.jsp?";
+                        }
+                        else
+                        {
+                            base.url += "&";
+                        }
+                        
+                        base.url += objectType + "=" + object.getID_D();
+                    }
+                }
+            }
         }
 
         StringBuffer verseFeaturesQuery = new StringBuffer("GET FEATURES " +
@@ -196,14 +234,16 @@ public class Search
                 if (base.monads.part_of(monads))
                 {
                     base.location = tr.getColumn(5);
-                    base.url = "clause.jsp?book=" + tr.getColumn(2) +
-                        "&amp;chapter=" + tr.getColumn(3) +
-                        "&amp;verse="   + tr.getColumn(4) +
-                        "&amp;clause="  + base.clause.getID_D();
                 }
             }
         }
-        
+
+        for (Iterator<ResultBase> i = resultBases.iterator(); i.hasNext();)
+        {
+            ResultBase base = i.next();            
+            base.url += "&clause=" + base.clause.getID_D();
+        }
+
         {
             String mql = "GET FEATURES predicate, logical_structure " +
                 "FROM OBJECTS WITH ID_DS = ";

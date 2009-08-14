@@ -1,4 +1,4 @@
-package com.qwirx.lex;
+package com.qwirx.lex.test.active;
 
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -8,18 +8,18 @@ import jemdros.MatchedObject;
 import jemdros.Sheaf;
 import jemdros.SheafConstIterator;
 import jemdros.Straw;
-import junit.framework.TestCase;
+import jemdros.StrawConstIterator;
 
 import org.aptivate.web.utils.HtmlIterator;
 import org.aptivate.web.utils.HtmlIterator.Attributes;
 
 import com.meterware.httpunit.WebConversation;
 import com.meterware.httpunit.WebResponse;
-import com.qwirx.db.sql.SqlDatabase;
+import com.qwirx.lex.Search;
 import com.qwirx.lex.Search.SearchResult;
-import com.qwirx.lex.emdros.EmdrosDatabase;
 import com.qwirx.lex.hebrew.HebrewConverter;
 import com.qwirx.lex.morph.HebrewMorphemeGenerator;
+import com.qwirx.lex.test.base.LexTestBase;
 import com.qwirx.lex.translit.DatabaseTransliterator;
 
 public class SearchTest extends LexTestBase
@@ -50,6 +50,17 @@ public class SearchTest extends LexTestBase
         search.setMaxResults(limit);
         assertSearchResultsMatch(query, search, limit);
     }
+
+    private MatchedObject getNestedObject(SheafConstIterator sci)
+    throws Exception
+    {
+        Straw objects = sci.next();
+        StrawConstIterator objecti = objects.const_iterator();
+        assertTrue(objecti.hasNext());
+        MatchedObject object = objecti.next();
+        assertFalse(objecti.hasNext());
+        return object;
+    }
     
     private void assertSearchResultsMatch(String query, Search search, 
         int limit)
@@ -77,23 +88,23 @@ public class SearchTest extends LexTestBase
 
         int count = 0;
         
-        SheafConstIterator sci = sheaf.const_iterator();
-        while (sci.hasNext())
         {
-            Straw straw = sci.next();
-
-            count++;
-            if (count > limit) continue;
-
-            MatchedObject clause = straw.const_iterator().next();
-            clauses.add(new Integer(clause.getID_D()));
+            SheafConstIterator sci = sheaf.const_iterator();
+            while (sci.hasNext())
+            {
+                Straw straw = sci.next();
+    
+                count++;
+                if (count > limit) continue;
+    
+                MatchedObject clause = straw.const_iterator().next();
+                clauses.add(new Integer(clause.getID_D()));
+            }
         }
         
         String mql = "SELECT ALL OBJECTS IN " +
             getEmdros().getVisibleMonads().toString() + " " +
-            "WHERE " +
-            "[verse GET book, chapter, verse, verse_label " +
-            " [clause ";
+            "WHERE [book [chapter [verse GET verse_label [clause ";
         
         if (clauses.size() == 0)
         {
@@ -114,86 +125,91 @@ public class SearchTest extends LexTestBase
 
         mql += "[word GET lexeme_wit, " +
             new HebrewMorphemeGenerator().getRequiredFeaturesString(false) +
-            "]]]";
+            "]]]]]";
 
         sheaf = getEmdros().getSheaf(mql);
-        sci = sheaf.const_iterator();
         
-        while (sci.hasNext())
+        for (SheafConstIterator bsci = sheaf.const_iterator(); bsci.hasNext();)
         {
-            Straw straw = sci.next();
-            MatchedObject verse = straw.const_iterator().next();
-            
-            SheafConstIterator clause_iter =
-                verse.getSheaf().const_iterator();
-                
-            while (clause_iter.hasNext())
+            MatchedObject book = getNestedObject(bsci);
+
+            for (SheafConstIterator csci = book.getSheaf().const_iterator();
+                csci.hasNext();)
             {
-                MatchedObject clause =
-                    clause_iter.next().const_iterator().next();
-
-                String original = "";
-                String translit = "";
+                MatchedObject chapter = getNestedObject(csci);
                 
-                SheafConstIterator word_iter = 
-                    clause.getSheaf().const_iterator();
-                    
-                while (word_iter.hasNext())
+                for (SheafConstIterator vsci = chapter.getSheaf().const_iterator();
+                    vsci.hasNext();)
                 {
-                    MatchedObject word = 
-                        word_iter.next().const_iterator().next();
+                    MatchedObject verse = getNestedObject(vsci);
                     
-                    String lexeme = word.getEMdFValue("lexeme_wit").getString();
-                    
-                    boolean isMatch = lexeme.equals(query) ||
-                        lexeme.equals(query + "/") ||
-                        lexeme.equals(query + "[");
-                    
-                    if (isMatch)
+                    for (SheafConstIterator 
+                        clsci = verse.getSheaf().const_iterator();
+                        clsci.hasNext();)
                     {
-                        original += "<strong>";
-                        translit += "<strong>";
-                    }
+                        MatchedObject clause = getNestedObject(clsci);
                     
-                    original += HebrewConverter.wordHebrewToHtml  (word, generator);
-                    translit += HebrewConverter.wordTranslitToHtml(word,
-                        generator, m_Transliterator);
+                        String original = "";
+                        String translit = "";
+                        
+                        SheafConstIterator word_iter = 
+                            clause.getSheaf().const_iterator();
+                            
+                        while (word_iter.hasNext())
+                        {
+                            MatchedObject word = 
+                                word_iter.next().const_iterator().next();
+                            
+                            String lexeme = word.getEMdFValue("lexeme_wit").getString();
+                            
+                            boolean isMatch = lexeme.equals(query) ||
+                                lexeme.equals(query + "/") ||
+                                lexeme.equals(query + "[");
+                            
+                            if (isMatch)
+                            {
+                                original += "<strong>";
+                                translit += "<strong>";
+                            }
+                            
+                            original += HebrewConverter.wordHebrewToHtml  (word, generator);
+                            translit += HebrewConverter.wordTranslitToHtml(word,
+                                generator, m_Transliterator);
+                            
+                            if (isMatch)
+                            {
+                                original += "</strong>";
+                                translit += "</strong>";
+                            }
                     
-                    if (isMatch)
-                    {
-                        original += "</strong>";
-                        translit += "</strong>";
+                            original += " ";
+                            translit += " ";
+                        }
+        
+                        assertTrue("Expected to find clause " + clause.getID_D() +
+                            " but was missing", actualIterator.hasNext());
+                        SearchResult actual = actualIterator.next();
+                        assertEquals(verse.getEMdFValue("verse_label").getString(),
+                            actual.getLocation());
+                        assertEquals(actual.getLocation(), 
+                            "<div class=\"hebrew\">" + original + "</div>\n" +
+                            "<div class=\"translit\">" + translit + "</div>\n",
+                            actual.getDescription());
+                        assertEquals(actual.getLocation(), "clause.jsp" +
+                            "?book="    + book.getID_D() +
+                            "&chapter=" + chapter.getID_D() +
+                            "&verse="   + verse.getID_D() +
+                            "&clause="  + clause.getID_D(),
+                            actual.getLinkUrl()
+                        );
                     }
-            
-                    original += " ";
-                    translit += " ";
                 }
-
-                assertTrue("Expected to find clause " + clause.getID_D() +
-                    " but was missing", actualIterator.hasNext());
-                SearchResult actual = actualIterator.next();
-                assertEquals(verse.getEMdFValue("verse_label").getString(),
-                    actual.getLocation());
-                assertEquals(actual.getLocation(), 
-                    "<div class=\"hebrew\">" + original + "</div>\n" +
-                    "<div class=\"translit\">" + translit + "</div>\n",
-                    actual.getDescription());
-                assertEquals(actual.getLocation(),
-                    "clause.jsp?book=" + 
-                    getEmdros().getEnumConstNameFromValue("book_name_e",
-                        verse.getEMdFValue("book").getInt()) +
-                    "&amp;chapter=" + verse.getEMdFValue("chapter") +
-                    "&amp;verse="   + verse.getEMdFValue("verse") +
-                    "&amp;clause="  + clause.getID_D(),
-                    actual.getLinkUrl()
-                );
             }
-
-            assertEquals(count, search.getResultCount());
         }
         
         assertFalse("Found " + (actualResults.size() - count + 1) +
             " more results than expected", actualIterator.hasNext());
+        assertEquals(count, search.getResultCount());
     }
 
     public void testSearchCode1() throws Exception

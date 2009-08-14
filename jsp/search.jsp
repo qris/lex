@@ -1,5 +1,7 @@
+<%@ include file="include/setup.jsp" %>
+
 <% String pageTitle = "Search"; %>
-<%@ include file="header2.jsp" %>
+<%@ include file="include/header.jsp" %>
 
 <%@ page import="java.util.*" %>
 <%@ page import="com.qwirx.lex.Search" %>
@@ -220,4 +222,4 @@ function toggle(button, divid)
 	}	
 %>
 
-<%@ include file="footer.jsp" %>
+<%@ include file="include/footer.jsp" %>

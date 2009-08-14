@@ -19,7 +19,7 @@
  *
  * ID: $Id: APIExamples.java 1466 2007-07-02 02:48:09Z dmsmith $
  */
-package com.qwirx.lex;
+package com.qwirx.lex.test.active;
 
 import java.io.File;
 import java.net.URL;
@@ -67,6 +67,7 @@ import org.jdom.Text;
 import org.xml.sax.SAXException;
 
 import com.qwirx.crosswire.kjv.KJV;
+import com.qwirx.lex.Lex;
 import com.qwirx.lex.emdros.EmdrosDatabase;
 import com.qwirx.lex.hebrew.HebrewEnglishDatabase;
 

@@ -8,7 +8,7 @@
 
 <head>
 	<title>Lex: <%= pageTitle %></title>
-	<link rel="stylesheet" href="style.css"/>
+	<link rel="stylesheet" href="css/style.css"/>
 	<style type="text/css">
 		div.topmenu a.<%= 
 			request.getServletPath().substring(1).replaceAll("\\.", "_")
@@ -28,15 +28,15 @@
 <h2>RLM for BH: 
 	<a href="http://3bm.dk/index.php?p=3">Nicolai Winther-Nielsen</a></h2>
 <div class="topmenu">
-	<a 	class="index_jsp"   href="index.jsp"   >Home</a><a 
-		class="db_jsp"                         >Databases</a><a 
+	<a 	class="index_jsp"     href="index.jsp"    >Home</a><a 
+		class="db_jsp"                            >Databases</a><a 
 		class="published_jsp" href="published.jsp">Published</a><a 
-		class="clause_jsp"  href="clause.jsp"  >Browse</a><a 
-		class="search_jsp"  href="search.jsp"  >Search</a><a 
-		class="lsedit_jsp"  href="lsedit.jsp"  >Lexicon</a><a  
-		class="parse_jsp"   href="parse.jsp"   >Parser</a><a  
-		class="rules_jsp"   href="rules.jsp"   >Rules</a><!--<a  
-		class="wordnet_jsp" href="wordnet.jsp" >Wordnet</a>--><%
+		class="clause_jsp"    href="clause.jsp"   >Browse</a><a 
+		class="search_jsp"    href="search.jsp"   >Search</a><a 
+		class="lexicon_jsp"   href="lexicon.jsp"  >Lexicon</a><a  
+		class="parse_jsp"     href="parse.jsp"    >Parser</a><a  
+		class="rules_jsp"     href="rules.jsp"    >Rules</a><!--<a  
+		class="wordnet_jsp"   href="wordnet.jsp"  >Wordnet</a>--><%
 		
 		if (request.getRemoteUser() != null)
 		{
@@ -64,24 +64,3 @@
 	%></a><div 
 	class="clearer"></div>
 </div>
-<%
-
-	String username = request.getRemoteUser();
-	if (username == null)
-	{
-		username = "anonymous";
-	}
-
-	String hostname = request.getRemoteAddr();
-	String userhost = username + "@" + hostname;
-
-	SqlDatabase    sql    = Lex.getSqlDatabase(userhost);
-	EmdrosDatabase emdros = null;
-		
-	try
-	{
-		emdros = Lex.getEmdrosDatabase(username, hostname, sql);
-		int min_m = emdros.getMinM(), max_m = emdros.getMaxM();
-		int real_min_m = min_m, real_max_m = max_m;
-		
-%>

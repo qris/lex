@@ -28,4 +28,4 @@ to the author by sending an email to Chris Wilson at
 <%= sw.toString() %>
 </pre>
 
-<%@ include file="footer.jsp" %>
+<%@ include file="include/footer.jsp" %>

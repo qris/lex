@@ -1,5 +1,5 @@
 <% String pageTitle = "Text Browser"; %>
-<%@ include file="header2.jsp" %>
+
 <%@ page import="java.util.*" %>
 <%@ page import="java.util.regex.*" %>
 <%@ page import="java.net.*" %>
@@ -16,41 +16,21 @@
 <%@ page import="net.didion.jwnl.data.POS" %>
 <%@ page import="net.didion.jwnl.data.Synset" %>
 
-<script type="text/javascript"><!--
+<%@ include file="include/setup.jsp" %>
+<%@ include file="include/auth.jsp" %>
+<%@ include file="include/navclause_head.jsp" %>
 
-	function enableEditButton()
+<%
+	ClauseController controller = new ClauseController(request, emdros, sql,
+		navigator);	
+	if (controller.processRedirects(response))
 	{
-		if (document.forms.changels == null)
-		{
-			return;
-		}
-		
-		var lsselect = document.forms.changels.lsid;
-		var editform = document.forms.editls;
-		if (editform == null || editform.submit == null)
-		{
-			return;
-		}
-			
-		var sellsid  = -1;
-		if (lsselect.selectedIndex > 0)
-		{
-			sellsid = lsselect.options[lsselect.selectedIndex].value;
-		}	
-		
-		editform.submit.disabled = (sellsid != editform.lsid.value);
-		return true;
+		return;
 	}
+%>
+<%@ include file="include/header.jsp" %>
 
-	function enableChangeButton(button, oldValue, selectBox)
-	{
-		if (button == null) return;
-		var newValue = selectBox.options[selectBox.selectedIndex].value;
-		button.disabled = (newValue == oldValue);
-		return true;
-	}
-	
-//--></script>
+<script type="text/javascript" src="js/clause.js"></script>
 
 <style type="text/css">
 	TABLE.tree TD
@@ -59,13 +39,11 @@
 	}
 </style>
 
-<%@ include file="auth.jsp" %>
-
-<%@ include file="navclause.jsp" %>
+<%@ include file="include/navclause_body.jsp" %>
 
 <%
-	ClauseController controller = new ClauseController(request, emdros, sql,
-		navigator);	
+	controller.processBody();
+	
 	MatchedObject clause = controller.getClause();
 		 
 	if (clause == null) 
@@ -178,62 +156,7 @@
 		<table><tr><td>
 			<form name="changels" method="POST">
 			Choose logical structure:
-			<select name="lsid" onChange="enableEditButton(); 
-			return enableChangeButton(lssave,<%=
-				controller.getSelectedLogicalStructureId()
-			%>,lsid)">
-			<option value="0" <%=
-				(controller.getSelectedLogicalStructureId() == 0)
-					? " SELECTED" : "" %>>
-				Not specified
-			</option>
-			<%
-
-			try 
-			{
-				PreparedStatement stmt = sql.prepareSelect
-					("SELECT ID,Structure,Syntactic_Args " +
-					 "FROM lexicon_entries WHERE Lexeme = ?");
-				stmt.setString(1, controller.getPredicateText());
-				
-				ResultSet rs = sql.select();
-				while (rs.next()) 
-				{
-					int    thisLsId      = rs.getInt("ID");
-					String thisStructure = rs.getString("Structure");
-					int    thisNumSMRs   = rs.getInt("Syntactic_Args");
-					
-					%>
-			<option value="<%=
-				thisLsId
-			%>"<%=
-				thisLsId == controller.getSelectedLogicalStructureId()
-					? " SELECTED" : ""
-			%>><%=
-				thisStructure == null
-				? "(undefined structure "+thisLsId+")"
-				: (thisStructure
-						.replaceAll("<", "&lt;")
-						.replaceAll(">", "&gt;"))
-			%>
-					<%
-				}
-			} 
-			catch (DatabaseException ex) 
-			{
-				%><%= ex %><%
-			} 
-			finally 
-			{
-				sql.finish();
-			}
-		
-			%>
-			<option value="add" <%=
-				selLsIdString != null && selLsIdString.equals("add")
-				? " SELECTED" : ""
-			%>>Add new...
-			</select>
+			<%= controller.getLogicalStructureSelector().toString() %>
 			<input type="submit" name="lssave" value="Change">
 			</form>
 			<script type="text/javascript"><!--
@@ -248,7 +171,7 @@
 			{
 				%>
 		<td>
-			<form name="editls" method="get" action="lsedit.jsp">
+			<form name="editls" method="get" action="lexicon.jsp">
 			<input type="hidden" name="lsid" value="<%=
 				controller.getSelectedLogicalStructureId()
 			%>" />
@@ -400,4 +323,4 @@ Verse   <%= navigator.getLabel("verse") %>,
 Clause  <%= navigator.getClauseId() %>
 </form>
 
-<%@ include file="footer.jsp" %>
+<%@ include file="include/footer.jsp" %>

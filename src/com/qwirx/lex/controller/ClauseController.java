@@ -12,11 +12,14 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 
 import jemdros.EMdFValue;
 import jemdros.MatchedObject;
+import jemdros.SetOfMonads;
 import jemdros.SheafConstIterator;
 
+import org.aptivate.web.controls.SelectBox;
 import org.aptivate.web.utils.EditField;
 import org.crosswire.jsword.book.BookData;
 import org.crosswire.jsword.book.OSISUtil;
@@ -85,11 +88,11 @@ public class ClauseController extends ControllerBase
      * @throws Exception
      */
     public ClauseController(EmdrosDatabase emdros, SqlDatabase sql,
-        int clauseId)
+        SetOfMonads focusMonads, int clauseId)
     throws Exception
     {
         super(emdros, sql);
-        loadClause(emdros.getMinM(), emdros.getMaxM(), clauseId);
+        loadClause(focusMonads, clauseId);
     }
 
     public ClauseController(HttpServletRequest request, EmdrosDatabase emdros,
@@ -97,25 +100,27 @@ public class ClauseController extends ControllerBase
     throws Exception
     {
         super(request, emdros, sql, navigator);
-        
-        m_SwordVerse = KJV.getVerse(emdros, navigator);
-
-        if (request.getParameter("savearg") != null)
+    }
+    
+    public boolean processRedirects(HttpServletResponse response)
+    throws Exception
+    {
+        if (m_Request.getParameter("savearg") != null)
         {
             int phraseId  = getParamInt("phraseid");
-            String newArg = request.getParameter("newarg");
-            Change ch = emdros.createChange(EmdrosChange.UPDATE,
+            String newArg = m_Request.getParameter("newarg");
+            Change ch = m_Emdros.createChange(EmdrosChange.UPDATE,
                 "phrase", new int[]{phraseId});
             ch.setString("argument_name", newArg);
             ch.execute();
         }
         
-        if (request.getParameter("changemr") != null &&
-            request.getParameter("mr") != null) 
+        if (m_Request.getParameter("changemr") != null &&
+            m_Request.getParameter("mr") != null) 
         {
             int phraseId          = getParamInt("pid");
             int newMR             = getParamInt("mr");
-            Change ch = emdros.createChange(EmdrosChange.UPDATE,
+            Change ch = m_Emdros.createChange(EmdrosChange.UPDATE,
                 "phrase", new int[]{phraseId});
             ch.setInt("macrorole_number", newMR);
             ch.execute();
@@ -131,11 +136,11 @@ public class ClauseController extends ControllerBase
             ch.execute();
         }
         
-        if (request.getParameter("wags") != null) // WIVU alternate gloss save
+        if (m_Request.getParameter("wags") != null) // WIVU alternate gloss save
         {
-            Change ch = emdros.createChange(EmdrosChange.UPDATE, "word", 
-                new int[]{Integer.parseInt(request.getParameter("wagw"))});
-            ch.setString("wivu_alternate_gloss", request.getParameter("wagv"));
+            Change ch = m_Emdros.createChange(EmdrosChange.UPDATE, "word", 
+                new int[]{Integer.parseInt(m_Request.getParameter("wagw"))});
+            ch.setString("wivu_alternate_gloss", m_Request.getParameter("wagv"));
             ch.execute();
         }
 
@@ -144,15 +149,24 @@ public class ClauseController extends ControllerBase
         m_SelectedLogicalStructureId = 
             m_Clause.getEMdFValue("logical_struct_id").getInt();
         
-        {   
-            String newLsString = request.getParameter("newls");
-            boolean saveLs = (request.getParameter("lssave") != null);
+        if (m_Request.getParameter("lssave") != null)
+        {
+            String newLsString = m_Request.getParameter("newls");
+            boolean saveLs = false;
+            String selLsIdString = m_Request.getParameter("lsid");
         
-            if (request.getParameter("create") != null && newLsString != null) 
+            if (selLsIdString.equals("add"))
             {
-                Change ch = sql.createChange(SqlChange.INSERT,
+                // create a new structure to assign it to this clause
+                String predicateText = getPredicateText();
+                if (predicateText == null)
+                {
+                    predicateText = "";
+                }
+
+                Change ch = m_Sql.createChange(SqlChange.INSERT,
                     "lexicon_entries", null);
-                ch.setString("Lexeme",    getPredicateText());
+                ch.setString("Lexeme",    predicateText);
                 ch.setString("Structure", newLsString);
                 ch.execute();
                 m_SelectedLogicalStructureId = ((SqlChange)ch).getInsertedRowId();
@@ -160,10 +174,10 @@ public class ClauseController extends ControllerBase
             } 
             else 
             {       
-                String selLsIdString = request.getParameter("lsid");
                 try
                 {
                     m_SelectedLogicalStructureId = Integer.parseInt(selLsIdString);
+                    saveLs = true;
                 }
                 catch (Exception e)
                 {
@@ -173,19 +187,28 @@ public class ClauseController extends ControllerBase
         
             if (saveLs) 
             {
-                Change ch = emdros.createChange(EmdrosChange.UPDATE,
-                    "clause", new int[]{navigator.getClauseId()});
+                Change ch = m_Emdros.createChange(EmdrosChange.UPDATE,
+                    "clause", new int[]{m_Navigator.getClauseId()});
                 ch.setInt("logical_struct_id", m_SelectedLogicalStructureId);
                 ch.execute();
             }
-        }
 
-        PreparedStatement stmt = sql.prepareSelect(
+            if (selLsIdString.equals("add"))
+            {
+                // the logical structure is pretty useless right now,
+                // so redirect to the LS editor to configure it.
+                response.sendRedirect("lexicon.jsp?lsid=" + 
+                    m_SelectedLogicalStructureId);
+                return true; // stop processing this request
+            }
+        }
+        
+        PreparedStatement stmt = m_Sql.prepareSelect(
             "SELECT ID,Structure,Syntactic_Args " +
             "FROM lexicon_entries WHERE ID = ?");
         stmt.setInt(1, m_SelectedLogicalStructureId);
         
-        ResultSet rs = sql.select();
+        ResultSet rs = m_Sql.select();
 
         if (rs.next()) 
         {
@@ -201,43 +224,43 @@ public class ClauseController extends ControllerBase
             m_NumMacroroles = thisNumSMRs;
         }
         
-        sql.finish();
+        m_Sql.finish();
         
-        if (request.getParameter("nc") != null &&
-            request.getParameter("nt") != null)
+        if (m_Request.getParameter("nc") != null &&
+            m_Request.getParameter("nt") != null)
         {
-            String newNoteText = request.getParameter("nt");
+            String newNoteText = m_Request.getParameter("nt");
             
             EmdrosChange ch = (EmdrosChange)(
                 m_Emdros.createChange(EmdrosChange.CREATE,
-                    "note", new int[]{navigator.getClauseId()}));
+                    "note", new int[]{m_Navigator.getClauseId()}));
             ch.setString("text", newNoteText);
             ch.execute();
         }
     
-        if (request.getParameter("nu") != null &&
-            request.getParameter("ni") != null &&
-            request.getParameter("nt") != null)
+        if (m_Request.getParameter("nu") != null &&
+            m_Request.getParameter("ni") != null &&
+            m_Request.getParameter("nt") != null)
         {
-            String updateNoteIdString = request.getParameter("ni");
+            String updateNoteIdString = m_Request.getParameter("ni");
             int updateNoteId = Integer.parseInt(updateNoteIdString);
-            String newNoteText = request.getParameter("nt");
+            String newNoteText = m_Request.getParameter("nt");
             
             EmdrosChange ch = (EmdrosChange)(
-                emdros.createChange(EmdrosChange.UPDATE,
+                m_Emdros.createChange(EmdrosChange.UPDATE,
                     "note", new int [] {updateNoteId}));
             ch.setString("text", newNoteText);
             ch.execute();
         }
 
-        if (request.getParameter("nd") != null &&
-            request.getParameter("ni") != null)
+        if (m_Request.getParameter("nd") != null &&
+            m_Request.getParameter("ni") != null)
         {
-            String deleteNoteIdString = request.getParameter("ni");
+            String deleteNoteIdString = m_Request.getParameter("ni");
             int deleteNoteId = Integer.parseInt(deleteNoteIdString);
             
             EmdrosChange ch = (EmdrosChange)(
-                emdros.createChange(EmdrosChange.DELETE,
+                m_Emdros.createChange(EmdrosChange.DELETE,
                     "note", new int[]{deleteNoteId}));
             ch.execute();
         }
@@ -267,16 +290,16 @@ public class ClauseController extends ControllerBase
                 ch.setString("predicate", predicate);
                 ch.execute();
             }
-            else if (request.getParameter("unpublish") != null)
+            else if (m_Request.getParameter("unpublish") != null)
             {
-                Change ch = sql.createChange(SqlChange.DELETE,
+                Change ch = m_Sql.createChange(SqlChange.DELETE,
                     "user_text_access",
                     "Monad_First = " + m_Clause.getMonads().first() + " AND " +
                     "Monad_Last  = " + m_Clause.getMonads().last()  + " AND " +
                     "User_Name   = \"anonymous\"");
                 ch.execute();
     
-                ch = emdros.createChange(EmdrosChange.UPDATE, "clause", 
+                ch = m_Emdros.createChange(EmdrosChange.UPDATE, "clause", 
                     new int[]{m_Clause.getID_D()});
                 ch.setInt("published", 0);
                 ch.execute();
@@ -371,13 +394,20 @@ public class ClauseController extends ControllerBase
         String currentStruct = m_Clause.getEMdFValue("logical_structure")
             .getString();
         if (! currentStruct.equals(m_LinkedLogicalStructure) &&
-            emdros.canWriteTo(m_Clause))
+            m_Emdros.canWriteTo(m_Clause))
         {
-            Change ch = emdros.createChange(EmdrosChange.UPDATE,
-                "clause", new int[]{navigator.getClauseId()});
+            Change ch = m_Emdros.createChange(EmdrosChange.UPDATE,
+                "clause", new int[]{m_Navigator.getClauseId()});
             ch.setString("logical_structure", m_LinkedLogicalStructure);
             ch.execute();
         }
+        
+        return false;
+    }
+
+    public void processBody() throws Exception
+    {
+        m_SwordVerse = KJV.getVerse(m_Emdros, m_Navigator);
     }
     
     private final Pattern varPat = Pattern.compile("(?s)(?i)<([^>]*)>");
@@ -1258,5 +1288,28 @@ public class ClauseController extends ControllerBase
     public String getLinkedLogicalStructure()
     {
         return m_LinkedLogicalStructure;
+    }
+    
+    public SelectBox getLogicalStructureSelector() throws Exception
+    {
+        List<Object> options = new ArrayList<Object>();
+        options.add(new String[]{"0", "Not specified"});
+
+        Lexeme [] possibleStructures = Lexeme.loadAll(m_Sql, getPredicateText());
+        
+        for (Lexeme structure : possibleStructures)
+        {
+            options.add(new String[]{"" + structure.getID(),
+                structure.getLogicalStructure()});
+        }
+        
+        options.add(new String[]{"add", "Add new..."});
+        SelectBox sb = new SelectBox("lsid", options);
+        sb.setAttribute("onchange", "enableEditButton(); " + 
+            "return enableChangeButton(lssave," + 
+            getSelectedLogicalStructureId() +
+            ",lsid)");
+        sb.setDefaultValue("" + getSelectedLogicalStructureId());
+        return sb;
     }
 }

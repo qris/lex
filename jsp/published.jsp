@@ -1,5 +1,4 @@
 <% String pageTitle = "Published Data"; %>
-<%@ include file="header2.jsp" %>
 
 <%@ page import="java.util.*" %>
 <%@ page import="com.qwirx.lex.Search" %>
@@ -9,6 +8,10 @@
 <%@ page import="com.qwirx.lex.translit.*" %>
 <%@ page import="jemdros.*" %>
 <%@ page import="org.aptivate.web.utils.EditField" %>
+
+<%@ include file="include/setup.jsp" %>
+<%@ include file="include/auth.jsp" %>
+<%@ include file="include/header.jsp" %>
 
 <%
 	EditField field = new EditField(request);
@@ -63,7 +66,9 @@
 				<td><%=
 					HebrewConverter.toHtml(result.getLogicalStructure())
 				%></td>
-				<td><a href="<%= result.getLinkUrl() %>"><%=
+				<td><a href="<%= 
+					EditField.escapeEntities(result.getLinkUrl())
+					%>"><%=
 					result.getLocation()
 				%></a></td>
 			</tr>
@@ -76,4 +81,4 @@
 	}
 %>
 
-<%@ include file="footer.jsp" %>
+<%@ include file="include/footer.jsp" %>

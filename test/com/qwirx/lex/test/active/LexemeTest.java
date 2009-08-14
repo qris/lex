@@ -1,4 +1,4 @@
-package com.qwirx.lex;
+package com.qwirx.lex.test.active;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -20,6 +20,7 @@ import com.qwirx.db.Change;
 import com.qwirx.db.DatabaseException;
 import com.qwirx.db.sql.SqlChange;
 import com.qwirx.db.sql.SqlDatabase;
+import com.qwirx.lex.Lex;
 import com.qwirx.lex.emdros.EmdrosChange;
 import com.qwirx.lex.emdros.EmdrosDatabase;
 import com.qwirx.lex.emdros.EmdrosChange.MonadSetEntry;
@@ -111,7 +112,7 @@ public final class LexemeTest extends TestCase
     
     private void assertEquals(Lexeme a, Lexeme b)
     {
-        assertEquals(a.id, b.id);
+        assertEquals(a.getID(), b.getID());
         assertEquals(a.getLogicalStructure(), b.getLogicalStructure());
         assertEquals(a.isCaused(),            b.isCaused());
         assertEquals(a.isPunctual(),          b.isPunctual());
@@ -137,8 +138,8 @@ public final class LexemeTest extends TestCase
     {
         assertNotNull(expected);
 
-        String url = "http://localhost:8080/lex/lsedit.jsp?lsid=" + 
-            expected.id;
+        String url = "http://localhost:8080/lex/lexicon.jsp?lsid=" + 
+            expected.getID();
         WebConversation conv = new WebConversation();
         conv.getClientProperties().setAcceptGzip(false);
         WebResponse resp = conv.getResponse(url);
@@ -146,7 +147,7 @@ public final class LexemeTest extends TestCase
         WebForm form = resp.getFormWithName("lsform");
         assertNotNull(form);
 
-        assertEquals(expected.id == 0 ? "" : expected.id + "", 
+        assertEquals(expected.getID() == 0 ? "" : expected.getID() + "", 
             form.getParameterValue("lsid"));
         checkCheckbox(form, "ls_caused", expected.isCaused());
         checkCheckbox(form, "ls_punct",  expected.isPunctual());
@@ -183,8 +184,8 @@ public final class LexemeTest extends TestCase
     {
         assertNotNull(lexeme);
         
-        String url = "http://localhost:8080/lex/lsedit.jsp?lsid=" + 
-            lexeme.id;
+        String url = "http://localhost:8080/lex/lexicon.jsp?lsid=" + 
+            lexeme.getID();
         WebConversation conv = new WebConversation();
         conv.getClientProperties().setAcceptGzip(false);
         WebResponse resp = conv.getResponse(url);
@@ -227,16 +228,16 @@ public final class LexemeTest extends TestCase
 
     private Lexeme checkSaveAndLoad(Lexeme newValues) throws Exception
     {
-        int id = newValues.id;
+        int id = newValues.getID();
         assertFalse("new values should belong to an existing lexeme", id == 0);
         
         Lexeme oldValues = Lexeme.load(sql, id);
-        assertEquals(id, oldValues.id);
+        assertEquals(id, oldValues.getID());
         assertFalse("equals method did not detect change", 
             newValues.equals(oldValues));
         
         newValues.save();
-        assertEquals(id, newValues.id);
+        assertEquals(id, newValues.getID());
         
         Lexeme newCopy = Lexeme.load(sql, id);
         assertEquals(newValues, newCopy);
@@ -259,12 +260,12 @@ public final class LexemeTest extends TestCase
     public void testLexemeSaveAndLoadWorks() throws Exception
     {
         Lexeme t = new Lexeme(sql);
-        assertEquals(0, t.id);
+        assertEquals(0, t.getID());
         t.save();
-        assertTrue(t.id != 0);
+        assertTrue(t.getID() != 0);
         addedLexemes.add(t);
 
-        Lexeme t2 = Lexeme.load(sql, t.id);
+        Lexeme t2 = Lexeme.load(sql, t.getID());
         assertEquals(t, t2);
         assertTrue(t2.equals(t));
 
@@ -500,15 +501,15 @@ public final class LexemeTest extends TestCase
         int clauseIdCatIsBlack = addClause(
             new String[]{"YAT","IS","$LAYK"}, 
             new Object[][]{subjAttr, predAttr, objcAttr}, 
-            new Integer(be.id));
+            new Integer(be.getID()));
         int clauseIdCatWantsMilk = addClause(
             new String[]{"YAT","WANTS","MILK"}, 
             new Object[][]{subjAttr, predAttr, objcAttr},
-            new Integer(want.id));
+            new Integer(want.getID()));
         int clauseIdCatDrinksMilk = addClause(
             new String[]{"YAT","DRINKS","MILK"}, 
             new Object[][]{subjAttr, predAttr, objcAttr},
-            new Integer(drink.id));
+            new Integer(drink.getID()));
         
         DatabaseTransliterator transliterator = new DatabaseTransliterator(sql);
         

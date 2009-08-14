@@ -1,4 +1,4 @@
-package com.qwirx.lex;
+package com.qwirx.lex.test.active;
 
 import jemdros.MatchedObject;
 import jemdros.Sheaf;
@@ -13,6 +13,8 @@ import com.meterware.httpunit.WebConversation;
 import com.meterware.httpunit.WebResponse;
 import com.qwirx.crosswire.kjv.KJV;
 import com.qwirx.db.sql.SqlDatabase;
+import com.qwirx.lex.GenExporter;
+import com.qwirx.lex.Lex;
 import com.qwirx.lex.emdros.EmdrosDatabase;
 import com.qwirx.lex.lexicon.Lexeme;
 import com.qwirx.lex.morph.HebrewMorphemeGenerator;

@@ -8,17 +8,18 @@ import java.util.Map;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
 
+import jemdros.BadMonadsException;
 import jemdros.EmdrosException;
 import jemdros.MatchedObject;
 import jemdros.SetOfMonads;
 import jemdros.Sheaf;
 import jemdros.SheafConstIterator;
 import jemdros.Table;
+import jemdros.TableException;
 import jemdros.TableIterator;
 import jemdros.TableRow;
 
 import org.aptivate.web.controls.SelectBox;
-import org.aptivate.web.utils.EditField;
 
 import com.qwirx.db.DatabaseException;
 import com.qwirx.lex.emdros.EmdrosDatabase;
@@ -32,10 +33,8 @@ public class Navigator
     private HttpServletRequest m_Request;
     private HttpSession m_Session;
     private EmdrosDatabase m_Emdros;
-    private SetOfMonads m_VisibleMonads;
-    private int m_MinM, m_MaxM;
+    private SetOfMonads m_VisibleMonads, m_FocusMonads;
     private DatabaseTransliterator m_Transliterator;
-    private EditField m_Form;
     
     public Navigator(HttpServletRequest request, HttpSession session,
         EmdrosDatabase emdros, SetOfMonads visibleMonads,
@@ -45,11 +44,9 @@ public class Navigator
         m_Request = request;
         m_Session = session;
         m_Emdros = emdros;
-        m_VisibleMonads = emdros.getVisibleMonads();
-        m_MinM = emdros.getMinM();
-        m_MaxM = emdros.getMaxM();
+        m_VisibleMonads = visibleMonads;
+        m_FocusMonads = m_VisibleMonads;
         m_Transliterator = transliterator;
-        m_Form = new EditField(request);
     }
 
     private Map<String, String> m_ParamOverrideMap =
@@ -79,7 +76,7 @@ public class Navigator
         return value;
     }
     
-    private void setParamOverride(String name, String value)
+    public void setParamOverride(String name, String value)
     {
         m_ParamOverrideMap.put(name, value);
         
@@ -92,15 +89,16 @@ public class Navigator
     private Map<String, String> m_Labels = new HashMap<String, String>();
     public String getLabel(String name) { return m_Labels.get(name); }
     
-    public String getObjectNavigator(String objectType, String labelAttribute)
-    throws DatabaseException, EmdrosException
+    public SelectBox getObjectNavigator(String objectType,
+        String labelAttribute)
+    throws DatabaseException
     {
         return getObjectNavigator(objectType, new String[]{labelAttribute});
     }
     
-    public String getObjectNavigator(String objectType,
+    public SelectBox getObjectNavigator(String objectType,
         String [] labelAttributes)
-    throws DatabaseException, EmdrosException
+    throws DatabaseException
     {
         String selectedObject = getSessionString(objectType, null);
 
@@ -108,8 +106,7 @@ public class Navigator
     
         Table objectTable = m_Emdros.getTable
         (
-            "SELECT OBJECTS HAVING MONADS IN " + 
-            m_Emdros.intersect(m_VisibleMonads, m_MinM, m_MaxM) +
+            "SELECT OBJECTS HAVING MONADS IN " + m_FocusMonads.toString() +
             " [" + objectType + "]"
         );
         
@@ -117,29 +114,35 @@ public class Navigator
         String firstObject = null;
         
         TableIterator rows = objectTable.iterator();
-        while (rows.hasNext()) 
+        try
         {
-            TableRow row = rows.next();
-            String objectId = row.getColumn(3);
-            
-            id_dList.append(objectId);
-
-            if (rows.hasNext())
+            while (rows.hasNext()) 
             {
-                id_dList.append(",");
-            }
-
-            if (objectId.equals(selectedObject))
-            {
-                foundObject = true;
-            }
-            
-            if (firstObject == null)
-            {
-                firstObject = objectId;
+                TableRow row = rows.next();
+                String objectId = row.getColumn(3);
+                
+                id_dList.append(objectId);
+    
+                if (rows.hasNext())
+                {
+                    id_dList.append(",");
+                }
+    
+                if (objectId.equals(selectedObject))
+                {
+                    foundObject = true;
+                }
+                
+                if (firstObject == null)
+                {
+                    firstObject = objectId;
+                }
             }
         }
-        
+        catch (EmdrosException e)
+        {
+            throw new DatabaseException("Failed to find visible objects", e);
+        }
         if (!foundObject && firstObject != null)
         {
             selectedObject = firstObject;
@@ -161,8 +164,8 @@ public class Navigator
         query.append(" FROM OBJECTS WITH ID_DS = " + 
             id_dList.toString() + " [" + objectType + "]");
         
-        List<String[]> objects = m_Emdros.getTableAsListOfArrays(
-            query.toString(), columnMap);
+        List<String[]> objects = m_Emdros.getTableAsListOfArrays(query.toString(),
+            columnMap);
 
         for (String [] objectInfo : objects)
         {
@@ -180,12 +183,31 @@ public class Navigator
                     "GET MONADS FROM OBJECT WITH ID_D = " + objectId +
                     " [" + objectType + "]"
                 );
-                TableRow monad_row = monadTable.iterator().next();
-                int new_min_m = Integer.parseInt(monad_row.getColumn(2));   
-                int new_max_m = Integer.parseInt(monad_row.getColumn(3));   
-                if (m_MinM < new_min_m) m_MinM = new_min_m;
-                if (m_MaxM > new_max_m) m_MaxM = new_max_m;
-                if (m_MinM > m_MaxM) m_MaxM = m_MinM + 1;
+
+                SetOfMonads objectMonads = new SetOfMonads();
+
+                try
+                {
+                    TableRow monad_row = monadTable.iterator().next();
+                    System.out.println(monad_row.getColumn(2) + "-" +
+                        monad_row.getColumn(3));
+                    objectMonads.add(Integer.parseInt(monad_row.getColumn(2)),
+                        Integer.parseInt(monad_row.getColumn(3)));
+                }
+                catch (TableException te)
+                {
+                    throw new DatabaseException("Failed to retrieve monads " +
+                        "from object " + objectId, te);
+                }
+                catch (BadMonadsException bme)
+                {
+                    throw new DatabaseException("Failed to retrieve monads " +
+                        "from object " + objectId, bme);                    
+                }
+                
+                m_FocusMonads = SetOfMonads.intersect(m_FocusMonads,
+                    objectMonads);
+
                 // System.out.println("book restricts to " + min_m + "-" + max_m);
             }
         }
@@ -194,7 +216,7 @@ public class Navigator
         
         SelectBox sb = new SelectBox(objectType, objects, selectedObject);
         sb.setAttribute("onChange", "document.forms.nav.submit()");
-        return sb.toString();
+        return sb;
     }
 
     public int getClauseId()
@@ -202,11 +224,10 @@ public class Navigator
         return Integer.parseInt(getSessionString("clause", "0"));
     }
     
-    public String getClauseNavigator()
-    throws Exception
+    public SelectBox getClauseNavigator()
+    throws DatabaseException
     {
         int selClauseId = getClauseId();
-        MatchedObject verse = null;
         
         boolean foundSelectedClause = false;
         int defaultClauseId = 0;
@@ -214,8 +235,7 @@ public class Navigator
     
         Sheaf sheaf = m_Emdros.getSheaf
         (
-            "SELECT ALL OBJECTS IN " +
-            m_Emdros.intersect(m_VisibleMonads, m_MinM, m_MaxM) +
+            "SELECT ALL OBJECTS IN " + m_FocusMonads.toString() +
             " WHERE " +
             "[clause "+
             " [word GET " + 
@@ -228,13 +248,33 @@ public class Navigator
                 
         while (clause_iter.hasNext())
         {
-            MatchedObject clause = clause_iter.next().const_iterator().next();
+            MatchedObject clause;
+            
+            try
+            {
+                clause = clause_iter.next().const_iterator().next();
+            }
+            catch (EmdrosException e)
+            {
+                throw new DatabaseException("Failed to iterate over clauses", e);
+            }
+            
             SheafConstIterator word_iter = clause.getSheaf().const_iterator();
             StringBuffer lexemes = new StringBuffer();
                     
             while (word_iter.hasNext())
             {
-                MatchedObject word = word_iter.next().const_iterator().next();
+                MatchedObject word;
+                
+                try
+                {
+                    word = word_iter.next().const_iterator().next();
+                }
+                catch (EmdrosException e)
+                {
+                    throw new DatabaseException("Failed to iterate over words",
+                        e);
+                }
                 
                 List<Morpheme> morphemes = generator.parse(word, false,
                     (String)null, m_Transliterator);
@@ -277,17 +317,23 @@ public class Navigator
         SelectBox sb = new SelectBox("clause", clauses, selClauseId + "");
         sb.setAttribute("onChange", "document.forms.nav.submit()");
         sb.setAttribute("class", "translit");
-        return sb.toString();
+        return sb;
     }
     
-    public int getMinM()
+    public SelectBox [] getHebrewNavigator()
+    throws DatabaseException
     {
-        return m_MinM;
+        return new SelectBox [] {
+            getObjectNavigator("book", "book"),
+            getObjectNavigator("chapter", "chapter"),
+            getObjectNavigator("verse", new String[]{"verse_label", "verse"}),
+            getClauseNavigator()  
+        };
     }
-
-    public int getMaxM()
+    
+    public SetOfMonads getFocusMonads()
     {
-        return m_MaxM;
+        return new SetOfMonads(m_FocusMonads);
     }
     
     public DatabaseTransliterator getTransliterator()
