@@ -17,9 +17,12 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.apache.log4j.Logger;
 
+import com.mysql.jdbc.MysqlDataTruncation;
 import com.qwirx.db.Change;
 import com.qwirx.db.ChangeType;
 import com.qwirx.db.ChangedRow;
@@ -498,6 +501,12 @@ public final class SqlChange implements Change
             "SET User = ?, Date_Time = NOW(), DB_Type = 'SQL', " +
             "    DB_Name = ?, Table_Name = ?, Cmd_Type = ?"; 
         
+        Map<String, String> tempParams = new HashMap<String, String>();
+		tempParams.put("User", username);
+		tempParams.put("DB_Name", database);
+		tempParams.put("Table_Name", table);
+		tempParams.put("Cmd_Type", type.toString());
+        
 		try
 		{
             PreparedStatement stmt = prepareAndLogError(tempQuery);
@@ -510,6 +519,23 @@ public final class SqlChange implements Change
         }
         catch (SQLException e) 
         {
+        	if (e instanceof MysqlDataTruncation)
+        	{
+        		MysqlDataTruncation mdte = (MysqlDataTruncation)e;
+        		/*
+        		Pattern pat = Pattern.compile("Data (truncated)|(too long) " +
+        				"for column '([^']*)' at row (\\d+) *");
+        				*/
+        		Pattern pat = Pattern.compile("Data .* for column '([^']*)'");
+        		Matcher mat = pat.matcher(e.getMessage());
+        		if (mat.find())
+        		{
+        			String column = mat.group(1);
+                    throw new DatabaseException("Failed to create change_log " +
+                    		"entry: data truncation for '" + 
+                    		tempParams.get(column) + "'", e, tempQuery);
+        		}
+        	}
             throw new DatabaseException("Failed to create change_log entry", 
                 e, tempQuery);
         }
@@ -603,6 +629,13 @@ public final class SqlChange implements Change
 	public void setString(String column, String value)
 	{
 		fields.put(column, value);
+	}
+	
+	public void setDate(String column, java.util.Date date)
+	{
+		long time = date.getTime();
+		java.sql.Timestamp d = new java.sql.Timestamp(time);
+		fields.put(column, d);
 	}
 
 	public void setObject(String column, Object value)
