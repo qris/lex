@@ -38,6 +38,14 @@ public class SqlDatabase implements Database
 	private long startTime;
     private static final Logger m_LOG = Logger.getLogger(SqlDatabase.class);
     
+    /*
+    private boolean m_TrackChanges = false;
+    public void setTrackChanges(boolean trackChanges)
+    {
+    	m_TrackChanges = trackChanges;
+    }
+    */
+    
 	public SqlDatabase(Connection conn, String username, String database)
 	throws DatabaseException
     {
@@ -51,7 +59,7 @@ public class SqlDatabase implements Database
 				new DbColumn[]{
 					new DbColumn("ID",         "INT(11)", false, 
 							true, true),
-					new DbColumn("User",       "VARCHAR(40)", false),
+					new DbColumn("User",       "VARCHAR(60)", false),
 					new DbColumn("Date_Time",  "DATETIME",    false),
 					new DbColumn("DB_Type",    "ENUM('Emdros','SQL')", 
 							false),
@@ -176,7 +184,13 @@ public class SqlDatabase implements Database
 			    e, query);
 		}
 	}
-	
+
+	public ResultSet select(String sql) throws DatabaseException
+	{
+		prepareSelect(sql);
+		return select();
+	}
+
 	public void finish() throws DatabaseException 
     {
 		try 
@@ -298,6 +312,39 @@ public class SqlDatabase implements Database
     	}
 	}
 
+    public List<Map> getTableAsListOfHashes(String query)
+	throws DatabaseException
+	{
+    	try
+    	{
+		    List<Map> results = new ArrayList<Map>();
+		    prepareSelect(query);
+		    
+		    ResultSet rs = select();
+		    int cols = rs.getMetaData().getColumnCount();
+		    
+		    while (rs.next())
+		    {
+		        Map<String, String> result = new HashMap<String, String>();
+		        for (int i = 0; i < cols; i++)
+		        {
+		        	result.put(rs.getMetaData().getColumnLabel(i+1),
+		        			getString(i+1));
+		        }
+		        results.add(result);
+		    }
+		    
+		    finish();
+		    
+		    return results;
+    	}
+    	catch (SQLException e)
+    	{
+    		throw new DatabaseException("Failed to get database table " +
+    				"as List", e, query);
+    	}
+	}
+    
     /**
      * Returns the first column of the results of a query as an array of Strings.
      * @param query the SQL query whose results will be returned in the List
