@@ -64,7 +64,7 @@ public class ChangedRow
 	
 	public ChangedValue get(String columnName)
 	{
-		return (ChangedValue)( m_Values.get(columnName) );
+		return m_Values.get(columnName);
 	}
     
     public List<String> getColumns()
